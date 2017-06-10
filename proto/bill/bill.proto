@@ -1,0 +1,28 @@
+syntax = "proto3";
+
+package bill;
+
+import "playcards/proto/page/page.proto";
+
+message Balance {
+    int32 UserID = 1;
+    int64 Amount = 2;
+    int64 Gold = 3;
+    int64 Diamond = 4;
+    int64 Deposit = 5;
+    int64 Freeze = 6;
+    int64 GoldProfit = 7;
+    int64 DiamondProfit = 8;
+    int64 CreatedAt = 20;
+    int64 UpdatedAt = 21;
+}
+
+message GetBalanceRequest {
+    int32 UserID = 1;
+    string Username = 2;
+}
+
+service BillSrv {
+    rpc GetBalance(GetBalanceRequest) returns (Balance) {}
+    rpc GainBalance(Balance) returns (Balance) {}
+}

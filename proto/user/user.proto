@@ -1,0 +1,73 @@
+syntax = "proto3";
+
+import "playcards/proto/page/page.proto";
+
+package user;
+
+message User {
+    int32 UserID = 1;
+    string Username = 2;
+    string Password = 3;
+    string Nickname = 4;
+    string Mobile = 5;
+    string Email = 6;
+    string Avatar = 7;
+    int32 Status = 8;
+    string Channel = 9;
+    int64 CreatedAt = 10;
+    int64 UpdatedAt = 11;
+    int64 LastLoginAt = 12;
+    int32 Rights = 13;
+    Property Property = 20;
+}
+
+message Property {
+    int32 UserID = 1;
+    int32 Vip = 2;
+    int32 Glamour = 3;
+    int32 HonorID = 4;
+    int32 DesignationID = 5;
+    int32 RegionLastID = 6;
+    int64 CreatedAt = 20;
+    int64 UpdatedAt = 21;
+}
+
+message RegisterReply {
+    int32 UserID = 1;
+}
+
+message LoginReply {
+    string Token = 1;
+    User User = 2;
+}
+
+message UserInfoReq {
+    string Token = 1;
+    int32 UserID = 2;
+}
+
+message PageUserListRequest {
+    page.PageOption Page = 1;
+    int32 UserID = 2;
+    string Username = 3;
+    string Nickname = 4;
+    int32 AgentID = 5;
+    int32 Rights = 6;
+    int32 Type = 7;
+}
+
+message PageUserListReply {
+    repeated User List = 1;
+    int64 Count = 2;
+}
+
+service UserSrv {
+    rpc Register(User) returns (RegisterReply) {}
+    rpc Login(User) returns (User) {}
+    rpc UserInfo(UserInfoReq) returns (User) {}
+    rpc GetProperty(Property) returns (Property) {}
+    rpc PageUserList(PageUserListRequest) returns (PageUserListReply) {}
+    rpc UpdateUser(User) returns (User) {}
+    rpc AddUser(User) returns (RegisterReply) {}
+    rpc UpdateProperty(Property) returns (Property){}
+}

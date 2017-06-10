@@ -1,0 +1,14 @@
+syntax = "proto3";
+
+package log;
+
+message ClientErrorLog {
+    string Message = 1;
+    string Condition = 2;
+    string StackTrace = 3;
+    string SystemInfo = 4;
+}
+
+service LogService {
+    rpc ClientReportException(ClientErrorLog) returns (ClientErrorLog) {}
+}

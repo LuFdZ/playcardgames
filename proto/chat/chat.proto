@@ -1,0 +1,40 @@
+syntax = "proto3";
+import "playcards/proto/page/page.proto";
+package chat;
+
+message Message {
+    int32 UserID = 1;
+    string Username = 2;
+    string Nickname = 3;
+    int32 Type = 4;
+    string Message = 5;
+
+    int32 HonorID = 11;
+    int32 DesignationID = 12;
+
+    int32 ToID = 21;
+    int32 RegionID = 22;
+    int32 GuildID = 23;
+
+    int64 CreatedAt = 20;
+}
+
+message ChatHistoryReply {
+    repeated Message List = 1;
+}
+
+message PageMessageListRequest {
+    page.PageOption Page = 1;
+    Message Message = 2;
+}
+
+message PageMessageListReply {
+    repeated Message List = 1;
+    int64 Count = 2;
+}
+
+service ChatSrv {
+    rpc Chat (Message) returns (Message) {}
+    rpc ChatHistory (Message) returns (ChatHistoryReply) {}
+    rpc PageMessageList(PageMessageListRequest) returns (PageMessageListReply) {}
+}

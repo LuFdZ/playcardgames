@@ -1,0 +1,21 @@
+syntax = "proto3";
+
+package activity;
+
+message ActivityConfig {
+    int32 ConfigID = 1;
+    string Description = 2;
+    string Parameter = 3;
+    int32 LastModifyUserID = 4;
+}
+
+message ConfigList {
+    repeated ActivityConfig List = 1;
+}
+
+service ActicitySrv {
+    rpc AddConfig(ActivityConfig) returns (ActivityConfig) {}
+    rpc DeleteConfig(ActivityConfig) returns (ActivityConfig) {}
+    rpc ListConfig(ActivityConfig) returns (ConfigList) {}
+    rpc UpdateConfig(ActivityConfig) returns (ActivityConfig) {}
+}

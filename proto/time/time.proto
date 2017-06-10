@@ -1,0 +1,8 @@
+syntax = "proto3";
+
+package time;
+
+message TimeRange {
+    int64 Start = 1;
+    int64 End = 2;
+}

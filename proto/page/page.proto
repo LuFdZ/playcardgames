@@ -1,0 +1,12 @@
+syntax = "proto3";
+
+import "playcards/proto/time/time.proto";
+
+package page;
+
+message PageOption {
+    int32 Page = 1;
+    int32 PageSize = 2;
+    time.TimeRange Time = 3;
+    bool Sum = 4;
+}

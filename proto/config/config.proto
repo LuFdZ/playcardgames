@@ -1,0 +1,28 @@
+syntax = "proto3";
+
+package config;
+
+message Config {
+    int32 ID = 1;
+    string Name = 2;
+    string Description = 3;
+    string Value = 4;
+    int64 CreatedAt = 10;
+    int64 UpdatedAt = 11;
+}
+
+message ConfigListRequest {}
+
+message ConfigListReply {
+    repeated Config List = 1;
+}
+
+message GetConfigByIDRequest {
+    int32 ID = 1;
+}
+
+service ConfigSrv {
+    rpc UpdateConfig(Config) returns (Config) {}
+    rpc ConfigList(ConfigListRequest) returns (ConfigListReply) {}
+    rpc GetConfigByID(GetConfigByIDRequest) returns (Config) {}
+}
