@@ -3,23 +3,19 @@ package enum
 import "playcards/utils/errors"
 
 const (
-	VERSION = "bcr.1.0.0"
+	VERSION = "playcards.1.0.0"
 )
 
 var (
-	APIServiceName      = "bcr.api"
-	Namespace           = "bcr.srv"
-	UserServiceName     = "bcr.srv.user"
-	BillServiceName     = "bcr.srv.bill"
-	FriendServiceName   = "bcr.srv.friend"
-	RegionServiceName   = "bcr.srv.region"
-	ChatServiceName     = "bcr.srv.chat"
-	StoreServiceName    = "bcr.srv.store"
-	WebServiceName      = "bcr.srv.web"
-	ConfigServiceName   = "bcr.srv.config"
-	ZodiacServiceName   = "bcr.srv.zodiac"
-	ActivityServiceName = "bcr.srv.activity"
-	LogServiceName      = "bcr.srv.log"
+	APIServiceName      = "playcards.api"
+	Namespace           = "playcards.srv"
+	UserServiceName     = "playcards.srv.user"
+	BillServiceName     = "playcards.srv.bill"
+	WebServiceName      = "playcards.srv.web"
+	ConfigServiceName   = "playcards.srv.config"
+	ActivityServiceName = "playcards.srv.activity"
+	LogServiceName      = "playcards.srv.log"
+	RoomServiceName     = "playcards.srv.room"
 )
 
 var (

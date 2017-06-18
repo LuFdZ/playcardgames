@@ -1,5 +1,5 @@
 package handler
 
 const (
-	TopicUpdateProperty = "bcr.user.%v.update.property"
+	TopicUpdateProperty = "playcards.user.%v.update.property"
 )

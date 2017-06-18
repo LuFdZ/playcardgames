@@ -1,8 +1,9 @@
 package config
 
 import (
-	"github.com/micro/go-os/config"
 	"time"
+
+	"github.com/micro/go-os/config"
 )
 
 var ConfigDefault config.Config
@@ -22,7 +23,7 @@ func LogLevel() string {
 
 func DBURL() string {
 	return ConfigDefault.Get("db_url").
-		String("root:@tcp(127.0.0.1:3306)/bcr?parseTime=true&loc=Asia%2FChongqing")
+		String("root:@tcp(127.0.0.1:3306)/playcards?parseTime=true&loc=Asia%2FChongqing")
 }
 
 func RedisHost() []string {

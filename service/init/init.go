@@ -24,7 +24,7 @@ var Debug = false
 
 func Init() {
 	cf := config.NewConfig(config.WithSource(
-		consul.NewSource(config.SourceName("/bcr/config"))),
+		consul.NewSource(config.SourceName("/playcards/config"))),
 	)
 
 	gcf.Init(cf)

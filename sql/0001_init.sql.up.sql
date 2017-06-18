@@ -97,18 +97,45 @@ CREATE TABLE `activity_configs` (
   DEFAULT CHARSET = utf8;
 
 CREATE TABLE `rooms` (
-  `room_id`       INT          NOT NULL AUTO_INCREMENT,
-  `password`      VARCHAR(16)  NOT NULL,
-  `user_id_a`     INT          NOT NULL DEFAULT '0',
-  `user_id_b`     INT          NOT NULL DEFAULT '0',
-  `user_id_c`     INT          NOT NULL DEFAULT '0',
-  `user_id_d`     INT          NOT NULL DEFAULT '0',
-  `user_id_e`     INT          NOT NULL DEFAULT '0',
-  `user_id_f`     INT          NOT NULL DEFAULT '0',
-  `status`        INT          NOT NULL DEFAULT '0',
-  `game_type`     INT          NOT NULL,
-  `created_at`    DATETIME     NOT NULL,
-  `updated_at`    DATETIME     NOT NULL,
+  `room_id`        INT          NOT NULL AUTO_INCREMENT,
+  `password`       VARCHAR(16)  NOT NULL,
+  `user_list`      VARCHAR(255) NOT NULL DEFAULT '',
+  `player_max_num` INT          NOT NULL DEFAULT '0',
+  `status`         INT          NOT NULL DEFAULT '0',
+  `game_type`      INT          NOT NULL DEFAULT '0',
+  `created_at`     DATETIME     NOT NULL,
+  `updated_at`     DATETIME     NOT NULL,
+  PRIMARY KEY (`room_id`),
+  KEY `idx_created`(`created_at`)
+)
+  ENGINE = InnoDB
+  AUTO_INCREMENT = 1
+  DEFAULT CHARSET = utf8;
+
+CREATE TABLE `thirteen` (
+  `game_id`         INT          NOT NULL AUTO_INCREMENT,
+  `room_id`         INT          NOT NULL DEFAULT '0',
+  `user_id_list` VARCHAR(255) NOT NULL DEFAULT '',
+  `status`          INT          NOT NULL DEFAULT '0',
+  `user_score_list` VARCHAR(255) NOT NULL DEFAULT '',
+  `created_at`      DATETIME     NOT NULL,
+  `updated_at`      DATETIME     NOT NULL,
+  PRIMARY KEY (`room_id`),
+  KEY `idx_created`(`created_at`)
+)
+  ENGINE = InnoDB
+  AUTO_INCREMENT = 1
+  DEFAULT CHARSET = utf8;
+
+CREATE TABLE `thirteen_user_log` (
+  `game_id`         INT          NOT NULL AUTO_INCREMENT,
+  `user_cards_list` VARCHAR(255) NOT NULL DEFAULT '',
+  `room_id`         INT          NOT NULL DEFAULT '0',
+  `user_score_list` VARCHAR(255) NOT NULL DEFAULT '',
+  `score`         INT          NOT NULL DEFAULT '0',
+  `status`          INT          NOT NULL DEFAULT '0',
+  `created_at`      DATETIME     NOT NULL,
+  `updated_at`      DATETIME     NOT NULL,
   PRIMARY KEY (`room_id`),
   KEY `idx_created`(`created_at`)
 )

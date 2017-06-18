@@ -1,0 +1,46 @@
+syntax = "proto3";
+
+import "playcards/proto/page/page.proto";
+
+package thirteen;
+
+message Card {
+    int32 Type = 1;
+    int32 Value = 1;        
+}
+
+message Ready {}
+
+message CardList {
+    repeated Card List = 1;
+}
+
+message GroupCard {
+    int32 UserID = 1;
+    int32 Type = 2;
+    int32 Weight = 3;    //权重
+    CardList Cards = 4;
+}
+
+message GroupCardList {
+    repeated GroupCard List = 1;
+}
+
+message Settle {
+    int32 UserID = 1;
+    int32 ScoreHead = 2;
+    int32 ScoreMiddle = 3;
+    int32 ScoreTail = 4;
+    int32 Score = 5;
+}
+
+message GameResult {
+    repeated Settle List = 1;
+    GroupCardList GroupCards = 2;
+    CardList NullUserCards = 3;
+}
+
+
+service ThirteenSrv {
+    rpc Submit(CardList) returns (CardList) {}
+}

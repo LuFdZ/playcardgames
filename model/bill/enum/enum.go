@@ -3,9 +3,8 @@ package enum
 const (
 	JournalTypeInitBalance = iota + 1
 	JournalTypeDeposito
-	JournalTypeRegion
-	JournalTypeZodiac
 	JournalTypeDash
+	JournalTypeRoom
 )
 
 const (

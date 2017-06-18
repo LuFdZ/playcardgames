@@ -1,5 +1,5 @@
 package publish
 
 const (
-	TopicServiceOnline = "bcr.service.online"
+	TopicServiceOnline = "playcards.service.online"
 )

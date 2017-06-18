@@ -1,0 +1,31 @@
+syntax = "proto3";
+
+package room;
+
+message Room {
+     int32 RoomID = 1;
+     string Password = 2;
+     repeated User list  =3;
+     int32 MaxPlayerNumber  =4;
+     int32 Status    =5;
+     int32 GameType  =6;
+     int64 CreatedAt =7;
+     int64 UpdatedAt =8;
+}
+
+message Ready{
+     
+}
+
+
+message Position {
+     int32 RoomID = 1;
+     int32 UserID = 2;
+     int32 index  = 3;
+}
+
+service RoomSrv {
+    rpc CreateRoom(Room) returns (Room) {}
+    rpc JoinRoom(Room) returns (Room) {}
+    rpc Ready(Ready) returns (Ready) {}
+}

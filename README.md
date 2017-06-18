@@ -1,4 +1,4 @@
-# bcr 
+# playcards
 Broad Chat Game Project
 
 ### Compile with debug info
@@ -58,7 +58,7 @@ make GOFLags="-gcflags -N"
 ```json
 {
     "log_level": "debug",
-    "db_url": "root:@tcp(127.0.0.1:3306)/bcr?parseTime=true",
+    "db_url": "root:@tcp(127.0.0.1:3306)/playcards?parseTime=true",
     "redis_host": "127.0.0.1:6379",
     "api_host": "0.0.0.0:8080",
     "web_host": "0.0.0.0:8999"
