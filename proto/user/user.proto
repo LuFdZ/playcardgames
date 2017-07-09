@@ -18,20 +18,8 @@ message User {
     int64 UpdatedAt = 11;
     int64 LastLoginAt = 12;
     int32 Rights = 13;
-    Property Property = 20;
+    string Icon = 14;
 }
-
-message Property {
-    int32 UserID = 1;
-    int32 Vip = 2;
-    int32 Glamour = 3;
-    int32 HonorID = 4;
-    int32 DesignationID = 5;
-    int32 RegionLastID = 6;
-    int64 CreatedAt = 20;
-    int64 UpdatedAt = 21;
-}
-
 message RegisterReply {
     int32 UserID = 1;
 }
@@ -61,13 +49,19 @@ message PageUserListReply {
     int64 Count = 2;
 }
 
+message UserInfo{
+    int32 UserID = 1;
+    string Username = 2;
+    string Nickname = 3;
+    string Icon = 4;
+    int32 Sex =5;
+}
+
 service UserSrv {
     rpc Register(User) returns (RegisterReply) {}
     rpc Login(User) returns (User) {}
     rpc UserInfo(UserInfoReq) returns (User) {}
-    rpc GetProperty(Property) returns (Property) {}
     rpc PageUserList(PageUserListRequest) returns (PageUserListReply) {}
     rpc UpdateUser(User) returns (User) {}
     rpc AddUser(User) returns (RegisterReply) {}
-    rpc UpdateProperty(Property) returns (Property){}
 }

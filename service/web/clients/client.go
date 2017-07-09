@@ -61,6 +61,10 @@ func (c *Client) UserID() int32 {
 	return c.user.UserID
 }
 
+func (c *Client) RoomID() int32 {
+	return c.user.RoomID
+}
+
 func (c *Client) Token() string {
 	return c.token
 }

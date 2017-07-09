@@ -58,6 +58,7 @@ func (w *Web) Subscribe(ws *websocket.Conn) {
 			log.Err("client %v request error: %v", c, req)
 			return err
 		}
+
 		return request.OnEmit(c, req)
 	}
 

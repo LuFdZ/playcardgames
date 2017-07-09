@@ -5,10 +5,9 @@ const (
 )
 
 const (
-	MsgRegionProfit = "RegionProfit"
-
-	MsgChatMessage = "ChatMessage"
-
-	MsgZodiacRoundUpdata = "ZodiacSettleRound"
-	MsgZodiacBetUpdata   = "ZodiacSettleBet"
+	MsgRoomStatusChange = "RoomStatusChange"
+	MsgRoomReady        = "RoomReady"
+	MsgRoomUnReady      = "RoomUnReady"
+	MsgRoomRoomJoin     = "RoomJoin"
+	MsgRoomRoomUnJoin   = "RoomUnJoin"
 )

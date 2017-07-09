@@ -14,6 +14,7 @@ import (
 	"playcards/utils/auth"
 	"playcards/utils/db"
 
+	cacheuser "playcards/model/user/cache"
 	"playcards/utils/errors"
 
 	"github.com/asaskevich/govalidator"
@@ -106,4 +107,9 @@ func PageUserList(page *mdpage.PageOption, u *mdu.User) ([]*mdu.User, int64,
 
 func UpdateUser(u *mdu.User) (*mdu.User, error) {
 	return dbu.UpdateUser(db.DB(), u)
+}
+
+func GetUserInfoSimple(userID int32) *mdu.User {
+	_, u := cacheuser.GetUserByID(userID)
+	return u
 }

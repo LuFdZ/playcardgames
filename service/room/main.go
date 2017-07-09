@@ -8,13 +8,18 @@ import (
 	gcf "playcards/utils/config"
 	"playcards/utils/env"
 	"playcards/utils/log"
+	"playcards/utils/sync"
 
 	micro "github.com/micro/go-micro"
 )
 
 var FuncRights = map[string]int32{
 	"RoomSrv.CreateRoom": auth.RightsNone,
-	"RoomSrv.JoinRoom":   auth.RightsNone,
+	"RoomSrv.EnterRoom":  auth.RightsNone,
+	"RoomSrv.LeaveRoom":  auth.RightsNone,
+	"RoomSrv.SetReady":   auth.RightsNone,
+	"RoomSrv.OutReady":   auth.RightsNone,
+	"RoomSrv.Heartbeat":  auth.RightsNone,
 }
 
 func main() {
@@ -33,8 +38,11 @@ func main() {
 	service.Init()
 
 	server := service.Server()
-	server.Handle(server.NewHandler(&handler.RoomSrv{}))
+	gt := sync.NewGlobalTimer()
+	h := handler.NewHandler(server, gt)
+	server.Handle(server.NewHandler(h))
 
 	err := service.Run()
+	gt.Stop()
 	env.ErrExit(err)
 }

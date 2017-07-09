@@ -13,6 +13,8 @@ CREATE TABLE `users` (
   `updated_at`    DATETIME     NOT NULL,
   `last_login_at` DATETIME              DEFAULT NULL,
   `rights`        INT          NOT NULL DEFAULT '0',
+  `sex`           INT          NOT NULL DEFAULT NULL,
+  `icon`          VARCHAR(128) NOT NULL DEFAULT NULL,
   PRIMARY KEY (`user_id`),
   UNIQUE KEY `email_unique` (`email`),
   UNIQUE KEY `username_unique` (`username`)
@@ -120,7 +122,8 @@ CREATE TABLE `thirteen` (
   `user_score_list` VARCHAR(255) NOT NULL DEFAULT '',
   `created_at`      DATETIME     NOT NULL,
   `updated_at`      DATETIME     NOT NULL,
-  PRIMARY KEY (`room_id`),
+  PRIMARY KEY (`game_id`),
+  KEY `idx_status` (`status`),
   KEY `idx_created`(`created_at`)
 )
   ENGINE = InnoDB
@@ -129,14 +132,14 @@ CREATE TABLE `thirteen` (
 
 CREATE TABLE `thirteen_user_log` (
   `game_id`         INT          NOT NULL AUTO_INCREMENT,
-  `user_cards_list` VARCHAR(255) NOT NULL DEFAULT '',
+  `user_id` VARCHAR(255) NOT NULL DEFAULT '',
   `room_id`         INT          NOT NULL DEFAULT '0',
-  `user_score_list` VARCHAR(255) NOT NULL DEFAULT '',
+  `user_card_list` VARCHAR(255) NOT NULL DEFAULT '',
   `score`         INT          NOT NULL DEFAULT '0',
   `status`          INT          NOT NULL DEFAULT '0',
   `created_at`      DATETIME     NOT NULL,
   `updated_at`      DATETIME     NOT NULL,
-  PRIMARY KEY (`room_id`),
+  PRIMARY KEY (`game_id`),
   KEY `idx_created`(`created_at`)
 )
   ENGINE = InnoDB

@@ -1,31 +1,60 @@
 syntax = "proto3";
+import "playcards/proto/user/user.proto";
 
 package room;
 
 message Room {
-     int32 RoomID = 1;
-     string Password = 2;
-     repeated User list  =3;
-     int32 MaxPlayerNumber  =4;
-     int32 Status    =5;
-     int32 GameType  =6;
-     int64 CreatedAt =7;
-     int64 UpdatedAt =8;
+    int32 RoomID = 1;
+    string Password = 2;
+    repeated RoomUser UserList  =3;
+    int32 MaxNumber  =4;
+    int32 Status    =5;
+    int32 GameType  =6;
+    int64 CreatedAt =7;
+    int64 UpdatedAt =8;
 }
 
-message Ready{
-     
+message RoomUser{
+    int32 UserID = 1;
+    int32 Ready = 2;
+    int32 Position = 3;
+    string Icon =4;
+    int32 Sex =5;
+    int32 Role =6;
 }
-
 
 message Position {
-     int32 RoomID = 1;
-     int32 UserID = 2;
-     int32 index  = 3;
+    int32 RoomID = 1;
+    int32 UserID = 2;
+    int32 Index = 3;
+    bool Ready = 4;
+}
+
+message RoomEvent {
+    int32 UserID = 1;
+    int32 RoomID = 2;
+    int32 Type = 3;
+    string Data = 4;
+}
+
+message SetReadyRequest{
+    string Password = 1;    
+}
+
+message OutReadyRequest{
+    string Password = 1;    
+}
+
+message HeartbeatRequest {
+        
 }
 
 service RoomSrv {
     rpc CreateRoom(Room) returns (Room) {}
-    rpc JoinRoom(Room) returns (Room) {}
-    rpc Ready(Ready) returns (Ready) {}
+    rpc EnterRoom(Room) returns (Room) {}
+    rpc LeaveRoom(Room) returns (Room) {}
+    rpc SetReady(SetReadyRequest) returns (RoomUser) {}
+    rpc OuttReady(OutReadyRequest) returns (RoomUser) {}
+    rpc Heartbeat(HeartbeatRequest) returns (HeartbeatRequest) {}
 }
+

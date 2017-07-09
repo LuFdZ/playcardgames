@@ -76,6 +76,12 @@ func SendTo(uid int32, topic, typ string, msg interface{}) error {
 	})
 }
 
+func SendRoomUsers(rid int32, topic, typ string, msg interface{}) error {
+	return SendWhereRoomUsers(rid, topic, typ, msg, func(c *Client) bool {
+		return c.RoomID() == rid
+	})
+}
+
 func SendWhere(topic, typ string, msg interface{},
 	f func(*Client) bool) error {
 	cs := GetLockClients(topic)
@@ -83,6 +89,21 @@ func SendWhere(topic, typ string, msg interface{},
 
 	for c, _ := range cs {
 		if f != nil && !f(c) {
+			continue
+		}
+		c.SendMessage(topic, typ, msg)
+	}
+
+	return nil
+}
+
+func SendWhereRoomUsers(rid int32, topic, typ string, msg interface{},
+	f func(*Client) bool) error {
+	cs := GetLockClients(topic)
+	defer Done()
+
+	for c, _ := range cs {
+		if f != nil && !f(c) && c.user.RoomID == rid {
 			continue
 		}
 		c.SendMessage(topic, typ, msg)

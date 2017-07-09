@@ -33,7 +33,7 @@ func GetRoomsByStatus(tx *gorm.DB, status int32) ([]*mdr.Room, error) {
 	var (
 		out []*mdr.Room
 	)
-	if err := tx.Where("status = ?", status).Order("created_at").
+	if err := tx.Where("status = ?", status).Order("created_ed").
 		Find(&out).Error; err != nil {
 		return nil, errr.ErrRoomNotExisted
 	}
@@ -55,7 +55,7 @@ func GetRoomByID(tx *gorm.DB, rid int32) (*mdr.Room, error) {
 	return &out, nil
 }
 
-func BatchUpdate(tx *gorm.DB, status int32, ids []int32) error {
+func BatchUpdate(tx *gorm.DB, status int32, ids *[]int32) error {
 	sql, param, _ := squirrel.Update(enum.RoomTableName).
 		Set("status", status).
 		Where("id in (?)", ids).ToSql()
