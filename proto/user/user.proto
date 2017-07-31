@@ -19,7 +19,16 @@ message User {
     int64 LastLoginAt = 12;
     int32 Rights = 13;
     string Icon = 14;
+    int32 PlayTimes    = 15;
+    int32 InviteUserID = 16;
+    string MobileUuID   = 17;
+    string MobileModel   = 18;
+    string MobileNetWork= 19;
+    string MobileOs     = 20;
+    string LastLoginIP  = 21;
+    string RegIP        = 22;
 }
+
 message RegisterReply {
     int32 UserID = 1;
 }

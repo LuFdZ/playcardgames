@@ -9,31 +9,22 @@ import (
 	"playcards/utils/topic"
 
 	"github.com/micro/go-micro/broker"
-	"github.com/micro/go-micro/server"
 	"github.com/micro/protobuf/proto"
 )
 
-type RoomSrv struct {
-	server server.Server
-	broker broker.Broker
-}
-
-var RoomEvent = []string{
-	srvroom.TopicRoomStatusChange,
-	srvroom.TopicRoomReady,
-	srvroom.TopicRoomUnReady,
-	srvroom.TopicRoomJoin,
-	srvroom.TopicRoomUnJoin,
-}
+var (
+	brok broker.Broker
+)
 
 func Init(brk broker.Broker) error {
-	broker = brk
-	if err := SubscribeRoomMessage(brk); err != nil {
+	brok = brk
+	if err := SubscribeAllRoomMessage(brk); err != nil {
 		return err
 	}
+	return nil
 }
 
-func SubscribeRoomMessage(brk broker.Broker) error {
+func SubscribeAllRoomMessage(brk broker.Broker) error {
 	subscribe.SrvSubscribe(brk, topic.Topic(srvroom.TopicRoomStatusChange),
 		RoomStatusChangeHandler,
 	)
@@ -41,14 +32,15 @@ func SubscribeRoomMessage(brk broker.Broker) error {
 		RoomReadyHandler,
 	)
 	subscribe.SrvSubscribe(brk, topic.Topic(srvroom.TopicRoomUnReady),
-		RoomReadyHandler,
+		RoomUnReadyHandler,
 	)
 	subscribe.SrvSubscribe(brk, topic.Topic(srvroom.TopicRoomJoin),
-		RoomStatusChangeHandler,
+		RoomJoin,
 	)
 	subscribe.SrvSubscribe(brk, topic.Topic(srvroom.TopicRoomUnJoin),
-		RoomStatusChangeHandler,
+		RoomUnJoin,
 	)
+	return nil
 }
 
 func RoomStatusChangeHandler(p broker.Publication) error {
@@ -67,18 +59,74 @@ func RoomStatusChangeHandler(p broker.Publication) error {
 	return nil
 }
 
-func RoomReadyHandler(p broker.Publication) error {
+func RoomJoin(p broker.Publication) error {
 	t := p.Topic()
 	msg := p.Message()
-	p := &pbroom.Position{}
-	err := proto.Unmarshal(msg.Body, p)
+	rs := &pbroom.Room{}
+	err := proto.Unmarshal(msg.Body, rs)
 	if err != nil {
 		return err
 	}
 
-	err = clients.SendRoomUsers(rs.RoomID, t, enum.MsgRoomStatusChange, p)
+	err = clients.SendRoomUsers(rs.RoomID, t, enum.MsgRoomRoomJoin, rs)
 	if err != nil {
 		return err
 	}
 	return nil
+}
+
+func RoomUnJoin(p broker.Publication) error {
+	t := p.Topic()
+	msg := p.Message()
+	rs := &pbroom.Room{}
+	err := proto.Unmarshal(msg.Body, rs)
+	if err != nil {
+		return err
+	}
+
+	err = clients.SendRoomUsers(rs.RoomID, t, enum.MsgRoomRoomUnJoin, rs)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func RoomReadyHandler(p broker.Publication) error {
+	t := p.Topic()
+	msg := p.Message()
+	rs := &pbroom.Position{}
+	err := proto.Unmarshal(msg.Body, rs)
+	if err != nil {
+		return err
+	}
+
+	err = clients.SendRoomUsers(rs.RoomID, t, enum.MsgRoomReady, rs)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func RoomUnReadyHandler(p broker.Publication) error {
+	t := p.Topic()
+	msg := p.Message()
+	rs := &pbroom.Position{}
+	err := proto.Unmarshal(msg.Body, rs)
+	if err != nil {
+		return err
+	}
+
+	err = clients.SendRoomUsers(rs.RoomID, t, enum.MsgRoomUnReady, rs)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func AutoSubscribe(uid int32) {
+	clients.AutoSubscribe(uid, RoomEvent)
+}
+
+func AutoUnSubscribe(uid int32) {
+	clients.AutoUnSubscribe(uid, RoomEvent)
 }

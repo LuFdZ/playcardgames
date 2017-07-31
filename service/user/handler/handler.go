@@ -6,6 +6,7 @@ import (
 	cacheuser "playcards/model/user/cache"
 	mdu "playcards/model/user/mod"
 	pbu "playcards/proto/user"
+	"playcards/service/web/room"
 	"playcards/utils/auth"
 	"playcards/utils/log"
 	utilpb "playcards/utils/proto"
@@ -61,7 +62,7 @@ func (us *UserSrv) Login(ctx context.Context, req *pbu.User,
 	}
 	rsp.Token = token
 	log.Debug("login: %v", u)
-
+	room.AutoSubscribe(u.UserID)
 	return nil
 }
 

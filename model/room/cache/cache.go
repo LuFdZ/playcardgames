@@ -11,25 +11,19 @@ import (
 )
 
 func RoomHKey(pwd string) string {
-	return fmt.Sprintf(cache.KeyPrefix("ROOM:%d"), pwd)
+	return fmt.Sprintf(cache.KeyPrefix("ROOM:%s"), pwd)
 }
 
 func UserHKey(uid int32) string {
-	return fmt.Sprintf(cache.KeyPrefix("ROOMUSER:%n"), uid)
+	return fmt.Sprintf(cache.KeyPrefix("ROOMUSER:%d"), uid)
 }
 
 func SetRoom(r *mdr.Room) error {
-	key := RoomHKey(r.Password)
-
+	var key string
 	f := func(tx *redis.Tx) error {
-		roomInfo := tx.HGetAll(key).Val()
-		if roomInfo != nil {
-			return errors.Internal("room password has exist", nil)
-		}
-
+		key = RoomHKey(r.Password)
 		tx.Pipelined(func(p *redis.Pipeline) error {
 			b, _ := json.Marshal(r)
-
 			tx.HSet(key, "password", r.Password)
 			tx.HSet(key, "roomid", r.RoomID)
 			tx.HSet(key, "room", b)
@@ -42,7 +36,6 @@ func SetRoom(r *mdr.Room) error {
 	if err := cache.KV().Watch(f, key); err != nil {
 		return errors.Internal("set room failed", err)
 	}
-
 	return nil
 }
 
@@ -70,7 +63,14 @@ func DeleteRoom(password string) error {
 
 	f := func(tx *redis.Tx) error {
 		orig, _ := tx.HGet(key, "password").Bytes()
+
 		tx.Pipelined(func(p *redis.Pipeline) error {
+			room, err := GetRoom(password)
+			if err == nil && room != nil {
+				for _, user := range room.Users {
+					tx.HDel(key, string(user.UserID))
+				}
+			}
 			tx.HDel(key, string(orig))
 			return nil
 		})
@@ -83,9 +83,18 @@ func DeleteRoom(password string) error {
 	return nil
 }
 
+func CheckRoomExist(pwd string) (bool, error) {
+	key := RoomHKey(pwd)
+	_, err := cache.KV().HGet(key, "room").Bytes()
+	if err == redis.Nil {
+		return false, nil
+	}
+	return true, nil
+}
+
 func GetRoom(pwd string) (*mdr.Room, error) {
 	key := RoomHKey(pwd)
-	val, err := cache.KV().HGet(key, pwd).Bytes()
+	val, err := cache.KV().HGet(key, "room").Bytes()
 	if err == redis.Nil {
 		return nil, nil
 	}
@@ -115,13 +124,32 @@ func SetRoomUser(rid int32, password string, uid int32) error {
 	}
 	err := cache.KV().Watch(f, key)
 	if err != nil {
-		return errors.Internal("set roomuser failed", err)
+		return errors.Internal("set room user failed", err)
+	}
+	return nil
+}
+
+func DeleteRoomUser(rid int32, uid int32) error {
+	key := UserHKey(uid)
+
+	f := func(tx *redis.Tx) error {
+		tx.Pipelined(func(p *redis.Pipeline) error {
+
+			tx.Del(key)
+			return nil
+		})
+		return nil
+	}
+	err := cache.KV().Watch(f, key)
+	if err != nil {
+		return errors.Internal("del room user error", err)
 	}
 	return nil
 }
 
 func GetRoomPasswordByUserID(uid int32) string {
 	key := UserHKey(uid)
-	pwd := cache.KV().HGet(key, "roomid").String()
+	pwd := cache.KV().HGet(key, "password").Val()
+
 	return pwd
 }

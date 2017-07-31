@@ -23,6 +23,8 @@ class Client(object):
             "Password": name,
             "Nickname": name,
             "Email": name + "@x.com",
+            "Icon":"12345567",
+            "Sex":1
         }
 
     def Request(self, path, data):
@@ -313,3 +315,45 @@ class Client(object):
             "Status":status
         })
         return ul
+
+    def CreateRoom(self,Password,GameType,maxNumber):
+        ul = self.Request("/room/roomSrv/CreateRoom",{
+            "Password":Password,
+            "MaxNumber":maxNumber,
+            "GameType":GameType
+        })
+        return ul
+
+    def EnterRoom(self,Password):
+        ul = self.Request("/room/roomSrv/EnterRoom",{
+            "Password":Password
+        })
+        return ul
+
+    def LeaveRoom(self):
+        ul = self.Request("/room/roomSrv/LeaveRoom",{
+        })
+        return ul
+
+    def SetReady(self,Password):
+        ul = self.Request("/room/roomSrv/SetReady",{
+            "Password":Password
+        })
+        return ul
+
+    def OutReady(self,Password):
+        ul = self.Request("/room/roomSrv/OutReady",{
+            "Password":Password
+        })
+        return ul
+
+    def SubscribeRoom(self):
+        self.StreamSend("SubscribeRoomMessage",{})
+
+
+    def Recharge(self,uid,diamond,orderCode):
+        self.Request("/bill/billSrv/Recharge",{
+            "UserID":uid,
+            "Diamond":diamond,
+            "OrderCode":orderCode
+        })

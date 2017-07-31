@@ -19,9 +19,11 @@ func CreateRoom(tx *gorm.DB, r *mdr.Room) error {
 }
 
 func UpdateRoom(tx *gorm.DB, r *mdr.Room) (*mdr.Room, error) {
+	now := gorm.NowFunc()
 	room := &mdr.Room{
-		UserList: r.UserList,
-		Status:   r.Status,
+		Users:     r.Users,
+		Status:    r.Status,
+		UpdatedAt: &now,
 	}
 	if err := tx.Model(r).Updates(room).Error; err != nil {
 		return nil, errors.Internal("update room failed", err)
@@ -40,13 +42,26 @@ func GetRoomsByStatus(tx *gorm.DB, status int32) ([]*mdr.Room, error) {
 	return out, nil
 }
 
+func GetRoomsByStatusAndGameType(tx *gorm.DB, status int32,
+	GameType int32) ([]*mdr.Room, error) {
+	var (
+		out []*mdr.Room
+	)
+	if err := tx.Where("status = ? and GameType = ?", status, GameType).
+		Order("created_at").Find(&out).Error; err != nil {
+		return nil, errr.ErrRoomNotExisted
+	}
+	return out, nil
+}
+
 func GetRoomByID(tx *gorm.DB, rid int32) (*mdr.Room, error) {
 	var (
 		out mdr.Room
 	)
+	out.RoomID = rid
 	found, err := db.FoundRecord(tx.Find(&out).Error)
 	if err != nil {
-		return nil, errors.Internal("get region failed", err)
+		return nil, errors.Internal("get room failed", err)
 	}
 
 	if !found {
@@ -58,10 +73,10 @@ func GetRoomByID(tx *gorm.DB, rid int32) (*mdr.Room, error) {
 func BatchUpdate(tx *gorm.DB, status int32, ids []int32) error {
 	sql, param, _ := squirrel.Update(enum.RoomTableName).
 		Set("status", status).
-		Where("id in (?)", ids).ToSql()
+		Where("room_id in (?)", ids).ToSql()
 	err := tx.Exec(sql, param...).Error
 	if err != nil {
-		return errors.Internal("set round finish failed", err)
+		return errors.Internal("set room finish failed", err)
 	}
 	return nil
 }

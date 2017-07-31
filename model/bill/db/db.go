@@ -24,7 +24,7 @@ func CreateBalance(tx *gorm.DB, uid int32, balance *mdbill.Balance) error {
 	}
 
 	err = InsertJournal(tx, uid, balance, enum.JournalTypeInitBalance,
-		int64(b.UserID))
+		int64(b.UserID), b.UserID)
 	if err != nil {
 		return err
 	}
@@ -47,6 +47,15 @@ func GetLockUserBalance(tx *gorm.DB, uid int32) (*mdbill.UserBalance, error) {
 		return nil, errors.Internal("get balance failed", err)
 	}
 	return out, nil
+}
+
+func GetJournal(tx *gorm.DB, uid int32, systemcode int64) int32 {
+	out := &mdbill.Journal{}
+	if found, _ := db.FoundRecord(tx.Where("user_id = ? and `foreign` = ? ",
+		uid, systemcode).Find(&out).Error); found {
+		return 2
+	}
+	return 1
 }
 
 func Deposit(tx *gorm.DB, uid int32, amount int64, typ int32) error {
@@ -84,7 +93,8 @@ func Deposit(tx *gorm.DB, uid int32, amount int64, typ int32) error {
 	bal := &mdbill.Balance{
 		Amount: amount,
 	}
-	return InsertJournal(tx, b.UserID, bal, typ, int64(d.ID))
+	return InsertJournal(tx, b.UserID, bal, typ, int64(d.ID),
+		enum.SystemOpUserID)
 }
 
 // Type:
@@ -92,7 +102,7 @@ func Deposit(tx *gorm.DB, uid int32, amount int64, typ int32) error {
 // JournalTypeDeposit -> Foreign deposit.id
 // JournalTypeMap -> Foreign map_profits.id
 func InsertJournal(tx *gorm.DB, uid int32, b *mdbill.Balance,
-	typ int32, fid int64) error {
+	typ int32, fid int64, opuid int32) error {
 	now := gorm.NowFunc()
 
 	m := make(map[string]interface{})
@@ -105,6 +115,7 @@ func InsertJournal(tx *gorm.DB, uid int32, b *mdbill.Balance,
 	m["`foreign`"] = fid
 	m["created_at"] = now
 	m["updated_at"] = now
+	m["op_user_id"] = opuid
 
 	usql := "amount = amount + ? , gold = gold + ? , " +
 		"diamond = diamond + ? , updated_at = ?"
@@ -126,7 +137,7 @@ func InsertJournal(tx *gorm.DB, uid int32, b *mdbill.Balance,
 }
 
 func GainBalance(tx *gorm.DB, uid int32, b *mdbill.Balance, typ int32,
-	fid int64) error {
+	fid int64, opuid int32) error {
 	if b.Amount != 0 {
 		return errbill.ErrNotAllowAmount
 	}
@@ -149,11 +160,20 @@ func GainBalance(tx *gorm.DB, uid int32, b *mdbill.Balance, typ int32,
 
 	if b.Diamond > 0 {
 		ub.DiamondProfit += b.Diamond
+		ub.CumulativeRecharge += b.Diamond
+	}
+
+	if b.Diamond < 0 {
+		ub.CumulativeConsumption += b.Diamond
+	}
+
+	if typ == enum.JournalTypeGive {
+		ub.CumulativeGift += b.Diamond
 	}
 
 	if err = tx.Save(ub).Error; err != nil {
 		return errors.Internal("gain balance failed", err)
 	}
 
-	return InsertJournal(tx, uid, b, typ, fid)
+	return InsertJournal(tx, uid, b, typ, fid, opuid)
 }

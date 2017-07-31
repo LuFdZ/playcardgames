@@ -33,7 +33,7 @@ func NewHandler(s server.Server, gt *gsync.GlobalTimer) *RoomSrv {
 func (z *RoomSrv) update(gt *gsync.GlobalTimer) {
 	lock := "bcr.room.update.lock"
 	f := func() error {
-		log.Debug("Room update loop...")
+		log.Debug("room update loop... and has %d rooms")
 		//now := time.Now()
 
 		err := room.RoomAllReady()
@@ -51,11 +51,11 @@ func (rs *RoomSrv) CreateRoom(ctx context.Context, req *pbr.Room,
 	if err != nil {
 		return err
 	}
-	r, err := room.CreateRoom(req.Password, req.GameType, req.MaxNumber,
-		u)
+	r, err := room.CreateRoom(req.Password, req.GameType, req.MaxNumber, u)
 	if err != nil {
 		return err
 	}
+	//webroom.AutoSubscribe(u.UserID)
 	*rsp = *r.ToProto()
 	return nil
 }
@@ -73,6 +73,7 @@ func (rs *RoomSrv) EnterRoom(ctx context.Context, req *pbr.Room,
 	*rsp = *r.ToProto()
 	msg := rsp
 	topic.Publish(rs.broker, msg, TopicRoomJoin)
+	//webroom.AutoSubscribe(u.UserID)
 	return nil
 }
 
@@ -86,13 +87,14 @@ func (rs *RoomSrv) LeaveRoom(ctx context.Context, req *pbr.Room,
 	if err != nil {
 		return err
 	}
+	//webroom.AutoUnSubscribe(u.UserID)
 	*rsp = *r.ToProto()
 	msg := rsp
 	topic.Publish(rs.broker, msg, TopicRoomUnJoin)
 	return nil
 }
 
-func (rs *RoomSrv) SetReady(ctx context.Context, req *pbr.SetReadyRequest,
+func (rs *RoomSrv) SetReady(ctx context.Context, req *pbr.Room,
 	rsp *pbr.RoomUser) error {
 	u, err := auth.GetUser(ctx)
 	if err != nil {
@@ -108,7 +110,7 @@ func (rs *RoomSrv) SetReady(ctx context.Context, req *pbr.SetReadyRequest,
 	return nil
 }
 
-func (rs *RoomSrv) OutReady(ctx context.Context, req *pbr.OutReadyRequest,
+func (rs *RoomSrv) OutReady(ctx context.Context, req *pbr.Room,
 	rsp *pbr.RoomUser) error {
 	u, err := auth.GetUser(ctx)
 	if err != nil {

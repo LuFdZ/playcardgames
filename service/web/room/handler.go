@@ -15,7 +15,7 @@ var RoomEvent = []string{
 	srvroom.TopicRoomUnJoin,
 }
 
-func SubscribeRoomMessageJoin(c *clients.Client, req *request.Request) error {
+func SubscribeRoomMessage(c *clients.Client, req *request.Request) error {
 	c.Subscribe(RoomEvent)
 	return nil
 }

@@ -13,8 +13,11 @@ message Balance {
     int64 Freeze = 6;
     int64 GoldProfit = 7;
     int64 DiamondProfit = 8;
-    int64 CreatedAt = 20;
-    int64 UpdatedAt = 21;
+    int64 CreatedAt = 9;
+    int64 UpdatedAt = 10;
+    int64 CumulativeRecharge    =11;
+    int64 CumulativeGift       =12;
+    int64 CumulativeConsumption=13;
 }
 
 message GetBalanceRequest {
@@ -22,7 +25,18 @@ message GetBalanceRequest {
     string Username = 2;
 }
 
+message BuyDiamondRequest {
+    int32 UserID = 1;
+    int32 Diamond = 2;
+    int64 OrderCode = 3;
+}
+
+message BuyDiamondReply {
+    int32 Result = 1;
+}
+
 service BillSrv {
     rpc GetBalance(GetBalanceRequest) returns (Balance) {}
     rpc GainBalance(Balance) returns (Balance) {}
+    rpc Recharge(BuyDiamondRequest) returns(BuyDiamondReply) {}
 }

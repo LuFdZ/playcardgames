@@ -57,7 +57,10 @@ func UpdateUser(tx *gorm.DB, u *mdu.User) (*mdu.User, error) {
 
 func PageUserList(tx *gorm.DB, page *mdpage.PageOption, u *mdu.User) (
 	[]*mdu.User, int64, error) {
-	var list []*mdu.User
+	var (
+		list []*mdu.User
+		etx  = tx.Model(u)
+	)
 	str := ""
 	if len(u.Username) > 0 {
 		if len(str) > 0 {
@@ -89,7 +92,12 @@ func PageUserList(tx *gorm.DB, page *mdpage.PageOption, u *mdu.User) (
 		}
 		str += fmt.Sprintf(" end_at < %s", page.EndAt.Unix())
 	}
-	rows, res := page.Find(tx.Model(u).Where(str), &list)
+
+	if u.UserID != 0 {
+		etx = etx.Where("user_id = ?", u.UserID)
+	}
+
+	rows, res := page.Find(etx.Where(str), &list)
 	if res.Error != nil {
 		return nil, 0, errors.Internal("page user list error", res.Error)
 	}

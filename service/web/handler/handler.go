@@ -6,6 +6,7 @@ import (
 	"playcards/service/web/clients"
 	"playcards/service/web/publish"
 	"playcards/service/web/request"
+	webroom "playcards/service/web/room"
 	"playcards/utils/auth"
 	"playcards/utils/log"
 
@@ -30,7 +31,7 @@ func NewWebHandler(c client.Client) *Web {
 		client: c,
 		broker: c.Options().Broker,
 	}
-
+	webroom.Init(w.broker)
 	return w
 }
 

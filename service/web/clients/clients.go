@@ -144,3 +144,25 @@ func CloseAll() {
 	log.Info("all connections are closed: %v", waitGroup)
 	waitGroup.Wait()
 }
+
+func AutoSubscribe(uid int32, tpc []string) {
+	for _, cs := range clients {
+		for c, _ := range cs {
+			if uid == c.UserID() {
+				c.Subscribe(tpc)
+				return
+			}
+		}
+	}
+}
+
+func AutoUnSubscribe(uid int32, tpc []string) {
+	for _, cs := range clients {
+		for c, _ := range cs {
+			if uid == c.UserID() {
+				c.Unsubscribe(tpc)
+				return
+			}
+		}
+	}
+}

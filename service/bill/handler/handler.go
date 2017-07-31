@@ -30,8 +30,8 @@ func (b *BillSrv) GetBalance(ctx context.Context,
 	return nil
 }
 
-func (b *BillSrv) GainBalance(ctx context.Context,
-	req *pbbill.Balance, rsp *pbbill.Balance) error {
+func (b *BillSrv) GainBalance(ctx context.Context, req *pbbill.Balance,
+	rsp *pbbill.Balance) error {
 	u := gctx.GetUser(ctx)
 	ub, err := bill.GainBalance(req.UserID, u.UserID,
 		&mbill.Balance{Gold: req.Gold, Diamond: req.Diamond})
@@ -39,5 +39,16 @@ func (b *BillSrv) GainBalance(ctx context.Context,
 		return err
 	}
 	*rsp = *ub.ToProto()
+	return nil
+}
+
+func (b *BillSrv) Recharge(ctx context.Context, req *pbbill.BuyDiamondRequest,
+	rsp *pbbill.BuyDiamondReply) error {
+	u := gctx.GetUser(ctx)
+	result, err := bill.Recharge(req.UserID, u.UserID, (int64)(req.Diamond), req.OrderCode)
+	if err != nil {
+		return err
+	}
+	rsp.Result = result
 	return nil
 }

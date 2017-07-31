@@ -37,14 +37,6 @@ message RoomEvent {
     string Data = 4;
 }
 
-message SetReadyRequest{
-    string Password = 1;    
-}
-
-message OutReadyRequest{
-    string Password = 1;    
-}
-
 message HeartbeatRequest {
         
 }
@@ -53,8 +45,8 @@ service RoomSrv {
     rpc CreateRoom(Room) returns (Room) {}
     rpc EnterRoom(Room) returns (Room) {}
     rpc LeaveRoom(Room) returns (Room) {}
-    rpc SetReady(SetReadyRequest) returns (RoomUser) {}
-    rpc OuttReady(OutReadyRequest) returns (RoomUser) {}
+    rpc SetReady(Room) returns (RoomUser) {}
+    rpc OuttReady(Room) returns (RoomUser) {}
     rpc Heartbeat(HeartbeatRequest) returns (HeartbeatRequest) {}
 }
 

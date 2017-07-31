@@ -7,6 +7,8 @@ import (
 	pbr "playcards/proto/room"
 	utilproto "playcards/utils/proto"
 	"time"
+
+	"github.com/jinzhu/gorm"
 )
 
 type Room struct {
@@ -62,13 +64,15 @@ func (r *RoomUser) ToProto() *pbr.RoomUser {
 	}
 }
 
-func (r *Room) BeforeUpdate() error {
+func (r *Room) BeforeUpdate(scope *gorm.Scope) error {
 	r.MarshalUsers()
+	scope.SetColumn("user_list", r.UserList)
 	return nil
 }
 
-func (r *Room) BeforeCreate() error {
+func (r *Room) BeforeCreate(scope *gorm.Scope) error {
 	r.MarshalUsers()
+	scope.SetColumn("user_list", r.UserList)
 	return nil
 }
 
@@ -87,7 +91,6 @@ func (r *Room) UnmarshalUsers() error {
 	if err := json.Unmarshal([]byte(r.UserList), &out); err != nil {
 		return err
 	}
-
 	r.Users = out
 	return nil
 }

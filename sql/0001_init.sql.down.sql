@@ -7,3 +7,5 @@ DROP TABLE IF EXISTS `designations`;
 DROP TABLE IF EXISTS `configs`;
 DROP TABLE IF EXISTS `activity_configs`;
 DROP TABLE IF EXISTS `rooms`;
+DROP TABLE IF EXISTS `thirteen`;
+DROP TABLE IF EXISTS `thirteen_user_log`;
