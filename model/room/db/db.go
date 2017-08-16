@@ -47,7 +47,7 @@ func GetRoomsByStatusAndGameType(tx *gorm.DB, status int32,
 	var (
 		out []*mdr.Room
 	)
-	if err := tx.Where("status = ? and GameType = ?", status, GameType).
+	if err := tx.Where("status = ? and game_type = ?", status, GameType).
 		Order("created_at").Find(&out).Error; err != nil {
 		return nil, errr.ErrRoomNotExisted
 	}

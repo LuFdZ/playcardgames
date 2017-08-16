@@ -12,6 +12,13 @@ import (
 )
 
 func CreateThirteen(tx *gorm.DB, t *mdt.Thirteen) error {
+	now := gorm.NowFunc()
+	t.UpdatedAt = &now
+	// thirteen := &mdt.Thirteen{
+	// 	GameResults: t.GameResults,
+	// 	Status:      t.Status,
+	// 	UpdatedAt:   &now,
+	// }
 	if err := tx.Create(t).Error; err != nil {
 		return errors.Internal("create thirteen failed", err)
 	}
@@ -21,14 +28,14 @@ func CreateThirteen(tx *gorm.DB, t *mdt.Thirteen) error {
 func UpdateThirteen(tx *gorm.DB, t *mdt.Thirteen) (*mdt.Thirteen, error) {
 	now := gorm.NowFunc()
 	thirteen := &mdt.Thirteen{
-		UserList: t.UserList,
-		Status:   t.Status,
-		UpdateAt: &now,
+		GameResults: t.GameResults,
+		Status:      t.Status,
+		UpdatedAt:   &now,
 	}
 	if err := tx.Model(t).Updates(thirteen).Error; err != nil {
 		return nil, errors.Internal("update thirteen failed", err)
 	}
-	return r, nil
+	return thirteen, nil
 }
 
 func GetThirteensByStatus(tx *gorm.DB, status int32) ([]*mdt.Thirteen, error) {
@@ -42,11 +49,11 @@ func GetThirteensByStatus(tx *gorm.DB, status int32) ([]*mdt.Thirteen, error) {
 	return out, nil
 }
 
-func GetThitteenByID(tx *gorm.DB, tid int32) (*mdt.Thitreen, error) {
+func GetThitteenByID(tx *gorm.DB, gid int32) (*mdt.Thirteen, error) {
 	var (
 		out mdt.Thirteen
 	)
-	out.ThirteenID
+	out.GameID = gid
 	found, err := db.FoundRecord(tx.Find(&out).Error)
 	if err != nil {
 		return nil, errors.Internal("get thirteen failed", err)

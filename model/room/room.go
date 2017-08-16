@@ -1,6 +1,8 @@
 package room
 
 import (
+	"fmt"
+	"math/rand"
 	cacheroom "playcards/model/room/cache"
 	dbr "playcards/model/room/db"
 	enumroom "playcards/model/room/enum"
@@ -9,12 +11,21 @@ import (
 	mdu "playcards/model/user/mod"
 	"playcards/utils/db"
 	"playcards/utils/log"
+	"strconv"
 	"time"
 
 	"github.com/jinzhu/gorm"
 )
 
-func CreateRoom(pwd string, gtype int32, num int32, user *mdu.User) (*mdr.Room,
+func GenerateRangeNum(min, max int) string {
+	rand.Seed(time.Now().Unix())
+	randNum := rand.Intn(max - min)
+	randNum = randNum + min
+	return strconv.Itoa(randNum)
+}
+
+func CreateRoom(gtype int32, maxNum int32, roundNum int32, gparam string,
+	user *mdu.User) (*mdr.Room,
 	error) {
 	var err error
 	checkpwd := cacheroom.GetRoomPasswordByUserID(user.UserID)
@@ -22,25 +33,32 @@ func CreateRoom(pwd string, gtype int32, num int32, user *mdu.User) (*mdr.Room,
 		return nil, errors.ErrUserAlreadyInRoom
 	}
 
+	pwd := GenerateRangeNum(100000, 999999)
+	exist, err := cacheroom.CheckRoomExist(pwd)
+	for i := 0; exist && i < 3; i++ {
+		pwd = GenerateRangeNum(100000, 999999)
+		exist, err = cacheroom.CheckRoomExist(pwd)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	if exist {
+		return nil, errors.ErrRoomPwdExisted
+	}
+
 	roomUser := GetRoomUser(user, enumroom.UserUnready, 1,
 		enumroom.UserRoleMaster)
 	users := []*mdr.RoomUser{roomUser}
-
 	room := &mdr.Room{
-		Password:  pwd,
-		GameType:  gtype,
-		MaxNumber: num,
+		Password:    pwd,
+		GameType:    gtype,
+		MaxNumber:   maxNum,
+		RoundNumber: roundNum,
+		GameParam:   gparam,
 		//UserList:  fmt.Sprint(userID),
 		Status: enumroom.RoomStatusInit,
 		Users:  users,
-	}
-
-	exist, err := cacheroom.CheckRoomExist(pwd)
-	if err != nil {
-		return nil, err
-	}
-	if exist {
-		return nil, errors.ErrRoomPwdExisted
 	}
 
 	f := func(tx *gorm.DB) error {
@@ -192,7 +210,8 @@ func LeaveRoom(user *mdu.User) (*mdr.Room, error) {
 func GetReadyOrUnReady(pwd string, userID int32, readyStatus int32) (*mdr.
 	RoomUser, error) {
 	checkpwd := cacheroom.GetRoomPasswordByUserID(userID)
-	if len(pwd) == 0 && pwd != checkpwd {
+	//fmt.Printf("AAAAAAA: %d", checkpwd)
+	if len(checkpwd) == 0 || len(pwd) == 0 || pwd != checkpwd {
 		return nil, errors.ErrUserNotInRoom
 	}
 	room, err := cacheroom.GetRoom(pwd)
@@ -214,10 +233,12 @@ func GetReadyOrUnReady(pwd string, userID int32, readyStatus int32) (*mdr.
 			out = user
 
 		}
-		if allReady && user.Ready == enumroom.UserUnready {
+		fmt.Printf("BBBBBBBB: %s", user.Ready)
+		if allReady && user.Ready != enumroom.UserReady {
 			allReady = false
 		}
 	}
+	//fmt.Printf("CCCCCCC: %t|%d", allReady, num)
 	if allReady && num == room.MaxNumber {
 		room.Status = enumroom.RoomStatusAllReady
 	}

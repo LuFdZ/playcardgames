@@ -24,7 +24,9 @@ class Client(object):
             "Nickname": name,
             "Email": name + "@x.com",
             "Icon":"12345567",
-            "Sex":1
+            "Sex":1,
+            "OpenID":"123445",
+            "UnionID":"123445",
         }
 
     def Request(self, path, data):
@@ -316,11 +318,12 @@ class Client(object):
         })
         return ul
 
-    def CreateRoom(self,Password,GameType,maxNumber):
+    def CreateRoom(self,gameType,maxNumber,roundNumbrt,gameParam):
         ul = self.Request("/room/roomSrv/CreateRoom",{
-            "Password":Password,
+            "RoundNumbrt":roundNumbrt,
             "MaxNumber":maxNumber,
-            "GameType":GameType
+            "GameType":gameType,
+            "GameParam":gameParam
         })
         return ul
 
@@ -352,8 +355,34 @@ class Client(object):
 
 
     def Recharge(self,uid,diamond,orderCode):
-        self.Request("/bill/billSrv/Recharge",{
+        ul = self.Request("/bill/billSrv/Recharge",{
             "UserID":uid,
             "Diamond":diamond,
-            "OrderCode":orderCode
+            "OrderID":orderCode
         })
+        return ul
+
+    def GetToken(self,uid):
+        ul = self.Request("/user/UserSrv/GetToken",{
+            "UserID":uid
+        })
+        return ul
+
+    def CheckUser(self,UserID,Token):
+        ul = self.Request("/user/UserSrv/CheckUser",{
+            "UserID":UserID,
+            "Token":Token
+        })
+        return ul
+
+    def PageUserList(self):
+        ul = self.Request("/user/UserSrv/PageUserList",{
+            "OpenID":"asfafa",
+            "UnionID":"123445"
+        })
+        return ul
+
+    def Heartbreate(self):
+        ul = self.Request("/room/roomSrv/Heartbrat",{
+        })
+        return ul

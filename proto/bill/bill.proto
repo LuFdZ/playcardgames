@@ -2,8 +2,6 @@ syntax = "proto3";
 
 package bill;
 
-import "playcards/proto/page/page.proto";
-
 message Balance {
     int32 UserID = 1;
     int64 Amount = 2;
@@ -25,18 +23,19 @@ message GetBalanceRequest {
     string Username = 2;
 }
 
-message BuyDiamondRequest {
+message RechargeRequest {
     int32 UserID = 1;
     int32 Diamond = 2;
-    int64 OrderCode = 3;
+    string OrderID = 3;
 }
 
-message BuyDiamondReply {
+message RechargeReply {
     int32 Result = 1;
+    int32 Code = 2;
 }
 
 service BillSrv {
     rpc GetBalance(GetBalanceRequest) returns (Balance) {}
     rpc GainBalance(Balance) returns (Balance) {}
-    rpc Recharge(BuyDiamondRequest) returns(BuyDiamondReply) {}
+    rpc Recharge(RechargeRequest) returns(RechargeReply) {}
 }

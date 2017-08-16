@@ -81,16 +81,23 @@ func (us *UserSrv) UserInfo(ctx context.Context, req *pbu.UserInfoReq,
 
 func (u *UserSrv) PageUserList(ctx context.Context,
 	req *pbu.PageUserListRequest, rsp *pbu.PageUserListReply) error {
-
+	rsp.Result = 2
+	rsp.Code = 101
 	page := mdpage.PageOptionFromProto(req.Page)
 	l, rows, err := user.PageUserList(page, mdu.UserFromPageRequestProto(req))
 	if err != nil {
+		rsp.Code = 102
 		return err
 	}
 
 	err = utilpb.ProtoSlice(l, &rsp.List)
 	if err != nil {
+		rsp.Code = 103
 		return err
+	}
+	if len(rsp.List) > 0 {
+		rsp.Code = 0
+		rsp.Result = 1
 	}
 
 	rsp.Count = rows
@@ -103,6 +110,33 @@ func (us *UserSrv) UpdateUser(ctx context.Context, req *pbu.User,
 	_, err := user.UpdateUser(mdu.UserFromProto(req))
 	if err != nil {
 		return err
+	}
+	return nil
+}
+
+func (us *UserSrv) GetToken(ctx context.Context, req *pbu.GetTokenRequest,
+	rsp *pbu.GetTokenReply) error {
+	rsp.Result = 2
+	rsp.Code = 101
+	token, _ := cacheuser.GetUserByID(req.UserID)
+	if len(token) > 0 {
+		rsp.Result = 1
+		rsp.Code = 0
+		rsp.Token = token
+	}
+	return nil
+}
+
+func (us *UserSrv) CheckUser(ctx context.Context, req *pbu.CheckUserRequest,
+	rsp *pbu.CheckUserReply) error {
+	rsp.Result = 2
+	rsp.Code = 101
+	token, user := cacheuser.GetUserByID(req.UserID)
+	if user != nil || len(token) > 0 {
+		if token == req.Token {
+			rsp.Code = 0
+			rsp.Result = 1
+		}
 	}
 	return nil
 }

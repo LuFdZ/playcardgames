@@ -6,6 +6,7 @@ import (
 	mdbill "playcards/model/bill/mod"
 	"playcards/utils/db"
 	"playcards/utils/errors"
+	"strconv"
 
 	sq "github.com/Masterminds/squirrel"
 	"github.com/jinzhu/gorm"
@@ -24,7 +25,7 @@ func CreateBalance(tx *gorm.DB, uid int32, balance *mdbill.Balance) error {
 	}
 
 	err = InsertJournal(tx, uid, balance, enum.JournalTypeInitBalance,
-		int64(b.UserID), b.UserID)
+		strconv.Itoa(int(b.UserID)), b.UserID)
 	if err != nil {
 		return err
 	}
@@ -49,10 +50,10 @@ func GetLockUserBalance(tx *gorm.DB, uid int32) (*mdbill.UserBalance, error) {
 	return out, nil
 }
 
-func GetJournal(tx *gorm.DB, uid int32, systemcode int64) int32 {
+func GetJournal(tx *gorm.DB, uid int32, orderid string) int32 {
 	out := &mdbill.Journal{}
 	if found, _ := db.FoundRecord(tx.Where("user_id = ? and `foreign` = ? ",
-		uid, systemcode).Find(&out).Error); found {
+		uid, orderid).Find(&out).Error); found {
 		return 2
 	}
 	return 1
@@ -93,7 +94,7 @@ func Deposit(tx *gorm.DB, uid int32, amount int64, typ int32) error {
 	bal := &mdbill.Balance{
 		Amount: amount,
 	}
-	return InsertJournal(tx, b.UserID, bal, typ, int64(d.ID),
+	return InsertJournal(tx, b.UserID, bal, typ, string(d.ID),
 		enum.SystemOpUserID)
 }
 
@@ -102,7 +103,7 @@ func Deposit(tx *gorm.DB, uid int32, amount int64, typ int32) error {
 // JournalTypeDeposit -> Foreign deposit.id
 // JournalTypeMap -> Foreign map_profits.id
 func InsertJournal(tx *gorm.DB, uid int32, b *mdbill.Balance,
-	typ int32, fid int64, opuid int32) error {
+	typ int32, fid string, opuid int32) error {
 	now := gorm.NowFunc()
 
 	m := make(map[string]interface{})
@@ -117,17 +118,20 @@ func InsertJournal(tx *gorm.DB, uid int32, b *mdbill.Balance,
 	m["updated_at"] = now
 	m["op_user_id"] = opuid
 
-	usql := "amount = amount + ? , gold = gold + ? , " +
-		"diamond = diamond + ? , updated_at = ?"
-	uargs := []interface{}{
-		b.Amount,
-		b.Gold,
-		b.Diamond,
-		now,
-	}
+	// usql := "amount = amount + ? , gold = gold + ? , " +
+	// 	"diamond = diamond + ? , updated_at = ?"
+	// uargs := []interface{}{
+	// 	b.Amount,
+	// 	b.Gold,
+	// 	b.Diamond,
+	// 	now,
+	// }
+
+	// sql, args, _ := sq.Insert(enum.JournalTableName).SetMap(m).
+	// 	Suffix("ON DUPLICATE KEY UPDATE "+usql, uargs...).ToSql()
 
 	sql, args, _ := sq.Insert(enum.JournalTableName).SetMap(m).
-		Suffix("ON DUPLICATE KEY UPDATE "+usql, uargs...).ToSql()
+		ToSql()
 
 	if err := tx.Exec(sql, args...).Error; err != nil {
 		return errors.Internal("save journal failed", err)
@@ -137,7 +141,7 @@ func InsertJournal(tx *gorm.DB, uid int32, b *mdbill.Balance,
 }
 
 func GainBalance(tx *gorm.DB, uid int32, b *mdbill.Balance, typ int32,
-	fid int64, opuid int32) error {
+	fid string, opuid int32) error {
 	if b.Amount != 0 {
 		return errbill.ErrNotAllowAmount
 	}
@@ -160,7 +164,7 @@ func GainBalance(tx *gorm.DB, uid int32, b *mdbill.Balance, typ int32,
 
 	if b.Diamond > 0 {
 		ub.DiamondProfit += b.Diamond
-		ub.CumulativeRecharge += b.Diamond
+
 	}
 
 	if b.Diamond < 0 {
@@ -169,6 +173,9 @@ func GainBalance(tx *gorm.DB, uid int32, b *mdbill.Balance, typ int32,
 
 	if typ == enum.JournalTypeGive {
 		ub.CumulativeGift += b.Diamond
+	}
+	if typ == enum.JournalTypeRecharge {
+		ub.CumulativeRecharge += b.Diamond
 	}
 
 	if err = tx.Save(ub).Error; err != nil {

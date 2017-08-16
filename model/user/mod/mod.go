@@ -13,7 +13,7 @@ type User struct {
 	Password      string `reg:"required,min=6,max=32,excludesall= 	"`
 	Nickname      string `reg:"required,min=6,max=16,excludesall= 	"`
 	Mobile        string `reg:"omitempty,min=6,max=16,excludesall= 	"`
-	Email         string `reg:"required,min=6,max=30,email,excludesall= 	"`
+	Email         string `reg:"min=6,max=30,email,excludesall= 	"`
 	Avatar        string
 	Status        int32
 	Channel       string `reg:"omitempty,min=6,max=64,excludesall= 	"`
@@ -31,6 +31,8 @@ type User struct {
 	MobileOs      string
 	LastLoginIP   string
 	RegIP         string
+	OpenID        string
+	UnionID       string
 	RoomID        int32 `gorm:"-"` // Ignore this field
 }
 
@@ -70,6 +72,10 @@ func (u *User) ToProto() *pbu.User {
 		MobileOs:      u.MobileOs,
 		LastLoginIP:   u.LastLoginIP,
 		RegIP:         u.RegIP,
+		Icon:          u.Icon,
+		Sex:           u.Sex,
+		OpenID:        u.OpenID,
+		UnionID:       u.UnionID,
 	}
 }
 func (u *UserInfo) ToProto() *pbu.UserInfo {
@@ -88,6 +94,8 @@ func UserFromPageRequestProto(u *pbu.PageUserListRequest) *User {
 		Username: u.Username,
 		Nickname: u.Nickname,
 		Rights:   u.Rights,
+		OpenID:   u.OpenID,
+		UnionID:  u.UnionID,
 	}
 }
 
@@ -114,6 +122,10 @@ func UserFromProto(u *pbu.User) *User {
 		MobileOs:      u.MobileOs,
 		LastLoginIP:   u.LastLoginIP,
 		RegIP:         u.RegIP,
+		Icon:          u.Icon,
+		Sex:           u.Sex,
+		OpenID:        u.OpenID,
+		UnionID:       u.UnionID,
 	}
 }
 

@@ -5,6 +5,7 @@ import (
 	enumbill "playcards/model/bill/enum"
 	mdbill "playcards/model/bill/mod"
 	"playcards/utils/db"
+	"strconv"
 
 	"github.com/jinzhu/gorm"
 )
@@ -17,7 +18,7 @@ func GainBalance(uid int32, aid int32, balance *mdbill.Balance) (
 	*mdbill.UserBalance, error) {
 	f := func(tx *gorm.DB) error {
 		err := dbbill.GainBalance(tx, uid, balance, enumbill.JournalTypeDash,
-			int64(aid), enumbill.SystemOpUserID)
+			strconv.Itoa(int(aid)), enumbill.SystemOpUserID)
 		if err != nil {
 			return err
 		}
@@ -33,17 +34,16 @@ func GainBalance(uid int32, aid int32, balance *mdbill.Balance) (
 	return b, nil
 }
 
-func Recharge(uid int32, aid int32, diamond int64, systemcode int64,
-) (int32, error) {
-	exist := CheckBalanceIsDone(uid, systemcode)
+func Recharge(uid int32, aid int32, diamond int64, orderid string,
+	rechangeType int32) (int32, error) {
+	exist := CheckBalanceIsDone(uid, orderid)
 	if exist == enumbill.OrderExist {
 		return enumbill.OrderExist, nil
 	}
 	f := func(tx *gorm.DB) error {
 		balance := &mdbill.Balance{0, 0, diamond}
 		err := dbbill.GainBalance(tx, uid, balance,
-			enumbill.JournalTypeRecharge, systemcode,
-			aid)
+			rechangeType, orderid, aid)
 		if err != nil {
 			return err
 		}
@@ -52,11 +52,10 @@ func Recharge(uid int32, aid int32, diamond int64, systemcode int64,
 	if err := db.Transaction(f); err != nil {
 		return enumbill.OrderFail, err
 	}
-
 	return enumbill.OrderSuccess, nil
 }
 
-func CheckBalanceIsDone(uid int32, systemcode int64) int32 {
+func CheckBalanceIsDone(uid int32, orderid string) int32 {
 	//var result int32 = 0
 	// f := func(tx *gorm.DB) error {
 	// 	result = dbbill.GetJournal(tx, uid, systemcode)
@@ -69,5 +68,5 @@ func CheckBalanceIsDone(uid int32, systemcode int64) int32 {
 	// }
 	// return result
 
-	return dbbill.GetJournal(db.DB(), uid, systemcode)
+	return dbbill.GetJournal(db.DB(), uid, orderid)
 }

@@ -12,14 +12,16 @@ import (
 )
 
 type Room struct {
-	RoomID    int32  `gorm:"primary_key"`
-	Password  string `reg:"required,min=6,max=32,excludesall= 	"`
-	Status    int32
-	MaxNumber int32
-	UserList  string
-	GameType  int32
-	CreatedAt *time.Time
-	UpdatedAt *time.Time
+	RoomID      int32  `gorm:"primary_key"`
+	Password    string `reg:"required,min=6,max=32,excludesall= 	"`
+	Status      int32
+	MaxNumber   int32 `reg:"required,min=1,max=4,excludesall= 	"`
+	RoundNumber int32 `reg:"required,min=1,excludesall= 	"`
+	UserList    string
+	GameType    int32
+	GameParam   string `reg:"required,min=1,excludesall= 	"`
+	CreatedAt   *time.Time
+	UpdatedAt   *time.Time
 
 	Users []*RoomUser `gorm:"-"`
 }

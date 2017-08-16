@@ -36,10 +36,10 @@ func (z *RoomSrv) update(gt *gsync.GlobalTimer) {
 		log.Debug("room update loop... and has %d rooms")
 		//now := time.Now()
 
-		err := room.RoomAllReady()
-		if err != nil {
-			return err
-		}
+		//err := room.RoomAllReady()
+		// if err != nil {
+		// 	return err
+		// }
 		return nil
 	}
 	gt.Register(lock, time.Second*enum.LoopTime, f)
@@ -51,7 +51,8 @@ func (rs *RoomSrv) CreateRoom(ctx context.Context, req *pbr.Room,
 	if err != nil {
 		return err
 	}
-	r, err := room.CreateRoom(req.Password, req.GameType, req.MaxNumber, u)
+	r, err := room.CreateRoom(req.GameType, req.MaxNumber, req.RoundNumber,
+		req.GameParam, u)
 	if err != nil {
 		return err
 	}

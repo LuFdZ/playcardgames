@@ -97,6 +97,20 @@ func PageUserList(tx *gorm.DB, page *mdpage.PageOption, u *mdu.User) (
 		etx = etx.Where("user_id = ?", u.UserID)
 	}
 
+	if len(u.OpenID) > 0 {
+		if len(str) > 0 {
+			str += " and"
+		}
+		str += " open_id = '" + u.OpenID + "'"
+	}
+
+	if len(u.UnionID) > 0 {
+		if len(str) > 0 {
+			str += " and"
+		}
+		str += " union_id = '" + u.UnionID + "'"
+	}
+
 	rows, res := page.Find(etx.Where(str), &list)
 	if res.Error != nil {
 		return nil, 0, errors.Internal("page user list error", res.Error)

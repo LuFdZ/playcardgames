@@ -32,7 +32,7 @@ type Journal struct {
 	ID        int64 `gorm:"primary_key"`
 	UserID    int32
 	Type      int32
-	Foreign   int64
+	Foreign   string
 	OpUserID  int64
 	CreatedAt *time.Time
 	UpdatedAt *time.Time

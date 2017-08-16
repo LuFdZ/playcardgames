@@ -8,10 +8,12 @@ message Room {
     string Password = 2;
     repeated RoomUser UserList  =3;
     int32 MaxNumber  =4;
-    int32 Status    =5;
-    int32 GameType  =6;
-    int64 CreatedAt =7;
-    int64 UpdatedAt =8;
+    int32 RoundNumber  =5;
+    int32 Status    =6;
+    int32 GameType  =7;
+    string GameParam = 8;
+    int64 CreatedAt =9;
+    int64 UpdatedAt =10;
 }
 
 message RoomUser{

@@ -19,6 +19,8 @@ var FuncRights = map[string]int32{
 	"UserSrv.GetProperty":    auth.RightsPlayer | auth.RightsUserView,
 	"UserSrv.UserInfo":       auth.RightsUserView,
 	"UserSrv.PageUserList":   auth.RightsUserView,
+	"UserSrv.GetToken":       auth.RightsUserView,
+	"UserSrv.CheckUser":      auth.RightsUserView,
 	"UserSrv.UpdateUser":     auth.RightsUserEdit,
 	"UserSrv.UpdateProperty": auth.RightsUserEdit,
 }

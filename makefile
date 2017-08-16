@@ -16,6 +16,7 @@ all:  api-srv           \
       log-srv           \
       activity-srv      \
       room-srv      \
+      thirteen-srv      \
 
 dev:
 	-${GOGET} github.com/golang/lint
@@ -61,6 +62,7 @@ dep:
 	-${GOGET} github.com/rs/cors
 	-${GOGET} github.com/shopspring/decimal
 	-${GOGET} github.com/google/gops
+	-${GOGET} github.com/yuin/gopher-lua
 
 gen: dep
 	${PROTO_BUILD} ./proto/page/page.proto
@@ -72,6 +74,7 @@ gen: dep
 	${PROTO_BUILD} ./proto/activity/activity.proto
 	${PROTO_BUILD} ./proto/log/log.proto
 	${PROTO_BUILD} ./proto/room/room.proto
+	${PROTO_BUILD} ./proto/thirteen/thirteen.proto
 
 api-srv: gen
 	${BUILD} -o ./bin/api-srv service/api/main.go
@@ -96,6 +99,9 @@ log-srv: gen
 
 room-srv: gen
 	${BUILD} -o ./bin/room-srv service/room/main.go
+
+thirteen-srv: gen
+	${BUILD} -o ./bin/thirteen-srv service/thirteen/main.go
 
 db-reset-init:
 	${MIGRATE_CMD} goto 1

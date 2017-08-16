@@ -18,15 +18,18 @@ message User {
     int64 UpdatedAt = 11;
     int64 LastLoginAt = 12;
     int32 Rights = 13;
-    string Icon = 14;
-    int32 PlayTimes    = 15;
-    int32 InviteUserID = 16;
-    string MobileUuID   = 17;
-    string MobileModel   = 18;
-    string MobileNetWork= 19;
-    string MobileOs     = 20;
-    string LastLoginIP  = 21;
-    string RegIP        = 22;
+    int32 Sex = 14;
+    string Icon = 15;
+    int32 PlayTimes    = 16;
+    int32 InviteUserID = 17;
+    string MobileUuID   = 18;
+    string MobileModel   = 19;
+    string MobileNetWork= 20;
+    string MobileOs     = 21;
+    string LastLoginIP  = 22;
+    string RegIP        = 23;
+    string OpenID = 24;
+    string UnionID = 25;
 }
 
 message RegisterReply {
@@ -48,14 +51,16 @@ message PageUserListRequest {
     int32 UserID = 2;
     string Username = 3;
     string Nickname = 4;
-    int32 AgentID = 5;
     int32 Rights = 6;
-    int32 Type = 7;
+    string OpenID = 8;
+    string UnionID = 9;
 }
 
 message PageUserListReply {
-    repeated User List = 1;
-    int64 Count = 2;
+    int32 Result = 1;
+    int32 Code = 2;
+    repeated User List = 3;
+    int64 Count = 4;
 }
 
 message UserInfo{
@@ -66,6 +71,26 @@ message UserInfo{
     int32 Sex =5;
 }
 
+message GetTokenRequest{
+    int32 UserID = 1;
+}
+
+message GetTokenReply{
+    int32 Result = 1;
+    int32 Code = 2;
+    string Token = 3;
+}
+
+message CheckUserRequest{
+    int32 UserID = 1;
+    string Token = 2;
+}
+
+message CheckUserReply{
+    int32 Result = 1;
+    int32 Code = 2;
+}
+
 service UserSrv {
     rpc Register(User) returns (RegisterReply) {}
     rpc Login(User) returns (User) {}
@@ -73,4 +98,6 @@ service UserSrv {
     rpc PageUserList(PageUserListRequest) returns (PageUserListReply) {}
     rpc UpdateUser(User) returns (User) {}
     rpc AddUser(User) returns (RegisterReply) {}
+    rpc GetToken(GetTokenRequest) returns (GetTokenReply) {}
+    rpc CheckUser(CheckUserRequest) returns (CheckUserReply) {}
 }

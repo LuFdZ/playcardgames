@@ -11,3 +11,9 @@ const (
 	MsgRoomRoomJoin     = "RoomJoin"
 	MsgRoomRoomUnJoin   = "RoomUnJoin"
 )
+
+const (
+	MsgThireteenGameResult = "ThirteenGameResult"
+	MsgThireteenSurrender  = "ThirteenSurrender"
+	MsgThireteenGameReady  = "ThirteenGameReady"
+)

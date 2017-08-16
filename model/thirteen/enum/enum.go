@@ -12,3 +12,15 @@ const (
 const (
 	GameID = 1001
 )
+
+const (
+	GameStatusInit     = 1
+	GameStatusAllReady = 2
+	GameStatusStarted  = 3
+	GameStatusDone     = 4
+	GameStatusDestroy  = 5
+)
+
+const (
+	GameCost = 0.1
+)

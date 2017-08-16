@@ -3,6 +3,7 @@ package handler
 import (
 	"playcards/model/bill"
 	_ "playcards/model/bill"
+	enumbill "playcards/model/bill/enum"
 	mbill "playcards/model/bill/mod"
 	pbbill "playcards/proto/bill"
 	"playcards/utils/auth"
@@ -42,13 +43,22 @@ func (b *BillSrv) GainBalance(ctx context.Context, req *pbbill.Balance,
 	return nil
 }
 
-func (b *BillSrv) Recharge(ctx context.Context, req *pbbill.BuyDiamondRequest,
-	rsp *pbbill.BuyDiamondReply) error {
+func (b *BillSrv) Recharge(ctx context.Context, req *pbbill.RechargeRequest,
+	rsp *pbbill.RechargeReply) error {
+	rsp.Result = 2
+	rsp.Code = 101
 	u := gctx.GetUser(ctx)
-	result, err := bill.Recharge(req.UserID, u.UserID, (int64)(req.Diamond), req.OrderCode)
+	res, err := bill.Recharge(req.UserID, u.UserID, (int64)(req.Diamond),
+		req.OrderID, enumbill.JournalTypeRecharge)
 	if err != nil {
+		rsp.Code = 102
 		return err
 	}
-	rsp.Result = result
+	if res == 1 {
+		rsp.Code = 0
+		rsp.Result = 1
+	}
+
+	//rsp.Result = result
 	return nil
 }

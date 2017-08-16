@@ -1,15 +1,11 @@
 syntax = "proto3";
 
-import "playcards/proto/page/page.proto";
-
 package thirteen;
 
 message Card {
     int32 Type = 1;
-    int32 Value = 1;        
+    int32 Value = 2;        
 }
-
-message Ready {}
 
 message CardList {
     repeated Card List = 1;
@@ -34,13 +30,33 @@ message Settle {
     int32 Score = 5;
 }
 
+message GameReady {
+    int32 RoomID = 1;
+    int32 UserID = 2;
+}
 message GameResult {
     repeated Settle List = 1;
     GroupCardList GroupCards = 2;
     CardList NullUserCards = 3;
+    int32 RoomID = 4;
 }
 
+message Surrender {
+    int32 result = 1;  //0 不同意 1同意  
+}
+
+message SurrenderMessage{
+    int32 totalNumber = 1;//有效人数
+    int32 SurrenderNumber = 2;//赞成投降人数
+}
+
+message SubmitCards {
+    repeated CardList Head = 1;
+    repeated CardList Middle = 2;
+    repeated CardList Tail = 3;
+}
 
 service ThirteenSrv {
-    rpc Submit(CardList) returns (CardList) {}
+    rpc Submit(SubmitCards) returns (SubmitCards) {}
+    rpc SurrenderVote(Surrender) returns (Surrender) {}
 }

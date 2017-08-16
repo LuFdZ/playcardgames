@@ -16,6 +16,7 @@ var (
 	ActivityServiceName = "playcards.srv.activity"
 	LogServiceName      = "playcards.srv.log"
 	RoomServiceName     = "playcards.srv.room"
+	ThirteenServiceName = "playcards.srv.thirteen"
 )
 
 var (
