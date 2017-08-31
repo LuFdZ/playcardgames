@@ -8,12 +8,14 @@ const (
 	MsgRoomStatusChange = "RoomStatusChange"
 	MsgRoomReady        = "RoomReady"
 	MsgRoomUnReady      = "RoomUnReady"
-	MsgRoomRoomJoin     = "RoomJoin"
-	MsgRoomRoomUnJoin   = "RoomUnJoin"
+	MsgRoomJoin         = "RoomJoin"
+	MsgRoomUnJoin       = "RoomUnJoin"
+	MsgRoomResult       = "RoomResult"
 )
 
 const (
 	MsgThireteenGameResult = "ThirteenGameResult"
 	MsgThireteenSurrender  = "ThirteenSurrender"
 	MsgThireteenGameReady  = "ThirteenGameReady"
+	MsgThireteenGameStart  = "ThirteenGameStart"
 )

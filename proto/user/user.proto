@@ -30,6 +30,7 @@ message User {
     string RegIP        = 23;
     string OpenID = 24;
     string UnionID = 25;
+    int64 Diamond = 26;
 }
 
 message RegisterReply {

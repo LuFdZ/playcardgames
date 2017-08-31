@@ -61,6 +61,7 @@ func (us *UserSrv) Login(ctx context.Context, req *pbu.User,
 		return err
 	}
 	rsp.Token = token
+	rsp.User = u.ToProto()
 	log.Debug("login: %v", u)
 	room.AutoSubscribe(u.UserID)
 	return nil

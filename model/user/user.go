@@ -92,6 +92,8 @@ func Login(u *mdu.User) (*mdu.User, error) {
 		if err != nil {
 			return errors.Internal("login failed", err)
 		}
+		balance, _ := dbbill.GetUserBalance(tx, nu.UserID)
+		nu.Diamond = balance.Diamond
 
 		return nil
 	}

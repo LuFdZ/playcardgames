@@ -6,4 +6,5 @@ const (
 	TopicRoomUnReady      = "playcards.room.UnReady"
 	TopicRoomJoin         = "playcards.room.Join"
 	TopicRoomUnJoin       = "playcards.room.UnJoin"
+	TopicRoomResult       = "playcards.room.Result"
 )

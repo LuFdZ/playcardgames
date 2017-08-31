@@ -10,6 +10,8 @@ import (
 var ThirteenEvent = []string{
 	srvthirteen.TopicThirteenGameResult,
 	srvthirteen.TopicThirteenSurrender,
+	srvthirteen.TopicThirteenGameStart,
+	srvthirteen.TopicThirteenGameReady,
 }
 
 func SubscribeThirteenMessage(c *clients.Client, req *request.Request) error {

@@ -77,7 +77,8 @@ func SendTo(uid int32, topic, typ string, msg interface{}) error {
 }
 
 func SendRoomUsers(rid int32, topic, typ string, msg interface{}) error {
-	return SendWhereRoomUsers(rid, topic, typ, msg, func(c *Client) bool {
+	return SendWhere(topic, typ, msg, func(c *Client) bool {
+		//fmt.Printf("SendRoomUsers:%d|%d", rid, c.RoomID())
 		return c.RoomID() == rid
 	})
 }
@@ -91,6 +92,7 @@ func SendWhere(topic, typ string, msg interface{},
 		if f != nil && !f(c) {
 			continue
 		}
+		//fmt.Printf("SendWhere:%d|%d|%+v", c.UserID(), c.RoomID(), msg)
 		c.SendMessage(topic, typ, msg)
 	}
 
@@ -103,7 +105,7 @@ func SendWhereRoomUsers(rid int32, topic, typ string, msg interface{},
 	defer Done()
 
 	for c, _ := range cs {
-		if f != nil && !f(c) && c.user.RoomID == rid {
+		if f != nil && !f(c) && c.RoomID() == rid {
 			continue
 		}
 		c.SendMessage(topic, typ, msg)

@@ -35,10 +35,13 @@ func SubscribeAllRoomMessage(brk broker.Broker) error {
 		RoomUnReadyHandler,
 	)
 	subscribe.SrvSubscribe(brk, topic.Topic(srvroom.TopicRoomJoin),
-		RoomJoin,
+		RoomJoinHandler,
 	)
 	subscribe.SrvSubscribe(brk, topic.Topic(srvroom.TopicRoomUnJoin),
-		RoomUnJoin,
+		RoomUnJoinHandler,
+	)
+	subscribe.SrvSubscribe(brk, topic.Topic(srvroom.TopicRoomResult),
+		RoomResultHandler,
 	)
 	return nil
 }
@@ -59,32 +62,32 @@ func RoomStatusChangeHandler(p broker.Publication) error {
 	return nil
 }
 
-func RoomJoin(p broker.Publication) error {
+func RoomJoinHandler(p broker.Publication) error {
 	t := p.Topic()
 	msg := p.Message()
-	rs := &pbroom.Room{}
+	rs := &pbroom.RoomUser{}
 	err := proto.Unmarshal(msg.Body, rs)
 	if err != nil {
 		return err
 	}
-
-	err = clients.SendRoomUsers(rs.RoomID, t, enum.MsgRoomRoomJoin, rs)
+	//fmt.Printf("RoomJoin:%d", rs.RoomID)
+	err = clients.SendRoomUsers(rs.RoomID, t, enum.MsgRoomJoin, rs)
 	if err != nil {
 		return err
 	}
 	return nil
 }
 
-func RoomUnJoin(p broker.Publication) error {
+func RoomUnJoinHandler(p broker.Publication) error {
 	t := p.Topic()
 	msg := p.Message()
-	rs := &pbroom.Room{}
+	rs := &pbroom.RoomUser{}
 	err := proto.Unmarshal(msg.Body, rs)
 	if err != nil {
 		return err
 	}
 
-	err = clients.SendRoomUsers(rs.RoomID, t, enum.MsgRoomRoomUnJoin, rs)
+	err = clients.SendRoomUsers(rs.RoomID, t, enum.MsgRoomUnJoin, rs)
 	if err != nil {
 		return err
 	}
@@ -94,7 +97,7 @@ func RoomUnJoin(p broker.Publication) error {
 func RoomReadyHandler(p broker.Publication) error {
 	t := p.Topic()
 	msg := p.Message()
-	rs := &pbroom.Position{}
+	rs := &pbroom.RoomUser{}
 	err := proto.Unmarshal(msg.Body, rs)
 	if err != nil {
 		return err
@@ -110,13 +113,29 @@ func RoomReadyHandler(p broker.Publication) error {
 func RoomUnReadyHandler(p broker.Publication) error {
 	t := p.Topic()
 	msg := p.Message()
-	rs := &pbroom.Position{}
+	rs := &pbroom.RoomUser{}
 	err := proto.Unmarshal(msg.Body, rs)
 	if err != nil {
 		return err
 	}
 
 	err = clients.SendRoomUsers(rs.RoomID, t, enum.MsgRoomUnReady, rs)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func RoomResultHandler(p broker.Publication) error {
+	t := p.Topic()
+	msg := p.Message()
+	rs := &pbroom.RoomResults{}
+	err := proto.Unmarshal(msg.Body, rs)
+	if err != nil {
+		return err
+	}
+	//fmt.Printf("RoomResult:%+v", rs)
+	err = clients.SendRoomUsers(rs.RoomID, t, enum.MsgRoomResult, rs)
 	if err != nil {
 		return err
 	}

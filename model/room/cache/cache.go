@@ -26,7 +26,7 @@ func SetRoom(r *mdr.Room) error {
 			b, _ := json.Marshal(r)
 			tx.HSet(key, "password", r.Password)
 			tx.HSet(key, "roomid", r.RoomID)
-			tx.HSet(key, "room", b)
+			tx.HSet(key, "room", string(b))
 			return nil
 		})
 
@@ -62,16 +62,19 @@ func DeleteRoom(password string) error {
 	key := RoomHKey(password)
 
 	f := func(tx *redis.Tx) error {
-		orig, _ := tx.HGet(key, "password").Bytes()
+		//orig, _ := tx.HGet(key, "password").Bytes()
 
 		tx.Pipelined(func(p *redis.Pipeline) error {
 			room, err := GetRoom(password)
 			if err == nil && room != nil {
 				for _, user := range room.Users {
-					tx.HDel(key, string(user.UserID))
+					//tx.HDel(key, string(user.UserID))
+					userKey := UserHKey(user.UserID)
+					tx.Del(userKey)
 				}
 			}
-			tx.HDel(key, string(orig))
+			//tx.HDel(key, string(orig))
+			tx.Del(key)
 			return nil
 		})
 		return nil

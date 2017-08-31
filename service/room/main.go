@@ -14,12 +14,12 @@ import (
 )
 
 var FuncRights = map[string]int32{
+	"RoomSrv.Heartbeat":  auth.RightsNone,
 	"RoomSrv.CreateRoom": auth.RightsNone,
 	"RoomSrv.EnterRoom":  auth.RightsNone,
 	"RoomSrv.LeaveRoom":  auth.RightsNone,
 	"RoomSrv.SetReady":   auth.RightsNone,
-	"RoomSrv.OutReady":   auth.RightsNone,
-	"RoomSrv.Heartbeat":  auth.RightsNone,
+	//"RoomSrv.OutReady":   auth.RightsNone,
 }
 
 func main() {

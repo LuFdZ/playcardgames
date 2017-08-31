@@ -28,21 +28,22 @@ func CreateThirteen(tx *gorm.DB, t *mdt.Thirteen) error {
 func UpdateThirteen(tx *gorm.DB, t *mdt.Thirteen) (*mdt.Thirteen, error) {
 	now := gorm.NowFunc()
 	thirteen := &mdt.Thirteen{
-		GameResults: t.GameResults,
-		Status:      t.Status,
-		UpdatedAt:   &now,
+		UserSubmitCards: t.UserSubmitCards,
+		GameResults:     t.GameResults,
+		Status:          t.Status,
+		UpdatedAt:       &now,
 	}
 	if err := tx.Model(t).Updates(thirteen).Error; err != nil {
 		return nil, errors.Internal("update thirteen failed", err)
 	}
-	return thirteen, nil
+	return t, nil
 }
 
 func GetThirteensByStatus(tx *gorm.DB, status int32) ([]*mdt.Thirteen, error) {
 	var (
 		out []*mdt.Thirteen
 	)
-	if err := tx.Where("status = ?", status).Order("created_ed").
+	if err := tx.Where("status = ?", status).Order("created_at").
 		Find(&out).Error; err != nil {
 		return nil, errr.ErrRoomNotExisted
 	}

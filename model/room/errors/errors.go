@@ -11,4 +11,6 @@ var (
 	ErrGameHasBegin      = errors.Conflict(40007, "The game is already begining")
 	ErrNotReadyStatus    = errors.Conflict(40008, "Not in the ready state")
 	ErrRoomPwdExisted    = errors.Conflict(40009, "plase change password")
+	ErrNotEnoughDiamond  = errors.Conflict(40010, "diamond not enough")
+	ErrGameIsDone        = errors.Conflict(40011, "The game is done")
 )

@@ -1,5 +1,5 @@
 syntax = "proto3";
-import "playcards/proto/user/user.proto";
+
 
 package room;
 
@@ -9,11 +9,12 @@ message Room {
     repeated RoomUser UserList  =3;
     int32 MaxNumber  =4;
     int32 RoundNumber  =5;
-    int32 Status    =6;
-    int32 GameType  =7;
-    string GameParam = 8;
-    int64 CreatedAt =9;
-    int64 UpdatedAt =10;
+    int32 RoundNow  =6;
+    int32 Status    =7;
+    int32 GameType  =8;
+    string GameParam = 9;
+    int64 CreatedAt =10;
+    int64 UpdatedAt =11;
 }
 
 message RoomUser{
@@ -23,6 +24,9 @@ message RoomUser{
     string Icon =4;
     int32 Sex =5;
     int32 Role =6;
+    string Nickname = 7;
+    int32 RoomID = 8;
+    int32 Destroy = 9;
 }
 
 message Position {
@@ -39,6 +43,19 @@ message RoomEvent {
     string Data = 4;
 }
 
+message GameUserResult {
+    int32 UserID =1;
+    int32 Win    =2;
+    int32 Lost   =3;
+    int32 Tie    =4;
+    int32 Score  =5; 
+}
+
+message RoomResults {
+    int32 RoomID = 1;
+    repeated GameUserResult List = 2;
+}
+
 message HeartbeatRequest {
         
 }
@@ -46,9 +63,9 @@ message HeartbeatRequest {
 service RoomSrv {
     rpc CreateRoom(Room) returns (Room) {}
     rpc EnterRoom(Room) returns (Room) {}
-    rpc LeaveRoom(Room) returns (Room) {}
+    rpc LeaveRoom(Room) returns (RoomUser) {}
     rpc SetReady(Room) returns (RoomUser) {}
-    rpc OuttReady(Room) returns (RoomUser) {}
-    rpc Heartbeat(HeartbeatRequest) returns (HeartbeatRequest) {}
+    rpc OutReady(Room) returns (RoomUser) {}
+    rpc Heartbeat(Room) returns (Room) {}
 }
 

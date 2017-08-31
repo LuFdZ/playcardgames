@@ -2,11 +2,15 @@ package handler
 
 import (
 	"context"
+	"fmt"
 	"playcards/model/room/enum"
 	"playcards/model/thirteen"
+	mdt "playcards/model/thirteen/mod"
 	pbt "playcards/proto/thirteen"
+	"playcards/utils/auth"
 	"playcards/utils/log"
 	gsync "playcards/utils/sync"
+	"playcards/utils/topic"
 	"time"
 
 	"github.com/micro/go-micro/broker"
@@ -27,23 +31,55 @@ func NewHandler(s server.Server, gt *gsync.GlobalTimer) *ThirteenSrv {
 	return b
 }
 
-func (z *ThirteenSrv) update(gt *gsync.GlobalTimer) {
+func (ts *ThirteenSrv) update(gt *gsync.GlobalTimer) {
 	lock := "bcr.thirteen.update.lock"
 	f := func() error {
 		log.Debug("thirteen update loop... and has %d thirteens")
 		//now := time.Now()
-		thirteen.CreateThirteen()
+		newGames := thirteen.CreateThirteen()
+		//fmt.Printf("ThirteenUpdate:%v \n", newGames)
+		if newGames != nil {
+			for _, game := range newGames {
+				for _, groupCard := range game.Cards {
+					msg := groupCard.ToProto()
+					topic.Publish(ts.broker, msg, TopicThirteenGameStart)
+				}
+			}
+		}
+
+		results := thirteen.CleanGame()
+		//fmt.Printf("ThirteenUpdate:%v \n", newGames)
+		if results != nil {
+			for _, game := range results {
+				msg := game.ToProto()
+				topic.Publish(ts.broker, msg, TopicThirteenGameResult)
+			}
+		}
 		return nil
 	}
 	gt.Register(lock, time.Second*enum.LoopTime, f)
 }
 
-func (z *ThirteenSrv) Submit(ctx context.Context, req *pbt.SubmitCards,
-	rsp *pbt.SubmitCards) error {
+func (ts *ThirteenSrv) SubmitCard(ctx context.Context, req *pbt.SubmitCard,
+	rsp *pbt.SubmitCard) error {
+	u, err := auth.GetUser(ctx)
+	if err != nil {
+		return err
+	}
+	rid, err := thirteen.SubmitCard(u.UserID, mdt.SubmitCardFromProto(req))
+	if err != nil {
+		return err
+	}
+	fmt.Printf("SubmitCardSrv:%v \n", rid)
+	msg := &pbt.GameReady{
+		RoomID: rid,
+		UserID: u.UserID,
+	}
+	topic.Publish(ts.broker, msg, TopicThirteenGameReady)
 	return nil
 }
 
-func (z *ThirteenSrv) SurrenderVote(ctx context.Context, req *pbt.Surrender,
+func (ts *ThirteenSrv) SurrenderVote(ctx context.Context, req *pbt.Surrender,
 	rsp *pbt.Surrender) error {
 	return nil
 }

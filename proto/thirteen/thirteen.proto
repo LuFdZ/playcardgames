@@ -4,30 +4,22 @@ package thirteen;
 
 message Card {
     int32 Type = 1;
-    int32 Value = 2;        
-}
-
-message CardList {
-    repeated Card List = 1;
+    int32 Value = 2;
 }
 
 message GroupCard {
     int32 UserID = 1;
     int32 Type = 2;
     int32 Weight = 3;    //权重
-    CardList Cards = 4;
-}
-
-message GroupCardList {
-    repeated GroupCard List = 1;
+    repeated string CardList = 4;
 }
 
 message Settle {
     int32 UserID = 1;
-    int32 ScoreHead = 2;
-    int32 ScoreMiddle = 3;
-    int32 ScoreTail = 4;
-    int32 Score = 5;
+    int32 ScoreHead = 3;
+    int32 ScoreMiddle = 4;
+    int32 ScoreTail = 5;
+    int32 Score = 8;
 }
 
 message GameReady {
@@ -35,10 +27,16 @@ message GameReady {
     int32 UserID = 2;
 }
 message GameResult {
-    repeated Settle List = 1;
-    GroupCardList GroupCards = 2;
-    CardList NullUserCards = 3;
-    int32 RoomID = 4;
+    int32 UserID = 1;
+    repeated Settle SettleList = 2;
+    SubmitCard CardsList = 3;
+    string CardType = 4;
+}
+
+message GameResultList {
+    int32 RoomID = 1;
+    repeated GameResult Results= 2;
+     
 }
 
 message Surrender {
@@ -46,17 +44,18 @@ message Surrender {
 }
 
 message SurrenderMessage{
-    int32 totalNumber = 1;//有效人数
-    int32 SurrenderNumber = 2;//赞成投降人数
+    int32 RoomID = 1;
+    int32 totalNumber = 2;//有效人数
+    int32 SurrenderNumber = 3;//赞成投降人数
 }
 
-message SubmitCards {
-    repeated CardList Head = 1;
-    repeated CardList Middle = 2;
-    repeated CardList Tail = 3;
+message SubmitCard {
+    repeated string Head = 1;
+    repeated string Middle = 2;
+    repeated string Tail = 3;
 }
 
 service ThirteenSrv {
-    rpc Submit(SubmitCards) returns (SubmitCards) {}
+    rpc Submit(SubmitCard) returns (SubmitCard) {}
     rpc SurrenderVote(Surrender) returns (Surrender) {}
 }

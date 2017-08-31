@@ -14,7 +14,7 @@ import (
 )
 
 var FuncRights = map[string]int32{
-	"ThirteenSrv.Submit":        auth.RightsNone,
+	"ThirteenSrv.SubmitCard":    auth.RightsNone,
 	"ThirteenSrv.SurrenderVote": auth.RightsNone,
 }
 

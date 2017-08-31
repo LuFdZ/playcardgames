@@ -17,8 +17,9 @@ const (
 	RoomStatusInit     = 1
 	RoomStatusAllReady = 2
 	RoomStatusStarted  = 3
-	RoomStatusDone     = 4
-	RoomStatusDestroy  = 5
+	RoomStatusReInit   = 4
+	RoomStatusDone     = 5
+	RoomStatusDestroy  = 6
 )
 
 const (
@@ -29,4 +30,8 @@ const (
 const (
 	UserUnready = 0
 	UserReady   = 1
+)
+
+const (
+	ThirteenGameCost = 1
 )

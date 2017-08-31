@@ -61,7 +61,6 @@ func CheckBalanceIsDone(uid int32, orderid string) int32 {
 	// 	result = dbbill.GetJournal(tx, uid, systemcode)
 	// 	return nil
 	// }
-
 	// if err := db.Transaction(f); err != nil {
 	// 	log.Err("get Journal error!%v", err)
 	// 	return enumbill.OrderExist

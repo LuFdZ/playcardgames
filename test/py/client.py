@@ -318,9 +318,15 @@ class Client(object):
         })
         return ul
 
-    def CreateRoom(self,gameType,maxNumber,roundNumbrt,gameParam):
+    def Heartbeat(self):
+        ul = self.Request("/room/roomSrv/Heartbeat",{
+
+        })
+        return ul
+
+    def CreateRoom(self,gameType,maxNumber,roundNumber,gameParam):
         ul = self.Request("/room/roomSrv/CreateRoom",{
-            "RoundNumbrt":roundNumbrt,
+            "RoundNumber":roundNumber,
             "MaxNumber":maxNumber,
             "GameType":gameType,
             "GameParam":gameParam
@@ -350,8 +356,11 @@ class Client(object):
         })
         return ul
 
-    def SubscribeRoom(self):
-        self.StreamSend("SubscribeRoomMessage",{})
+    def SubscribeRoom(self,Password):
+        self.StreamSend("SubscribeRoomMessage",Password)
+
+    def SubscribeThirteen(self):
+        self.StreamSend("SubscribeThirteenMessage",{})
 
 
     def Recharge(self,uid,diamond,orderCode):
@@ -382,7 +391,10 @@ class Client(object):
         })
         return ul
 
-    def Heartbreate(self):
-        ul = self.Request("/room/roomSrv/Heartbrat",{
+    def SubmitCard(self):
+        ul = self.Request("/thirteen/thirteenSrv/SubmitCard",{
+            "Head":["1_1","1_2","1_3"],
+            "Middle":["2_1","2_2","2_3","2_4","2_5"],
+            "Tail":["3_1","3_2","3_3","3_4","3_5"]
         })
         return ul

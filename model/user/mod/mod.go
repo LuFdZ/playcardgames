@@ -34,6 +34,7 @@ type User struct {
 	OpenID        string
 	UnionID       string
 	RoomID        int32 `gorm:"-"` // Ignore this field
+	Diamond       int64 `gorm:"-"`
 }
 
 type UserInfo struct {
@@ -76,6 +77,7 @@ func (u *User) ToProto() *pbu.User {
 		Sex:           u.Sex,
 		OpenID:        u.OpenID,
 		UnionID:       u.UnionID,
+		Diamond:       u.Diamond,
 	}
 }
 func (u *UserInfo) ToProto() *pbu.UserInfo {

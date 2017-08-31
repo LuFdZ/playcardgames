@@ -23,6 +23,7 @@ func UpdateRoom(tx *gorm.DB, r *mdr.Room) (*mdr.Room, error) {
 	room := &mdr.Room{
 		Users:     r.Users,
 		Status:    r.Status,
+		RoundNow:  r.RoundNow,
 		UpdatedAt: &now,
 	}
 	if err := tx.Model(r).Updates(room).Error; err != nil {
@@ -79,4 +80,16 @@ func BatchUpdate(tx *gorm.DB, status int32, ids []int32) error {
 		return errors.Internal("set room finish failed", err)
 	}
 	return nil
+}
+
+func GetRoomsByStatusArrayAndGameType(tx *gorm.DB, status []int32,
+	GameType int32) ([]*mdr.Room, error) {
+	var (
+		out []*mdr.Room
+	)
+	if err := tx.Where("status in (?) and game_type = ?", status, GameType).
+		Order("created_at").Find(&out).Error; err != nil {
+		return nil, errr.ErrRoomNotExisted
+	}
+	return out, nil
 }

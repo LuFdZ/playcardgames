@@ -1,6 +1,9 @@
 package room
 
 import (
+	"encoding/json"
+	cacheroom "playcards/model/room/cache"
+	"playcards/model/room/errors"
 	srvroom "playcards/service/room/handler"
 	"playcards/service/web/clients"
 	"playcards/service/web/request"
@@ -13,9 +16,25 @@ var RoomEvent = []string{
 	srvroom.TopicRoomUnReady,
 	srvroom.TopicRoomJoin,
 	srvroom.TopicRoomUnJoin,
+	srvroom.TopicRoomResult,
 }
 
 func SubscribeRoomMessage(c *clients.Client, req *request.Request) error {
+	var pwd string
+	err := json.Unmarshal(req.Args, &pwd)
+	if err != nil {
+		return err
+	}
+	room, err := cacheroom.GetRoom(pwd)
+	if err != nil {
+		return err
+	}
+	if room == nil {
+		return errors.ErrRoomNotExisted
+	}
+
+	c.User().RoomID = room.RoomID
+	//fmt.Printf("SubscribeRoomMessage:%d", c.User().RoomID)
 	c.Subscribe(RoomEvent)
 	return nil
 }
@@ -28,6 +47,6 @@ func UnsubscribeRoomMessage(c *clients.Client, req *request.Request) error {
 func init() {
 	request.RegisterHandler("SubscribeRoomMessage", auth.RightsPlayer,
 		SubscribeRoomMessage)
-	request.RegisterHandler("UnsubscribeRoomMessage", auth.RightsPlayer,
+	request.RegisterHandler("UnSubscribeRoomMessage", auth.RightsPlayer,
 		UnsubscribeRoomMessage)
 }

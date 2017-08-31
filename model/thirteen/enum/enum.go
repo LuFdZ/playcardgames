@@ -20,7 +20,3 @@ const (
 	GameStatusDone     = 4
 	GameStatusDestroy  = 5
 )
-
-const (
-	GameCost = 0.1
-)
