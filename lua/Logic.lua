@@ -11,12 +11,12 @@ CardValueData = {"2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K", "A
 CardValue = {}
 
 function Logic:test1234(a, b)
-    return a + b
+    return (a + b)*b
 end
 
 function Logic:new()
     self = {}
-    math.randomseed(tostring(os.time()):reverse():sub(1, 6))
+    --math.randomseed(tostring(os.time()):reverse():sub(1, 6))
     setmetatable(self, Logic)
     --创建牌组型枚举
     GroupType = CreateEnumTable(GroupTypeName, -1)

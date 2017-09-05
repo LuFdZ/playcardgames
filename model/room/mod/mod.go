@@ -25,8 +25,19 @@ type Room struct {
 	CreatedAt      *time.Time
 	UpdatedAt      *time.Time
 
-	UserResults []*GameUserResult
-	Users       []*RoomUser `gorm:"-"`
+	UserResults []*GameUserResult `gorm:"-"`
+	Users       []*RoomUser       `gorm:"-"`
+	GiveupGame  GiveUpGameResult  `gorm:"-"`
+}
+
+type GiveUpGameResult struct {
+	RoomID   int32
+	Total    int32
+	Agree    int32
+	DisAgree int32
+	Wairting int32
+	Status   int32
+	Users    []int32
 }
 
 type RoomUser struct {
@@ -50,13 +61,28 @@ type GameUserResult struct {
 }
 
 type RoomResults struct {
-	RoomID int32
-	List   []*GameUserResult
+	RoomID      int32
+	RoundNumber int32
+	RoundNow    int32
+	Status      int32
+	List        []*GameUserResult
 }
 
 func (r *Room) String() string {
 	return fmt.Sprintf("[roomid: %d userlist: %s status: %d gametype: %d]",
 		r.RoomID, r.UserList, r.Status, r.GameType)
+}
+
+func (gur *GiveUpGameResult) ToProto() *pbr.GiveUpGameResult {
+	out := &pbr.GiveUpGameResult{
+		RoomID:   gur.RoomID,
+		Total:    gur.Total,
+		Agree:    gur.Agree,
+		DisAgree: gur.DisAgree,
+		Wairting: gur.Wairting,
+		Status:   gur.Status,
+	}
+	return out
 }
 
 func (r *Room) ToProto() *pbr.Room {
@@ -90,7 +116,10 @@ func (r *RoomUser) ToProto() *pbr.RoomUser {
 
 func (r *RoomResults) ToProto() *pbr.RoomResults {
 	out := &pbr.RoomResults{
-		RoomID: r.RoomID,
+		RoomID:      r.RoomID,
+		RoundNumber: r.RoundNumber,
+		RoundNow:    r.RoundNow,
+		Status:      r.Status,
 	}
 	utilproto.ProtoSlice(r.List, &out.List)
 	return out

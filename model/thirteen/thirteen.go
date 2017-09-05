@@ -1,6 +1,7 @@
 package thirteen
 
 import (
+	"fmt"
 	dbbill "playcards/model/bill/db"
 	enumbill "playcards/model/bill/enum"
 	mdbill "playcards/model/bill/mod"
@@ -185,7 +186,7 @@ func CreateThirteen() []*mdt.Thirteen {
 			// 	role = room.Users[i].Role
 			// }
 
-			if room.RoundNow == 0 {
+			if room.RoundNow == 1 {
 				userResult := &mdr.GameUserResult{
 					UserID: user.UserID,
 					Win:    0,
@@ -246,12 +247,14 @@ func CreateThirteen() []*mdt.Thirteen {
 		}
 
 		f := func(tx *gorm.DB) error {
-			if room.RoundNow == 0 {
+			if room.RoundNow == 1 {
 				err := dbbill.GainBalance(tx, room.Users[0].UserID,
 					&mdbill.Balance{0, 0,
 						-int64(room.RoundNumber * enumr.ThirteenGameCost / 10)}, //enumt.GameCost
 					enumbill.JournalTypeRoom,
-					strconv.Itoa(int(room.GameType))+strconv.Itoa(int(room.RoomID)),
+					strconv.Itoa(int(room.GameType))+
+						room.Password+
+						strconv.Itoa(int(room.RoomID)),
 					room.Users[0].UserID)
 
 				if err != nil {
@@ -286,6 +289,7 @@ func CreateThirteen() []*mdt.Thirteen {
 			continue
 		}
 		err = cacheroom.SetRoom(room)
+		fmt.Printf("GameUserResult : %+v\n", room.UserResults)
 		if err != nil {
 			log.Err("room create set redis failed,%v | %v", room, err)
 			continue
@@ -309,6 +313,9 @@ func SubmitCard(uid int32, submitCard *mdt.SubmitCard) (int32, error) {
 	}
 
 	if room.Status > enumr.RoomStatusStarted {
+		if room.Status == enumr.RoomStatusWairtGiveUp {
+			return 0, errors.ErrInGiveUp
+		}
 		return 0, errors.ErrGameIsDone
 	}
 

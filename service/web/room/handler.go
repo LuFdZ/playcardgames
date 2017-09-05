@@ -17,6 +17,9 @@ var RoomEvent = []string{
 	srvroom.TopicRoomJoin,
 	srvroom.TopicRoomUnJoin,
 	srvroom.TopicRoomResult,
+	srvroom.TopicRoomGiveup,
+	srvroom.TopicRoomShock,
+	srvroom.TopicRoomDropped,
 }
 
 func SubscribeRoomMessage(c *clients.Client, req *request.Request) error {

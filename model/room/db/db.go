@@ -93,3 +93,8 @@ func GetRoomsByStatusArrayAndGameType(tx *gorm.DB, status []int32,
 	}
 	return out, nil
 }
+
+func DeleteAll(tx *gorm.DB) error {
+	tx.Where(" 1=1 ").Delete(mdr.Room{})
+	return nil
+}

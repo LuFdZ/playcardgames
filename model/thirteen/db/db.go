@@ -87,3 +87,8 @@ func BatchCreate(tx *gorm.DB, status int32, ids *[]int32) error {
 	}
 	return nil
 }
+
+func DeleteAll(tx *gorm.DB) error {
+	tx.Where(" 1=1 ").Delete(mdt.Thirteen{})
+	return nil
+}

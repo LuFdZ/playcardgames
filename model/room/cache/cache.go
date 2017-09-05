@@ -6,6 +6,7 @@ import (
 	mdr "playcards/model/room/mod"
 	"playcards/utils/cache"
 	"playcards/utils/errors"
+	"strconv"
 
 	"gopkg.in/redis.v5"
 )
@@ -63,14 +64,16 @@ func DeleteRoom(password string) error {
 
 	f := func(tx *redis.Tx) error {
 		//orig, _ := tx.HGet(key, "password").Bytes()
-
 		tx.Pipelined(func(p *redis.Pipeline) error {
 			room, err := GetRoom(password)
 			if err == nil && room != nil {
 				for _, user := range room.Users {
 					//tx.HDel(key, string(user.UserID))
 					userKey := UserHKey(user.UserID)
-					tx.Del(userKey)
+					rid := cache.KV().HGet(userKey, "roomid").Val()
+					if rid == strconv.Itoa(int(room.RoomID)) {
+						tx.Del(userKey)
+					}
 				}
 			}
 			//tx.HDel(key, string(orig))
@@ -137,7 +140,6 @@ func DeleteRoomUser(rid int32, uid int32) error {
 
 	f := func(tx *redis.Tx) error {
 		tx.Pipelined(func(p *redis.Pipeline) error {
-
 			tx.Del(key)
 			return nil
 		})
@@ -155,4 +157,8 @@ func GetRoomPasswordByUserID(uid int32) string {
 	pwd := cache.KV().HGet(key, "password").Val()
 
 	return pwd
+}
+
+func FlushAll() {
+	cache.KV().FlushAll()
 }

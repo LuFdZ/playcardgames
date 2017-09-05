@@ -19,11 +19,10 @@ type Thirteen struct {
 	GameResults     string
 	CreatedAt       *time.Time
 	UpdatedAt       *time.Time
-
-	SubmitCards []*SubmitCard   `gorm:"-"`
-	Cards       []*GroupCard    `gorm:"-"`
-	GameLua     *lua.LState     `gorm:"-"`
-	Result      *GameResultList `gorm:"-"`
+	SubmitCards     []*SubmitCard   `gorm:"-"`
+	Cards           []*GroupCard    `gorm:"-"`
+	GameLua         *lua.LState     `gorm:"-"`
+	Result          *GameResultList `gorm:"-"`
 }
 
 type ThirteenUserLog struct {

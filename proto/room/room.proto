@@ -48,16 +48,43 @@ message GameUserResult {
     int32 Win    =2;
     int32 Lost   =3;
     int32 Tie    =4;
-    int32 Score  =5; 
+    int32 Score  =5;
 }
 
 message RoomResults {
     int32 RoomID = 1;
-    repeated GameUserResult List = 2;
+    int32 RoundNumber = 2;
+    int32 RoundNow = 3;
+    int32 Status = 4;
+    repeated GameUserResult List = 5;
+}
+
+message GiveUpGameRequest {
+    string Password = 1;
+    int32 AgreeOrNot = 2;
+}
+
+message GiveUpGameResult {
+    int32 Total = 1;
+    int32 Agree =2;
+    int32 DisAgree = 3;
+    int32 Wairting = 4;
+    int32 Status = 5;// 1投票进行中 2游戏继续 3游戏解散
+    int32 RoomID =6;
+}
+
+message Shock {
+    int32 RoomID = 1;
+    int32 UserIDFrom = 2;
+    int32 UserIDTo = 3;
+}
+
+message Dropped {
+    int32 UserID = 1;
 }
 
 message HeartbeatRequest {
-        
+    
 }
 
 service RoomSrv {
@@ -67,5 +94,8 @@ service RoomSrv {
     rpc SetReady(Room) returns (RoomUser) {}
     rpc OutReady(Room) returns (RoomUser) {}
     rpc Heartbeat(Room) returns (Room) {}
+    rpc TestClean(Room) returns (Room) {}
+    rpc GiveUpGame(GiveUpGameRequest) returns (GiveUpGameResult) {}
+    rpc Shock(RoomUser) returns (RoomUser) {}
 }
 

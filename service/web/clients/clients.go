@@ -2,6 +2,7 @@ package clients
 
 import (
 	"errors"
+	"fmt"
 	"playcards/utils/log"
 	"sync"
 )
@@ -92,6 +93,7 @@ func SendWhere(topic, typ string, msg interface{},
 		if f != nil && !f(c) {
 			continue
 		}
+		fmt.Printf(" SendWhereRoom:%d|%d|%s /n", c.UserID(), c.RoomID(), topic)
 		//fmt.Printf("SendWhere:%d|%d|%+v", c.UserID(), c.RoomID(), msg)
 		c.SendMessage(topic, typ, msg)
 	}
@@ -108,6 +110,7 @@ func SendWhereRoomUsers(rid int32, topic, typ string, msg interface{},
 		if f != nil && !f(c) && c.RoomID() == rid {
 			continue
 		}
+		fmt.Printf(" SendWhereRoom:%d|%d|%s /n", c.UserID(), c.RoomID(), topic)
 		c.SendMessage(topic, typ, msg)
 	}
 

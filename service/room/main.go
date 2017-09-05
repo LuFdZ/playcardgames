@@ -14,11 +14,13 @@ import (
 )
 
 var FuncRights = map[string]int32{
-	"RoomSrv.Heartbeat":  auth.RightsNone,
-	"RoomSrv.CreateRoom": auth.RightsNone,
-	"RoomSrv.EnterRoom":  auth.RightsNone,
-	"RoomSrv.LeaveRoom":  auth.RightsNone,
-	"RoomSrv.SetReady":   auth.RightsNone,
+	"RoomSrv.Heartbeat":  auth.RightsPlayer,
+	"RoomSrv.CreateRoom": auth.RightsPlayer,
+	"RoomSrv.EnterRoom":  auth.RightsPlayer,
+	"RoomSrv.LeaveRoom":  auth.RightsPlayer,
+	"RoomSrv.SetReady":   auth.RightsPlayer,
+	"RoomSrv.TestClean":  auth.RightsNone,
+	"RoomSrv.GiveUpGame": auth.RightsPlayer,
 	//"RoomSrv.OutReady":   auth.RightsNone,
 }
 

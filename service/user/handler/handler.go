@@ -80,7 +80,20 @@ func (us *UserSrv) UserInfo(ctx context.Context, req *pbu.UserInfoReq,
 	return nil
 }
 
-func (u *UserSrv) PageUserList(ctx context.Context,
+func (us *UserSrv) GetUser(ctx context.Context, req *pbu.User,
+	rsp *pbu.User) error {
+
+	_, err := auth.GetUser(ctx)
+	if err != nil {
+		return err
+	}
+
+	um, err := user.GetUser(mdu.UserFromProto(req))
+	*rsp = *um.ToProto()
+	return nil
+}
+
+func (us *UserSrv) PageUserList(ctx context.Context,
 	req *pbu.PageUserListRequest, rsp *pbu.PageUserListReply) error {
 	rsp.Result = 2
 	rsp.Code = 101

@@ -1,7 +1,6 @@
 package handler
 
 import (
-	"fmt"
 	"playcards/model/room"
 	enum "playcards/model/room/enum"
 	enumroom "playcards/model/room/enum"
@@ -40,14 +39,18 @@ func (rs *RoomSrv) update(gt *gsync.GlobalTimer) {
 		//now := time.Now()
 
 		rooms := room.ReInit()
+		//fmt.Printf("rooms update :%d", len(rooms))
 		for _, room := range rooms {
 
 			RoomResults := mdr.RoomResults{
-				RoomID: room.RoomID,
-				List:   room.UserResults,
+				RoomID:      room.RoomID,
+				RoundNumber: room.RoundNumber,
+				RoundNow:    room.RoundNow,
+				Status:      room.Status,
+				List:        room.UserResults,
 			}
 			msg := RoomResults.ToProto()
-			//fmt.Printf("UpdateRoomSrv:%v", msg)
+			//fmt.Printf("UpdateRoomSrv:%v", room.UserResults)
 			topic.Publish(rs.broker, msg, TopicRoomResult)
 		}
 		return nil
@@ -104,7 +107,7 @@ func (rs *RoomSrv) LeaveRoom(ctx context.Context, req *pbr.Room,
 	//*rsp = *r.ToProto()
 	msg := r.ToProto()
 	msg.RoomID = room.RoomID
-	fmt.Printf("SSSSSSS:%d", room.Status)
+
 	if room.Status == enumroom.RoomStatusDestroy {
 		msg.Destroy = 1
 	}
@@ -129,6 +132,42 @@ func (rs *RoomSrv) SetReady(ctx context.Context, req *pbr.Room,
 	return nil
 }
 
+func (rs *RoomSrv) GiveUpGame(ctx context.Context, req *pbr.GiveUpGameRequest,
+	rsp *pbr.GiveUpGameResult) error {
+	u, err := auth.GetUser(ctx)
+	if err != nil {
+		return err
+	}
+	result, err := room.GiveUpGame(req.Password, req.AgreeOrNot, u.UserID)
+	if err != nil {
+		return err
+	}
+	*rsp = *result.ToProto()
+	msg := rsp
+	topic.Publish(rs.broker, msg, TopicRoomGiveup)
+	return nil
+}
+
+func (rs *RoomSrv) Shock(ctx context.Context, req *pbr.RoomUser,
+	rsp *pbr.RoomUser) error {
+	u, err := auth.GetUser(ctx)
+	if err != nil {
+		return err
+	}
+
+	rid, err := room.Shock(u.UserID, req.UserID)
+	if err != nil {
+		return err
+	}
+	msg := &pbr.Shock{
+		RoomID:     rid,
+		UserIDFrom: u.UserID,
+		UserIDTo:   req.UserID,
+	}
+	topic.Publish(rs.broker, msg, TopicRoomShock)
+	return nil
+}
+
 // func (rs *RoomSrv) OutReady(ctx context.Context, req *pbr.Room,
 // 	rsp *pbr.RoomUser) error {
 // 	u, err := auth.GetUser(ctx)
@@ -147,11 +186,26 @@ func (rs *RoomSrv) SetReady(ctx context.Context, req *pbr.Room,
 
 func (rs *RoomSrv) Heartbeat(ctx context.Context,
 	req *pbr.Room, rsp *pbr.Room) error {
+
 	u, err := auth.GetUser(ctx)
 	if err != nil {
 		return err
 	}
 	err = room.Heartbeat(u.UserID)
+	if err != nil {
+		return err
+	}
+
+	errtest := room.LuaTest()
+	if errtest != nil {
+		return errtest
+	}
+
+	return nil
+}
+
+func (rs *RoomSrv) TestClean(ctx context.Context, req *pbr.Room, rsp *pbr.Room) error {
+	err := room.TestClean()
 	if err != nil {
 		return err
 	}

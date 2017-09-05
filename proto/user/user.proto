@@ -101,4 +101,5 @@ service UserSrv {
     rpc AddUser(User) returns (RegisterReply) {}
     rpc GetToken(GetTokenRequest) returns (GetTokenReply) {}
     rpc CheckUser(CheckUserRequest) returns (CheckUserReply) {}
+    rpc GetUser(User) returns (User) {}
 }

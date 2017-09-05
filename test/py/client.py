@@ -398,3 +398,15 @@ class Client(object):
             "Tail":["3_1","3_2","3_3","3_4","3_5"]
         })
         return ul
+
+    def TestClean(self):
+        ul = self.Request("/room/roomSrv/TestClean",{
+        })
+        return ul
+
+    def GiveUpGame(self,pwd,status):
+        ul = self.Request("/room/roomSrv/GiveUpGame",{
+            "Password": pwd,
+            "AgreeOrNot": status,
+        })
+        return ul

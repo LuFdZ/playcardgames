@@ -102,6 +102,10 @@ func Login(u *mdu.User) (*mdu.User, error) {
 	return nu, err
 }
 
+func GetUser(u *mdu.User) (*mdu.User, error) {
+	return dbu.GetUser(db.DB(), u)
+}
+
 func PageUserList(page *mdpage.PageOption, u *mdu.User) ([]*mdu.User, int64,
 	error) {
 	return dbu.PageUserList(db.DB(), page, u)

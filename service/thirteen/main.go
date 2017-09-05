@@ -14,8 +14,8 @@ import (
 )
 
 var FuncRights = map[string]int32{
-	"ThirteenSrv.SubmitCard":    auth.RightsNone,
-	"ThirteenSrv.SurrenderVote": auth.RightsNone,
+	"ThirteenSrv.SubmitCard":    auth.RightsPlayer,
+	"ThirteenSrv.SurrenderVote": auth.RightsPlayer,
 }
 
 func main() {

@@ -2,7 +2,6 @@ package handler
 
 import (
 	"context"
-	"fmt"
 	"playcards/model/room/enum"
 	"playcards/model/thirteen"
 	mdt "playcards/model/thirteen/mod"
@@ -70,7 +69,7 @@ func (ts *ThirteenSrv) SubmitCard(ctx context.Context, req *pbt.SubmitCard,
 	if err != nil {
 		return err
 	}
-	fmt.Printf("SubmitCardSrv:%v \n", rid)
+	//fmt.Printf("SubmitCardSrv:%v \n", rid)
 	msg := &pbt.GameReady{
 		RoomID: rid,
 		UserID: u.UserID,
