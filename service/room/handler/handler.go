@@ -1,6 +1,7 @@
 package handler
 
 import (
+	mdpage "playcards/model/page"
 	"playcards/model/room"
 	enum "playcards/model/room/enum"
 	enumroom "playcards/model/room/enum"
@@ -8,6 +9,7 @@ import (
 	pbr "playcards/proto/room"
 	"playcards/utils/auth"
 	"playcards/utils/log"
+	utilpb "playcards/utils/proto"
 	gsync "playcards/utils/sync"
 	"playcards/utils/topic"
 	"time"
@@ -24,12 +26,12 @@ type RoomSrv struct {
 }
 
 func NewHandler(s server.Server, gt *gsync.GlobalTimer) *RoomSrv {
-	b := &RoomSrv{
+	r := &RoomSrv{
 		server: s,
 		broker: s.Options().Broker,
 	}
-	b.update(gt)
-	return b
+	r.update(gt)
+	return r
 }
 
 func (rs *RoomSrv) update(gt *gsync.GlobalTimer) {
@@ -65,13 +67,33 @@ func (rs *RoomSrv) CreateRoom(ctx context.Context, req *pbr.Room,
 		return err
 	}
 
-	r, err := room.CreateRoom(req.GameType, req.MaxNumber, req.RoundNumber,
-		req.GameParam, u)
+	r, err := room.CreateRoom(req.RoomType, req.GameType, req.MaxNumber,
+		req.RoundNumber, req.GameParam, u, "")
 	if err != nil {
 		return err
 	}
 	//webroom.AutoSubscribe(u.UserID)
 	*rsp = *r.ToProto()
+	return nil
+}
+
+func (rs *RoomSrv) Renewal(ctx context.Context, req *pbr.Room,
+	rsp *pbr.Room) error {
+	u, err := auth.GetUser(ctx)
+	if err != nil {
+		return err
+	}
+	r, err := room.RenewalRoom(req.Password, u)
+	if err != nil {
+		return err
+	}
+	//webroom.AutoSubscribe(u.UserID)
+	*rsp = *r.ToProto()
+	msg := &pbr.RenewalRoomReady{
+		RoomID:   r.RoomID,
+		Password: r.Password,
+	}
+	topic.Publish(rs.broker, msg, TopicRoomRenewal)
 	return nil
 }
 
@@ -165,6 +187,54 @@ func (rs *RoomSrv) Shock(ctx context.Context, req *pbr.RoomUser,
 		UserIDTo:   req.UserID,
 	}
 	topic.Publish(rs.broker, msg, TopicRoomShock)
+	return nil
+}
+
+func (rs *RoomSrv) PageFeedbackList(ctx context.Context,
+	req *pbr.PageFeedbackListRequest, rsp *pbr.PageFeedbackListReply) error {
+	page := mdpage.PageOptionFromProto(req.Page)
+	l, rows, err := room.PageFeedbackList(page,
+		mdr.FeedbackFromProto(req.Feedback))
+	if err != nil {
+		return err
+	}
+
+	err = utilpb.ProtoSlice(l, &rsp.List)
+	if err != nil {
+		return err
+	}
+	rsp.Count = rows
+	return nil
+}
+
+func (rs *RoomSrv) CreateFeedback(ctx context.Context, req *pbr.Feedback,
+	rsp *pbr.Feedback) error {
+
+	_, err := auth.GetUser(ctx)
+	if err != nil {
+		return err
+	}
+	fb, err := room.CreateFeedback(mdr.FeedbackFromProto(req))
+	if err != nil {
+		return err
+	}
+	*rsp = *fb.ToProto()
+
+	return nil
+}
+
+func (rs *RoomSrv) RoomResultList(ctx context.Context, req *pbr.RoomUser,
+	rsp *pbr.RoomResultListReply) error {
+	u, err := auth.GetUser(ctx)
+	if err != nil {
+		return err
+	}
+
+	roomresult, err := room.RoomResultList(u.UserID)
+	if err != nil {
+		return err
+	}
+	*rsp = *roomresult
 	return nil
 }
 

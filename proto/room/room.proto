@@ -1,5 +1,5 @@
 syntax = "proto3";
-
+import "playcards/proto/page/page.proto";
 
 package room;
 
@@ -8,13 +8,16 @@ message Room {
     string Password = 2;
     repeated RoomUser UserList  =3;
     int32 MaxNumber  =4;
-    int32 RoundNumber  =5;
+    int32 RoundNumber =5;
     int32 RoundNow  =6;
     int32 Status    =7;
     int32 GameType  =8;
+        
     string GameParam = 9;
     int64 CreatedAt =10;
     int64 UpdatedAt =11;
+    int32 RoomType   = 12;
+    int32 PayerID = 13;
 }
 
 message RoomUser{
@@ -73,6 +76,11 @@ message GiveUpGameResult {
     int32 RoomID =6;
 }
 
+message RenewalRoomReady {
+    int32 RoomID = 1;
+    string Password = 2;
+}
+
 message Shock {
     int32 RoomID = 1;
     int32 UserIDFrom = 2;
@@ -87,6 +95,39 @@ message HeartbeatRequest {
     
 }
 
+message Renewal {
+    string Password = 2;
+}
+
+message PageFeedbackListRequest{
+    page.PageOption Page = 1;
+    Feedback Feedback = 2;
+}
+
+message PageFeedbackListReply {
+    int32 Result = 1;
+    repeated Feedback List = 2;
+    int64 Count = 3;
+}
+
+message Feedback {
+    int32  FeedbackID    =1; 
+    int32  UserID        =2;
+    string Channel       =3;
+    string Version       =4;
+    string Content       =5;
+    string MobileModel   =6;
+    string MobileNetWork =7;
+    string MobileOs      =8;
+    string LoginIP      =9;
+    int64 CreatedAt      =10;
+    int64 UpdatedAt      =11;
+}
+
+message RoomResultListReply {
+    repeated RoomResults List= 1;
+}
+
 service RoomSrv {
     rpc CreateRoom(Room) returns (Room) {}
     rpc EnterRoom(Room) returns (Room) {}
@@ -97,5 +138,10 @@ service RoomSrv {
     rpc TestClean(Room) returns (Room) {}
     rpc GiveUpGame(GiveUpGameRequest) returns (GiveUpGameResult) {}
     rpc Shock(RoomUser) returns (RoomUser) {}
+    rpc Renewal(Room) returns (Room) {}
+    rpc PageFeedbackList(PageFeedbackListRequest) returns (PageFeedbackListReply) {}
+    rpc RoomResultList(RoomUser) returns (RoomResultListReply) {}
 }
+
+
 

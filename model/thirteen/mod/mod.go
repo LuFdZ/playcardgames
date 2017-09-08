@@ -186,7 +186,15 @@ func (t *Thirteen) BeforeCreate(scope *gorm.Scope) error {
 }
 
 func (t *Thirteen) AfterFind() error {
-	return t.UnmarshalUserSubmitCards()
+	err := t.UnmarshalGameResults()
+	if err != nil {
+		return err
+	}
+	err = t.UnmarshalUserSubmitCards()
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 func (t *Thirteen) MarshaUserCards() error {
@@ -226,5 +234,17 @@ func (t *Thirteen) UnmarshalUserSubmitCards() error {
 		}
 	}
 	t.SubmitCards = out
+	return nil
+}
+
+func (t *Thirteen) UnmarshalGameResults() error {
+	if len(t.GameResults) == 0 {
+		return nil
+	}
+	var out GameResultList
+	if err := json.Unmarshal([]byte(t.GameResults), &out); err != nil {
+		return err
+	}
+	t.Result = &out
 	return nil
 }

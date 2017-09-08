@@ -19,4 +19,5 @@ const (
 	GameStatusStarted  = 3
 	GameStatusDone     = 4
 	GameStatusDestroy  = 5
+	GameStatusGiveUp   = 6
 )

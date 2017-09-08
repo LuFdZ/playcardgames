@@ -8,13 +8,26 @@ import (
 	pbbill "playcards/proto/bill"
 	"playcards/utils/auth"
 	gctx "playcards/utils/context"
+	"playcards/utils/topic"
+
+	"github.com/micro/go-micro/broker"
+	"github.com/micro/go-micro/server"
 
 	"golang.org/x/net/context"
 )
 
 type BillSrv struct {
+	server server.Server
+	broker broker.Broker
 }
 
+func NewHandler(s server.Server) *BillSrv {
+	b := &BillSrv{
+		server: s,
+		broker: s.Options().Broker,
+	}
+	return b
+}
 func (b *BillSrv) GetBalance(ctx context.Context,
 	req *pbbill.GetBalanceRequest, rsp *pbbill.Balance) error {
 	u := gctx.GetUser(ctx)
@@ -40,6 +53,13 @@ func (b *BillSrv) GainBalance(ctx context.Context, req *pbbill.Balance,
 		return err
 	}
 	*rsp = *ub.ToProto()
+	if req.UserID != u.UserID {
+		msg := &pbbill.BalanceChange{
+			UserID:  req.UserID,
+			Diamond: ub.Diamond,
+		}
+		topic.Publish(b.broker, msg, TopicBillChange)
+	}
 	return nil
 }
 
@@ -48,7 +68,7 @@ func (b *BillSrv) Recharge(ctx context.Context, req *pbbill.RechargeRequest,
 	rsp.Result = 2
 	rsp.Code = 101
 	u := gctx.GetUser(ctx)
-	res, err := bill.Recharge(req.UserID, u.UserID, (int64)(req.Diamond),
+	res, ub, err := bill.Recharge(req.UserID, u.UserID, req.Diamond,
 		req.OrderID, enumbill.JournalTypeRecharge)
 	if err != nil {
 		rsp.Code = 102
@@ -59,6 +79,13 @@ func (b *BillSrv) Recharge(ctx context.Context, req *pbbill.RechargeRequest,
 		rsp.Result = 1
 	}
 
+	if req.UserID != u.UserID {
+		msg := &pbbill.BalanceChange{
+			UserID:  req.UserID,
+			Diamond: ub.Diamond,
+		}
+		topic.Publish(b.broker, msg, TopicBillChange)
+	}
 	//rsp.Result = result
 	return nil
 }

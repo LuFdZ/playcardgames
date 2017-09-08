@@ -20,6 +20,7 @@ var RoomEvent = []string{
 	srvroom.TopicRoomGiveup,
 	srvroom.TopicRoomShock,
 	srvroom.TopicRoomDropped,
+	srvroom.TopicRoomRenewal,
 }
 
 func SubscribeRoomMessage(c *clients.Client, req *request.Request) error {

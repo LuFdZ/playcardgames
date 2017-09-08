@@ -9,10 +9,14 @@ const (
 	RightsBillEdit
 	RightsChatView
 	RightsChatEdit
-	RightsRegionEdit
-	RightsStoreEdit
+	RightsRoomView
+	RightsRoomEdit
+	RightsThirteenView
+	RightsThirteenEdit
+	RightsConfigView
 	RightsConfigEdit
-	RightsZodiacEdit
+	RightsNoticeView
+	RightsNoticeEdit
 	RightsActivityView
 	RightsActivityEdit
 )
@@ -21,20 +25,22 @@ const (
 	RightsUserAdmin     = RightsUserView | RightsUserEdit
 	RightsBillAdmin     = RightsBillView | RightsBillEdit
 	RightsGameAdmin     = RightsChatView | RightsChatEdit
-	RightsRegionAdmin   = RightsRegionEdit
-	RightsStoreAdmin    = RightsStoreEdit
-	RightsConfigAdmin   = RightsConfigEdit
-	RightsZodiacAdmin   = RightsZodiacEdit
+	RightsRoomAdmin     = RightsRoomView | RightsRoomEdit
+	RightsThirteenAdmin = RightsThirteenView | RightsThirteenEdit
+	RightsConfigAdmin   = RightsConfigView | RightsConfigEdit
+	RightsNoticeAdmin   = RightsNoticeView | RightsNoticeEdit
 	RightsActivityAdmin = RightsActivityView | RightsActivityEdit
-	RightsViewer        = RightsUserView | RightsChatView | RightsBillView | RightsActivityView
+	RightsViewer        = RightsUserView | RightsChatView | RightsBillView |
+		RightsActivityView | RightsRoomView | RightsThirteenView |
+		RightsNoticeView | RightsConfigView
 
 	RightsAdmin = RightsUserAdmin |
 		RightsGameAdmin |
 		RightsBillAdmin |
-		RightsRegionAdmin |
-		RightsStoreAdmin |
+		RightsRoomAdmin |
+		RightsThirteenAdmin |
 		RightsConfigAdmin |
-		RightsZodiacAdmin |
+		RightsNoticeAdmin |
 		RightsActivityAdmin |
 		RightsPlayer
 )

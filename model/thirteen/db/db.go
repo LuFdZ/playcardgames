@@ -2,12 +2,11 @@ package db
 
 import (
 	errr "playcards/model/room/errors"
-	"playcards/model/thirteen/enum"
+	enum "playcards/model/thirteen/enum"
 	mdt "playcards/model/thirteen/mod"
 	"playcards/utils/db"
 	"playcards/utils/errors"
 
-	"github.com/Masterminds/squirrel"
 	"github.com/jinzhu/gorm"
 )
 
@@ -66,29 +65,21 @@ func GetThitteenByID(tx *gorm.DB, gid int32) (*mdt.Thirteen, error) {
 	return &out, nil
 }
 
-func BatchUpdate(tx *gorm.DB, status int32, ids *[]int32) error {
-	sql, param, _ := squirrel.Update(enum.ThirteenTableName).
-		Set("status", status).
-		Where("id in (?)", ids).ToSql()
-	err := tx.Exec(sql, param...).Error
-	if err != nil {
-		return errors.Internal("set round finish failed", err)
+func GetThirteenByRoomID(tx *gorm.DB, rid int32) ([]*mdt.Thirteen, error) {
+	var out []*mdt.Thirteen
+	if err := tx.Where(" room_id = ? ", rid).
+		Order("created_at").Find(&out).Error; err != nil {
+		return nil, errors.Internal("get thirteen by room_id failed", err)
 	}
-	return nil
+
+	return out, nil
 }
 
-func BatchCreate(tx *gorm.DB, status int32, ids *[]int32) error {
-	sql, param, _ := squirrel.Update(enum.ThirteenTableName).
-		Set("status", status).
-		Where("id in (?)", ids).ToSql()
-	err := tx.Exec(sql, param...).Error
-	if err != nil {
-		return errors.Internal("set round finish failed", err)
+func GiveUpGameUpdate(tx *gorm.DB, gids []int32) error {
+	if err := tx.Table(enum.ThirteenTableName).Where(" game_id IN (?)", gids).
+		Updates(map[string]interface{}{"status": enum.GameStatusGiveUp}).
+		Error; err != nil {
+		return errors.Internal("get thirteen by room_id failed", err)
 	}
-	return nil
-}
-
-func DeleteAll(tx *gorm.DB) error {
-	tx.Where(" 1=1 ").Delete(mdt.Thirteen{})
 	return nil
 }

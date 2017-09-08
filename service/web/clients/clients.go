@@ -93,7 +93,9 @@ func SendWhere(topic, typ string, msg interface{},
 		if f != nil && !f(c) {
 			continue
 		}
-		fmt.Printf(" SendWhereRoom:%d|%d|%s /n", c.UserID(), c.RoomID(), topic)
+		if topic == "playcards.room.Ready" {
+			fmt.Printf(" SendWhereRoom:%d|%d|%s /n", c.UserID(), c.RoomID(), topic)
+		}
 		//fmt.Printf("SendWhere:%d|%d|%+v", c.UserID(), c.RoomID(), msg)
 		c.SendMessage(topic, typ, msg)
 	}

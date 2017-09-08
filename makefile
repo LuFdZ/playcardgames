@@ -17,6 +17,7 @@ all:  api-srv           \
       activity-srv      \
       room-srv      \
       thirteen-srv      \
+	notice-srv      \
 
 dev:
 	-${GOGET} github.com/golang/lint
@@ -75,6 +76,7 @@ gen: dep
 	${PROTO_BUILD} ./proto/log/log.proto
 	${PROTO_BUILD} ./proto/room/room.proto
 	${PROTO_BUILD} ./proto/thirteen/thirteen.proto
+	${PROTO_BUILD} ./proto/notice/notice.proto
 
 api-srv: gen
 	${BUILD} -o ./bin/api-srv service/api/main.go
@@ -102,6 +104,9 @@ room-srv: gen
 
 thirteen-srv: gen
 	${BUILD} -o ./bin/thirteen-srv service/thirteen/main.go
+
+notice-srv: gen
+	${BUILD} -o ./bin/notice-srv service/notice/main.go
 
 db-reset-init:
 	${MIGRATE_CMD} goto 1

@@ -1,7 +1,9 @@
 package db
 
 import (
+	mdpage "playcards/model/page"
 	"playcards/model/room/enum"
+	enumr "playcards/model/room/enum"
 	errr "playcards/model/room/errors"
 	mdr "playcards/model/room/mod"
 	"playcards/utils/db"
@@ -94,7 +96,89 @@ func GetRoomsByStatusArrayAndGameType(tx *gorm.DB, status []int32,
 	return out, nil
 }
 
-func DeleteAll(tx *gorm.DB) error {
-	tx.Where(" 1=1 ").Delete(mdr.Room{})
+func CreateFeedback(tx *gorm.DB, fb *mdr.Feedback) (*mdr.Feedback, error) {
+	if err := tx.Create(fb).Error; err != nil {
+		return nil, errors.Internal("create feed back failed", err)
+	}
+	return fb, nil
+}
+
+func PageFeedbackList(tx *gorm.DB, page *mdpage.PageOption,
+	fb *mdr.Feedback) ([]*mdr.Feedback, int64, error) {
+	var out []*mdr.Feedback
+	rows, rtx := page.Find(tx.Model(fb).Order("created_at desc").
+		Where(fb), &out)
+	if rtx.Error != nil {
+		return nil, 0, errors.Internal("page feed back failed", rtx.Error)
+	}
+	return out, rows, nil
+}
+
+func CreatePlayerRoom(tx *gorm.DB, r *mdr.PlayerRoom) error {
+	if err := tx.Create(r).Error; err != nil {
+		return errors.Internal("create player room failed", err)
+	}
 	return nil
+}
+
+func DeleteAll(tx *gorm.DB) error {
+	tx.Where(" game_type = 1001 ").Delete(mdr.Room{})
+	return nil
+}
+
+func GetRoomResultByUserId(tx *gorm.DB, uid int32) ([]*mdr.Room, error) {
+	var out []*mdr.Room
+	// sql, param, err := squirrel.
+	// 	Select(" r.room_id,status,game_user_result "). //
+	// 	From(enum.RoomTableName+" r ").
+	// 	LeftJoin(enum.PlayerRoomTableName+" pr on r.room_id = pr.room_id").
+	// 	Where("pr.user_id = ? ", uid).
+	// 	Limit(20).ToSql()
+
+	// if err != nil {
+	// 	return nil, errors.Internal("get player room list failed", err)
+	// }
+
+	// err = tx.Raw(sql, param...).Scan(&out).Error
+	// if err != nil {
+	// 	return nil, errors.Internal("get player list failed", err)
+	// }
+
+	sqlstr := " room_id in (select room_id from player_rooms where user_id = ?)"
+	if err := tx.Where(sqlstr, uid).
+		Order("created_at").Find(&out).Error; err != nil {
+		return nil, errr.ErrRoomNotExisted
+	}
+	return out, nil
+}
+
+func UpdateRoomPlayTimes(tx *gorm.DB, rid int32, gtype int32) error {
+	if err := tx.Model(&mdr.PlayerRoom{}).Where("room_id = ? and game_type = ? ",
+		rid, gtype).UpdateColumn("play_times", gorm.Expr("play_times + 1")).
+		Error; err != nil {
+		return errors.Internal("update player room play times failed", err)
+	}
+	return nil
+}
+
+func GetGiveUpRoomIDByGameType(tx *gorm.DB,
+	gtype int32) ([]int32, error) {
+	var (
+		out []int32
+	)
+	sql, param, err := squirrel.
+		Select(" room_id "). //
+		From(enum.RoomTableName+" r ").
+		Where(" status = ? and game_type = ? and created_at >curdate() ",
+			enumr.RoomStatusGiveUp, gtype).ToSql()
+
+	if err != nil {
+		return nil, errors.Internal("get room list failed", err)
+	}
+
+	err = tx.Raw(sql, param...).Scan(&out).Error
+	if err != nil {
+		return nil, errors.Internal("get list failed", err)
+	}
+	return out, nil
 }

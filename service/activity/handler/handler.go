@@ -45,3 +45,12 @@ func (*ActivitySrv) UpdateConfig(ctx context.Context, req *pba.ActivityConfig,
 	cfg.LastModifyUserID = u.UserID
 	return activity.UpdateActivityConfig(cfg)
 }
+
+func (*ActivitySrv) Invite(ctx context.Context, req *pba.InviteRequest,
+	rsp *pba.InviteReply) error {
+	u := gctx.GetUser(ctx)
+	cfg := mda.ActivityConfigFormProto(req)
+
+	cfg.LastModifyUserID = u.UserID
+	return activity.UpdateActivityConfig(cfg)
+}

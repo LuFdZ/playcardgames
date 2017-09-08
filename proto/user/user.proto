@@ -31,6 +31,7 @@ message User {
     string OpenID = 24;
     string UnionID = 25;
     int64 Diamond = 26;
+    int64 InviteNumber = 27;
 }
 
 message RegisterReply {
@@ -91,6 +92,8 @@ message CheckUserReply{
     int32 Result = 1;
     int32 Code = 2;
 }
+
+
 
 service UserSrv {
     rpc Register(User) returns (RegisterReply) {}

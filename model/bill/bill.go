@@ -35,10 +35,10 @@ func GainBalance(uid int32, aid int32, balance *mdbill.Balance) (
 }
 
 func Recharge(uid int32, aid int32, diamond int64, orderid string,
-	rechangeType int32) (int32, error) {
+	rechangeType int32) (int32, *mdbill.UserBalance, error) {
 	exist := CheckBalanceIsDone(uid, orderid)
 	if exist == enumbill.OrderExist {
-		return enumbill.OrderExist, nil
+		return enumbill.OrderExist, nil, nil
 	}
 	f := func(tx *gorm.DB) error {
 		balance := &mdbill.Balance{0, 0, diamond}
@@ -50,9 +50,13 @@ func Recharge(uid int32, aid int32, diamond int64, orderid string,
 		return nil
 	}
 	if err := db.Transaction(f); err != nil {
-		return enumbill.OrderFail, err
+		return enumbill.OrderFail, nil, err
 	}
-	return enumbill.OrderSuccess, nil
+	b, err := dbbill.GetUserBalance(db.DB(), uid)
+	if err != nil {
+		return 0, nil, err
+	}
+	return enumbill.OrderSuccess, b, nil
 }
 
 func CheckBalanceIsDone(uid int32, orderid string) int32 {

@@ -10,4 +10,5 @@ const (
 	TopicRoomGiveup       = "playcards.room.Giveup"
 	TopicRoomShock        = "playcards.room.Shock"
 	TopicRoomDropped      = "playcards.room.Dropped"
+	TopicRoomRenewal      = "playcards.room.Renewal"
 )

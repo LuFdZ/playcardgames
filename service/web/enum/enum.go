@@ -14,6 +14,7 @@ const (
 	MsgRoomGiveup       = "RoomGiveup"
 	MsgRoomShock        = "RoomShock"
 	MsgRoomDropped      = "RoomDropped"
+	MsgRoomRenewal      = "RoomRenewal"
 )
 
 const (
@@ -21,4 +22,8 @@ const (
 	MsgThireteenSurrender  = "ThirteenSurrender"
 	MsgThireteenGameReady  = "ThirteenGameReady"
 	MsgThireteenGameStart  = "ThirteenGameStart"
+)
+
+const (
+	MsgBillChange = "BillChange"
 )

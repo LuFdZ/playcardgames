@@ -15,8 +15,8 @@ CREATE TABLE `users` (
   `rights`        INT          NOT NULL DEFAULT '0',
   `sex`           INT          NOT NULL DEFAULT '0',
   `icon`          VARCHAR(128) DEFAULT NULL,
-  `play_times`    INT          NOT NULL DEFAULT '0',
   `invite_user_id`INT          NOT NULL DEFAULT '0',
+  `invite_number `INT          NOT NULL DEFAULT '0',
   `mobile_uu_id`   VARCHAR(30) DEFAULT NULL,
   `mobile_model`  VARCHAR(20)  DEFAULT NULL ,
   `mobile_net_work`VARCHAR(20) DEFAULT NULL ,
@@ -89,6 +89,8 @@ CREATE TABLE `configs` (
   `name`        VARCHAR(64)  NOT NULL,
   `description` VARCHAR(128) NOT NULL,
   `value`       VARCHAR(512) NOT NULL,
+  `status`      INT          NOT NULL,
+  `system`      VARCHAR(20) NOT NULL,
   `created_at`  DATETIME     NOT NULL,
   `updated_at`  DATETIME     NOT NULL,
   PRIMARY KEY (`id`),
@@ -120,12 +122,20 @@ CREATE TABLE `rooms` (
   `round_number`   INT          NOT NULL DEFAULT '0',
   `round_now`      INT          NOT NULL DEFAULT '0',
   `status`         INT          NOT NULL DEFAULT '0',
+  `room_type`      INT          NOT NULL DEFAULT '0',
+  `payer_id`       INT          NOT NULL DEFAULT '0',
   `game_type`      INT          NOT NULL DEFAULT '0',
   `game_param`     VARCHAR(255) NOT NULL DEFAULT '',
   `game_user_result`     VARCHAR(255) NOT NULL DEFAULT '',
   `created_at`     DATETIME     NOT NULL,
   `updated_at`     DATETIME     NOT NULL,
+  `pre_item_1`     VARCHAR(255) NOT NULL DEFAULT '',
+  `pre_item_2`     VARCHAR(255) NOT NULL DEFAULT '',
   PRIMARY KEY (`room_id`),
+  KEY `idx_status` (`status`),
+  KEY `idx_gtype` (`game_type`),
+  KEY `idx_rtype` (`room_type`),
+  KEY `idx_payer` (`payer_id`),
   KEY `idx_created`(`created_at`)
 )
   ENGINE = InnoDB
@@ -144,6 +154,7 @@ CREATE TABLE `thirteens` (
   `updated_at`        DATETIME     NOT NULL,
   PRIMARY KEY (`game_id`),
   KEY `idx_status` (`status`),
+  KEY `idx_room` (`room_id`),
   KEY `idx_created`(`created_at`)
 )
   ENGINE = InnoDB
@@ -161,6 +172,83 @@ CREATE TABLE `thirteen_user_logs` (
   `updated_at`      DATETIME     NOT NULL,
   PRIMARY KEY (`log_id`),
   KEY `idx_created`(`created_at`)
+)
+  ENGINE = InnoDB
+  AUTO_INCREMENT = 1
+  DEFAULT CHARSET = utf8;
+
+
+CREATE TABLE `notices` (
+  `notice_id`         INT           NOT NULL AUTO_INCREMENT,
+  `notice_type`       INT           NOT NULL DEFAULT '0',
+  `notice_content`    TEXT          ,
+  `channels`          VARCHAR(500)  NOT NULL DEFAULT '',
+  `versions`          VARCHAR(500)  NOT NULL DEFAULT '',
+  `status`            INT           NOT NULL DEFAULT '0',
+  `description`       VARCHAR(50)  NOT NULL DEFAULT '',
+  `param`             VARCHAR(255)  NOT NULL DEFAULT '',
+  `start_at`          DATETIME      NOT NULL,
+  `end_at`            DATETIME      NOT NULL,
+  `created_at`        DATETIME      NOT NULL,
+  `updated_at`        DATETIME      NOT NULL,
+  PRIMARY KEY (`notice_id`),
+  KEY `idx_status` (`status`),
+  KEY `idx_type` (`notice_type`),
+  KEY `idx_created`(`created_at`)
+)
+  ENGINE = InnoDB
+  AUTO_INCREMENT = 1
+  DEFAULT CHARSET = utf8;
+
+
+CREATE TABLE `feedbacks`(
+  `feedback_id`       INT           NOT NULL AUTO_INCREMENT,
+  `user_id`           INT           NOT NULL DEFAULT '0',
+  `channel`  VARCHAR(20)  DEFAULT NULL ,
+  `version`  VARCHAR(20)  DEFAULT NULL ,
+  `Content`  VARCHAR(500)  DEFAULT NULL ,
+  `mobile_model`      VARCHAR(20)   DEFAULT NULL ,
+  `mobile_net_work`   VARCHAR(20)   DEFAULT NULL ,
+  `mobile_os`         VARCHAR(20)   DEFAULT NULL ,
+  `login_ip`          VARCHAR(20)   DEFAULT NULL ,
+  `created_at`        DATETIME      NOT NULL,
+  `updated_at`        DATETIME      NOT NULL,
+  PRIMARY KEY (`feedback_id`),
+  KEY `idx_channel` (`channel`),
+  KEY `idx_version` (`version`)
+)
+  ENGINE = InnoDB
+  AUTO_INCREMENT = 1
+  DEFAULT CHARSET = utf8;
+
+
+CREATE TABLE `player_rooms`(
+  `log_id`            INT           NOT NULL AUTO_INCREMENT,
+  `user_id`           INT           NOT NULL DEFAULT '0',
+  `room_id`           INT           DEFAULT NULL DEFAULT '0',
+  `game_type`         INT           DEFAULT NULL DEFAULT '0',
+  `play_times`        INT           DEFAULT NULL DEFAULT '0',
+  `created_at`        DATETIME      NOT NULL,
+  `updated_at`        DATETIME      NOT NULL,
+  PRIMARY KEY (`log_id`),
+  KEY `idx_user`(`user_id`),
+  KEY `idx_room`(`room_id`),
+  KEY `idx_game`(`game_type`),
+  KEY `idx_created`(`created_at`),
+  UNIQUE KEY `unique_index` (`user_id`,`room_id`,game_type)
+)
+  ENGINE = InnoDB
+  AUTO_INCREMENT = 1
+  DEFAULT CHARSET = utf8;
+
+
+CREATE TABLE `player_shares`(
+  `user_id`           INT           NOT NULL DEFAULT '0',
+  `share_times`       INT     DEFAULT NULL DEFAULT '0',
+  `total_diamonds`    BIGINT  DEFAULT NULL DEFAULT '0',
+  `created_at`        DATETIME      NOT NULL,
+  `updated_at`        DATETIME      NOT NULL,
+  PRIMARY KEY (`user_id`)
 )
   ENGINE = InnoDB
   AUTO_INCREMENT = 1

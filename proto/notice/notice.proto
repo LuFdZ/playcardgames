@@ -1,0 +1,46 @@
+syntax = "proto3";
+import "playcards/proto/page/page.proto";
+
+package notice;
+
+message Notice {
+    int32 NoticeID = 1;
+    int32 NoticeType = 2;
+    string NoticeContent  =3;
+    string Channels = 4;
+    string Versions = 5;
+    int32 Status =6;
+    string Description = 7;
+    string Param  =8;
+    int64 StartAt =9;
+    int64 EndAt  =10;
+    int64 CreatedAt = 11;
+    int64 UpdatedAt = 12;
+}
+
+
+message NoticeList{
+    repeated Notice List = 1;
+}
+
+message PageNoticeListRequest{
+    page.PageOption Page = 1;
+    Notice Notice = 2;
+}
+
+message PageNoticeListReply {
+    int32 Result = 1;
+    repeated Notice List = 2;
+    int64 Count = 3;
+}
+
+service RoomSrv {
+    rpc GetNotice(Notice) returns (NoticeList) {}
+    rpc AllNotice(Notice) returns (NoticeList) {}
+    rpc CreateNotice(Notice) returns (Notice) {}
+    rpc UpdateNotice(Notice) returns (Notice) {}
+    rpc PageNoticeList(PageNoticeListRequest) returns (PageNoticeListReply) {}
+}
+
+
+

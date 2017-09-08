@@ -34,9 +34,8 @@ func (ts *ThirteenSrv) update(gt *gsync.GlobalTimer) {
 	lock := "bcr.thirteen.update.lock"
 	f := func() error {
 		log.Debug("thirteen update loop... and has %d thirteens")
-		//now := time.Now()
+
 		newGames := thirteen.CreateThirteen()
-		//fmt.Printf("ThirteenUpdate:%v \n", newGames)
 		if newGames != nil {
 			for _, game := range newGames {
 				for _, groupCard := range game.Cards {
@@ -46,13 +45,17 @@ func (ts *ThirteenSrv) update(gt *gsync.GlobalTimer) {
 			}
 		}
 
-		results := thirteen.CleanGame()
-		//fmt.Printf("ThirteenUpdate:%v \n", newGames)
-		if results != nil {
-			for _, game := range results {
+		cleanGames := thirteen.CleanGame()
+		if cleanGames != nil {
+			for _, game := range cleanGames {
 				msg := game.ToProto()
 				topic.Publish(ts.broker, msg, TopicThirteenGameResult)
 			}
+		}
+
+		err := thirteen.CleanGiveUpGame()
+		if err != nil {
+			log.Err("clean give up game loop err:%v", err)
 		}
 		return nil
 	}
@@ -78,7 +81,16 @@ func (ts *ThirteenSrv) SubmitCard(ctx context.Context, req *pbt.SubmitCard,
 	return nil
 }
 
-func (ts *ThirteenSrv) SurrenderVote(ctx context.Context, req *pbt.Surrender,
-	rsp *pbt.Surrender) error {
+func (ts *ThirteenSrv) GameResultList(ctx context.Context, req *pbt.GameResultListRequest,
+	rsp *pbt.GameResultListReply) error {
+	_, err := auth.GetUser(ctx)
+	if err != nil {
+		return err
+	}
+	results, err := thirteen.GameResultList(req.RoomID)
+	if err != nil {
+		return err
+	}
+	*rsp = *results
 	return nil
 }

@@ -25,13 +25,18 @@ message GetBalanceRequest {
 
 message RechargeRequest {
     int32 UserID = 1;
-    int32 Diamond = 2;
+    int64 Diamond = 2;
     string OrderID = 3;
 }
 
 message RechargeReply {
     int32 Result = 1;
     int32 Code = 2;
+}
+
+message BalanceChange{
+    int32 UserID = 1;
+    int64 Diamond = 2;
 }
 
 service BillSrv {

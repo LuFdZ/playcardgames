@@ -6,7 +6,7 @@ import (
 	mdr "playcards/model/room/mod"
 	"playcards/utils/cache"
 	"playcards/utils/errors"
-	"strconv"
+	//"strconv"
 
 	"gopkg.in/redis.v5"
 )
@@ -68,12 +68,12 @@ func DeleteRoom(password string) error {
 			room, err := GetRoom(password)
 			if err == nil && room != nil {
 				for _, user := range room.Users {
-					//tx.HDel(key, string(user.UserID))
-					userKey := UserHKey(user.UserID)
-					rid := cache.KV().HGet(userKey, "roomid").Val()
-					if rid == strconv.Itoa(int(room.RoomID)) {
-						tx.Del(userKey)
-					}
+					tx.HDel(key, string(user.UserID))
+					//userKey := UserHKey(user.UserID)
+					//rid := cache.KV().HGet(userKey, "roomid").Val()
+					//if rid == strconv.Itoa(int(room.RoomID)) {
+					//	tx.Del(userKey)
+					//}
 				}
 			}
 			//tx.HDel(key, string(orig))
@@ -135,9 +135,8 @@ func SetRoomUser(rid int32, password string, uid int32) error {
 	return nil
 }
 
-func DeleteRoomUser(rid int32, uid int32) error {
+func DeleteRoomUser(uid int32) error {
 	key := UserHKey(uid)
-
 	f := func(tx *redis.Tx) error {
 		tx.Pipelined(func(p *redis.Pipeline) error {
 			tx.Del(key)
@@ -148,6 +147,31 @@ func DeleteRoomUser(rid int32, uid int32) error {
 	err := cache.KV().Watch(f, key)
 	if err != nil {
 		return errors.Internal("del room user error", err)
+	}
+	return nil
+}
+
+func DeleteAllRoomUser(password string) error {
+	key := RoomHKey(password)
+
+	f := func(tx *redis.Tx) error {
+		//orig, _ := tx.HGet(key, "password").Bytes()
+		tx.Pipelined(func(p *redis.Pipeline) error {
+			room, err := GetRoom(password)
+			if err == nil && room != nil {
+				for _, user := range room.Users {
+					tx.HDel(key, string(user.UserID))
+				}
+			}
+			//tx.HDel(key, string(orig))
+			//tx.Del(key)
+			return nil
+		})
+		return nil
+	}
+	err := cache.KV().Watch(f, key)
+	if err != nil {
+		return errors.Internal("set room error", err)
 	}
 	return nil
 }

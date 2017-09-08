@@ -14,14 +14,17 @@ import (
 )
 
 var FuncRights = map[string]int32{
-	"RoomSrv.Heartbeat":  auth.RightsPlayer,
-	"RoomSrv.CreateRoom": auth.RightsPlayer,
-	"RoomSrv.EnterRoom":  auth.RightsPlayer,
-	"RoomSrv.LeaveRoom":  auth.RightsPlayer,
-	"RoomSrv.SetReady":   auth.RightsPlayer,
-	"RoomSrv.TestClean":  auth.RightsNone,
-	"RoomSrv.GiveUpGame": auth.RightsPlayer,
-	//"RoomSrv.OutReady":   auth.RightsNone,
+	"RoomSrv.Heartbeat":        auth.RightsPlayer,
+	"RoomSrv.CreateRoom":       auth.RightsPlayer,
+	"RoomSrv.EnterRoom":        auth.RightsPlayer,
+	"RoomSrv.LeaveRoom":        auth.RightsPlayer,
+	"RoomSrv.SetReady":         auth.RightsPlayer,
+	"RoomSrv.GiveUpGame":       auth.RightsPlayer,
+	"RoomSrv.Renewal":          auth.RightsPlayer,
+	"RoomSrv.RoomResultList":   auth.RightsPlayer,
+	"RoomSrv.PageFeedbackList": auth.RightsRoomAdmin,
+	"RoomSrv.CreateFeedback":   auth.RightsRoomAdmin,
+	"RoomSrv.TestClean":        auth.RightsNone,
 }
 
 func main() {

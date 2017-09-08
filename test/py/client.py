@@ -384,10 +384,17 @@ class Client(object):
         })
         return ul
 
-    def PageUserList(self):
+    def PageUserList(self,page,pagesize):
         ul = self.Request("/user/UserSrv/PageUserList",{
-            "OpenID":"asfafa",
-            "UnionID":"123445"
+            "Page":{
+                "Page":page,
+                "PageSize":pagesize,
+                "Time":{
+                    "Start":0,
+                    "End":0,
+                },
+                "Sum":False,
+            },
         })
         return ul
 
@@ -408,5 +415,96 @@ class Client(object):
         ul = self.Request("/room/roomSrv/GiveUpGame",{
             "Password": pwd,
             "AgreeOrNot": status,
+        })
+        return ul
+
+    def GetNotice(self,version):
+        ul = self.Request("/notice/NoticeSrv/GetNotice",{
+            "Versions": version,
+        })
+        return ul
+
+    def CreateNotice(self,noticetype):
+        ul = self.Request("/notice/NoticeSrv/CreateNotice",{
+            "NoticeType": noticetype,
+            "NoticeContent":"测试测试测试测试测试测试测试测试测试",
+            "Status":1,
+            "StartAt":1501655847,
+            "EndAt":1601655847,
+        })
+        return ul
+
+    def UpdateNotice(self,noticetype):
+        ul = self.Request("/notice/NoticeSrv/UpdateNotice",{
+            "NoticeType": noticetype,
+            "NoticeContent":"测试测试测试测试测试测试测试测试测试",
+            "Status":2,
+            "StartAt":1501655847,
+            "EndAt":1600655847,
+        })
+        return ul
+
+    def AllNotice(self):
+        ul = self.Request("/notice/NoticeSrv/AllNotice",{
+        })
+        return ul
+
+    def CreateFeedback(self):
+        ul = self.Request("/room/roomSrv/CreateFeedback",{
+            "UserID": 100000,
+            "Channel":"test",
+            "Version":"1.0.1",
+            "Content":"测试",
+            "MobileModel":"123123123",
+            "MobileNetWork":"123123123",
+            "MobileOs":"1501655847",
+            "LoginIP":"1601655847",
+        })
+        return ul
+
+    def PageFeedbackList(self,page,pagesize):
+        ul = self.Request("/room/roomSrv/PageFeedbackList",{
+            # "Page":{
+            #     "Page":page,
+            #     "PageSize":pagesize,
+            #     "Time":{
+            #         "Start":0,
+            #         "End":0,
+            #     },
+            #     "Sum":False,
+            # },
+            "Feedback":{}
+        })
+        return ul
+
+    def PageNoticeList(self,page,pagesize):
+        ul = self.Request("/notice/noticeSrv/PageNoticeList",{
+            "Page":{
+                "Page":page,
+                "PageSize":pagesize,
+                "Time":{
+                    "Start":0,
+                    "End":0,
+                },
+                "Sum":False,
+            },
+            "Notice":{}
+        })
+        return ul
+
+    def Renewal(self,pwd):
+        ul = self.Request("/room/roomSrv/Renewal",{
+            "Password":pwd,
+        })
+        return ul
+
+    def RoomResultList(self):
+        ul = self.Request("/room/roomSrv/RoomResultList",{
+        })
+        return ul
+
+    def GameResultList(self,rid):
+        ul = self.Request("/thirteen/thirteenSrv/GameResultList",{
+            "RoomID":rid,
         })
         return ul

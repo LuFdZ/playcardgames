@@ -19,7 +19,9 @@ type Room struct {
 	RoundNumber    int32 `reg:"required"`
 	RoundNow       int32
 	UserList       string
-	GameType       int32
+	RoomType       int32 `reg:"required"`
+	PayerID        int32
+	GameType       int32  `reg:"required"`
 	GameParam      string `reg:"required,min=1,excludesall= 	"`
 	GameUserResult string
 	CreatedAt      *time.Time
@@ -66,6 +68,20 @@ type RoomResults struct {
 	RoundNow    int32
 	Status      int32
 	List        []*GameUserResult
+}
+
+type PlayerRoom struct {
+	LogID     int32
+	UserID    int32
+	RoomID    int32
+	GameType  int32
+	PlayTimes int32
+	CreatedAt *time.Time
+	UpdatedAt *time.Time
+}
+
+type RoomResultList struct {
+	List []*RoomResults
 }
 
 func (r *Room) String() string {
@@ -135,6 +151,14 @@ func (ur *GameUserResult) ToProto() *pbr.GameUserResult {
 	}
 }
 
+// func (rs *RoomResultList) ToProto() *pbr.RoomResultListReply {
+// 	out := &pbr.RoomResultListReply{
+// 		List: nil,
+// 	}
+// 	utilproto.ProtoSlice(r.List, &out.List)
+// 	return out
+// }
+
 func (r *Room) BeforeUpdate(scope *gorm.Scope) error {
 	r.MarshalUsers()
 	r.MarshalGameUserResult()
@@ -181,7 +205,7 @@ func (r *Room) UnmarshalUsers() error {
 func (r *Room) MarshalGameUserResult() error {
 	data, _ := json.Marshal(&r.UserResults)
 	r.GameUserResult = string(data)
-	//fmt.Printf("MarshalGameUserResult:%+v ", r.UserResults)
+
 	return nil
 }
 
@@ -195,4 +219,50 @@ func (r *Room) UnmarshalGameUserResult() error {
 	}
 	r.UserResults = out
 	return nil
+}
+
+type Feedback struct {
+	FeedbackID    int32 `gorm:"primary_key"`
+	UserID        int32
+	Channel       string
+	Version       string
+	Content       string
+	MobileModel   string
+	MobileNetWork string
+	MobileOs      string
+	LoginIP       string
+	CreatedAt     *time.Time
+	UpdatedAt     *time.Time
+}
+
+func (fb *Feedback) ToProto() *pbr.Feedback {
+	return &pbr.Feedback{
+		FeedbackID:    fb.FeedbackID,
+		UserID:        fb.UserID,
+		Channel:       fb.Channel,
+		Version:       fb.Version,
+		Content:       fb.Content,
+		MobileModel:   fb.MobileModel,
+		MobileNetWork: fb.MobileNetWork,
+		MobileOs:      fb.MobileOs,
+		LoginIP:       fb.LoginIP,
+		CreatedAt:     mdtime.TimeToProto(fb.CreatedAt),
+		UpdatedAt:     mdtime.TimeToProto(fb.UpdatedAt),
+	}
+}
+
+func FeedbackFromProto(fb *pbr.Feedback) *Feedback {
+	return &Feedback{
+		FeedbackID:    fb.FeedbackID,
+		UserID:        fb.UserID,
+		Channel:       fb.Channel,
+		Version:       fb.Version,
+		Content:       fb.Content,
+		MobileModel:   fb.MobileModel,
+		MobileNetWork: fb.MobileNetWork,
+		MobileOs:      fb.MobileOs,
+		LoginIP:       fb.LoginIP,
+		CreatedAt:     mdtime.TimeFromProto(fb.CreatedAt),
+		UpdatedAt:     mdtime.TimeFromProto(fb.UpdatedAt),
+	}
 }
