@@ -33,13 +33,14 @@ type Room struct {
 }
 
 type GiveUpGameResult struct {
-	RoomID   int32
-	Total    int32
-	Agree    int32
-	DisAgree int32
-	Wairting int32
-	Status   int32
-	Users    []int32
+	RoomID        int32
+	Status        int32
+	UserStateList []*UserState
+}
+
+type UserState struct {
+	State  int32
+	UserID int32
 }
 
 type RoomUser struct {
@@ -55,11 +56,12 @@ type RoomUser struct {
 }
 
 type GameUserResult struct {
-	UserID int32
-	Win    int32
-	Lost   int32
-	Tie    int32
-	Score  int32
+	UserID        int32
+	Win           int32
+	Lost          int32
+	Tie           int32
+	Score         int32
+	GameCardCount string
 }
 
 type RoomResults struct {
@@ -89,14 +91,23 @@ func (r *Room) String() string {
 		r.RoomID, r.UserList, r.Status, r.GameType)
 }
 
+func (us *UserState) ToProto() *pbr.UserState {
+	out := &pbr.UserState{
+		State:  us.State,
+		UserID: us.UserID,
+	}
+	return out
+}
+
 func (gur *GiveUpGameResult) ToProto() *pbr.GiveUpGameResult {
+	var uss []*pbr.UserState
+	for _, us := range gur.UserStateList {
+		uss = append(uss, us.ToProto())
+	}
 	out := &pbr.GiveUpGameResult{
-		RoomID:   gur.RoomID,
-		Total:    gur.Total,
-		Agree:    gur.Agree,
-		DisAgree: gur.DisAgree,
-		Wairting: gur.Wairting,
-		Status:   gur.Status,
+		RoomID:        gur.RoomID,
+		Status:        gur.Status,
+		UserStateList: uss,
 	}
 	return out
 }
@@ -143,11 +154,12 @@ func (r *RoomResults) ToProto() *pbr.RoomResults {
 
 func (ur *GameUserResult) ToProto() *pbr.GameUserResult {
 	return &pbr.GameUserResult{
-		UserID: ur.UserID,
-		Win:    ur.Win,
-		Lost:   ur.Lost,
-		Tie:    ur.Tie,
-		Score:  ur.Score,
+		UserID:        ur.UserID,
+		Win:           ur.Win,
+		Lost:          ur.Lost,
+		Tie:           ur.Tie,
+		Score:         ur.Score,
+		GameCardCount: ur.GameCardCount,
 	}
 }
 

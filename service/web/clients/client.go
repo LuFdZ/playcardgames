@@ -2,6 +2,7 @@ package clients
 
 import (
 	"fmt"
+	cacheroom "playcards/model/room/cache"
 	mdu "playcards/model/user/mod"
 	"playcards/service/web/enum"
 	"playcards/utils/auth"
@@ -43,7 +44,6 @@ func NewClient(token string, u *mdu.User, ws *websocket.Conn) *Client {
 		cs = make(map[*Client]bool)
 		clients[u.UserID] = cs
 	}
-
 	log.Debug("add connection: %v", c)
 	cs[c] = true
 	return c
@@ -76,6 +76,9 @@ func (c *Client) Auth(sright int32) error {
 func (c *Client) Close() {
 	log.Info("server close ws connection: %v", c)
 	c.ws.Close()
+	//fmt.Printf("websocket close:%d", c.user.UserID)
+	//断线后更新用户缓存连接状态
+	cacheroom.UpdateRoomUserSocektStatus(c.User().UserID, enum.SocketClose, 0)
 }
 
 func (c *Client) Subscribe(tpc []string) {

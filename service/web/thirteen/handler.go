@@ -34,10 +34,6 @@ func SubscribeAllThirteenMessage(brk broker.Broker) error {
 		ThirteenGameResultHandler,
 	)
 	subscribe.SrvSubscribe(brk, topic.Topic(srvthirteen.
-		TopicThirteenSurrender),
-		ThirteenSurrenderHandler,
-	)
-	subscribe.SrvSubscribe(brk, topic.Topic(srvthirteen.
 		TopicThirteenGameReady),
 		ThirteenReadyHandler,
 	)
@@ -76,20 +72,20 @@ func ThirteenGameResultHandler(p broker.Publication) error {
 	return nil
 }
 
-func ThirteenSurrenderHandler(p broker.Publication) error {
-	t := p.Topic()
-	msg := p.Message()
-	rs := &pbthirteen.SurrenderMessage{}
-	err := proto.Unmarshal(msg.Body, rs)
-	if err != nil {
-		return err
-	}
-	err = clients.SendRoomUsers(rs.RoomID, t, enum.MsgThireteenGameResult, rs)
-	if err != nil {
-		return err
-	}
-	return nil
-}
+// func ThirteenSurrenderHandler(p broker.Publication) error {
+// 	t := p.Topic()
+// 	msg := p.Message()
+// 	rs := &pbthirteen.SurrenderMessage{}
+// 	err := proto.Unmarshal(msg.Body, rs)
+// 	if err != nil {
+// 		return err
+// 	}
+// 	err = clients.SendRoomUsers(rs.RoomID, t, enum.MsgThireteenGameResult, rs)
+// 	if err != nil {
+// 		return err
+// 	}
+// 	return nil
+// }
 
 func ThirteenReadyHandler(p broker.Publication) error {
 	t := p.Topic()

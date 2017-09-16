@@ -34,6 +34,7 @@ type Journal struct {
 	Type      int32
 	Foreign   string
 	OpUserID  int64
+	Channel   string
 	CreatedAt *time.Time
 	UpdatedAt *time.Time
 }

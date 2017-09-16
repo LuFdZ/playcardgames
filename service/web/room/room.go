@@ -49,9 +49,9 @@ func SubscribeAllRoomMessage(brk broker.Broker) error {
 	subscribe.SrvSubscribe(brk, topic.Topic(srvroom.TopicRoomShock),
 		RoomShockHandler,
 	)
-	// subscribe.SrvSubscribe(brk, topic.Topic(srvroom.TopicRoomDropped),
-	// 	RoomDroppedHandler,
-	// )
+	subscribe.SrvSubscribe(brk, topic.Topic(srvroom.TopicRoomUserConnection),
+		UserConnectionHandler,
+	)
 
 	subscribe.SrvSubscribe(brk, topic.Topic(srvroom.TopicRoomRenewal),
 		RoomRenewalHandler,
@@ -164,7 +164,6 @@ func RoomGiveupHandler(p broker.Publication) error {
 	if err != nil {
 		return err
 	}
-	//fmt.Printf("RoomGiveup:%+v", rs)
 	err = clients.SendRoomUsers(rs.RoomID, t, enum.MsgRoomGiveup, rs)
 	if err != nil {
 		return err
@@ -181,7 +180,7 @@ func RoomShockHandler(p broker.Publication) error {
 		return err
 	}
 	//fmt.Printf("RoomGiveup:%+v", rs)
-	err = clients.SendRoomUsers(rs.RoomID, t, enum.MsgRoomGiveup, rs)
+	err = clients.SendRoomUsers(rs.RoomID, t, enum.MsgRoomShock, rs)
 	if err != nil {
 		return err
 	}
@@ -198,6 +197,21 @@ func RoomRenewalHandler(p broker.Publication) error {
 	}
 	//fmt.Printf("RoomGiveup:%+v", rs)
 	err = clients.SendRoomUsers(rs.RoomID, t, enum.MsgRoomRenewal, rs)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func UserConnectionHandler(p broker.Publication) error {
+	t := p.Topic()
+	msg := p.Message()
+	rs := &pbroom.UserConnection{}
+	err := proto.Unmarshal(msg.Body, rs)
+	if err != nil {
+		return err
+	}
+	err = clients.SendRoomUsers(rs.RoomID, t, enum.MsgRoomUserConnection, rs)
 	if err != nil {
 		return err
 	}

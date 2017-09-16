@@ -6,6 +6,7 @@ import (
 	mdr "playcards/model/room/mod"
 	"playcards/utils/cache"
 	"playcards/utils/errors"
+	"strconv"
 	//"strconv"
 
 	"gopkg.in/redis.v5"
@@ -124,6 +125,8 @@ func SetRoomUser(rid int32, password string, uid int32) error {
 			tx.HSet(key, "userid", rid)
 			tx.HSet(key, "roomid", rid)
 			tx.HSet(key, "password", password)
+			tx.HSet(key, "socketstatus", 1) //scoket连接状态 1在线 2掉线
+			tx.HSet(key, "socketnotice", 0) //连接信息是否已广播
 			return nil
 		})
 		return nil
@@ -132,6 +135,24 @@ func SetRoomUser(rid int32, password string, uid int32) error {
 	if err != nil {
 		return errors.Internal("set room user failed", err)
 	}
+	return nil
+}
+
+func UpdateRoomUserSocektStatus(uid int32, socketStatus int32, socketNotice int32) error {
+	key := UserHKey(uid)
+	f := func(tx *redis.Tx) error {
+		tx.Pipelined(func(p *redis.Pipeline) error {
+			tx.HSet(key, "socketstatus", socketStatus) //scoket连接状态 1在线 2掉线
+			tx.HSet(key, "socketnotice", socketNotice) //scoket连接状态 1在线 2掉线
+			return nil
+		})
+		return nil
+	}
+	err := cache.KV().Watch(f, key)
+	if err != nil {
+		return errors.Internal("set room user failed", err)
+	}
+
 	return nil
 }
 
@@ -181,6 +202,27 @@ func GetRoomPasswordByUserID(uid int32) string {
 	pwd := cache.KV().HGet(key, "password").Val()
 
 	return pwd
+}
+
+func GetUserStatus(uid int32) int32 {
+	key := UserHKey(uid)
+	status := cache.KV().HGet(key, "socketstatus").Val()
+
+	if len(status) > 0 {
+		result, _ := strconv.Atoi(status)
+		return int32(result)
+	}
+	return 0
+}
+
+func GetUserSocketNotice(uid int32) int32 {
+	key := UserHKey(uid)
+	status := cache.KV().HGet(key, "socketnotice").Val()
+	if len(status) > 0 {
+		result, _ := strconv.Atoi(status)
+		return int32(result)
+	}
+	return 0
 }
 
 func FlushAll() {

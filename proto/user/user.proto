@@ -5,23 +5,23 @@ import "playcards/proto/page/page.proto";
 package user;
 
 message User {
-    int32 UserID = 1;
+    int32  UserID = 1;
     string Username = 2;
     string Password = 3;
     string Nickname = 4;
     string Mobile = 5;
     string Email = 6;
     string Avatar = 7;
-    int32 Status = 8;
+    int32  Status = 8;
     string Channel = 9;
-    int64 CreatedAt = 10;
-    int64 UpdatedAt = 11;
-    int64 LastLoginAt = 12;
-    int32 Rights = 13;
-    int32 Sex = 14;
+    int64  CreatedAt = 10;
+    int64  UpdatedAt = 11;
+    int64  LastLoginAt = 12;
+    int32  Rights = 13;
+    int32  Sex = 14;
     string Icon = 15;
-    int32 PlayTimes    = 16;
-    int32 InviteUserID = 17;
+    int32  PlayTimes    = 16;
+    int32  InviteUserID = 17;
     string MobileUuID   = 18;
     string MobileModel   = 19;
     string MobileNetWork= 20;
@@ -30,8 +30,8 @@ message User {
     string RegIP        = 23;
     string OpenID = 24;
     string UnionID = 25;
-    int64 Diamond = 26;
-    int64 InviteNumber = 27;
+    int64  Diamond = 26;
+    int64  InviteNumber = 27;
 }
 
 message RegisterReply {

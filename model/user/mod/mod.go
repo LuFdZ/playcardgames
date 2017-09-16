@@ -23,7 +23,6 @@ type User struct {
 	CreatedAt     *time.Time
 	UpdatedAt     *time.Time
 	LastLoginAt   *time.Time
-	PlayTimes     int32
 	InviteUserID  int32
 	MobileUuID    string
 	MobileModel   string
@@ -65,7 +64,6 @@ func (u *User) ToProto() *pbu.User {
 		CreatedAt:     mdtime.TimeToProto(u.CreatedAt),
 		UpdatedAt:     mdtime.TimeToProto(u.UpdatedAt),
 		LastLoginAt:   mdtime.TimeToProto(u.LastLoginAt),
-		PlayTimes:     u.PlayTimes,
 		InviteUserID:  u.InviteUserID,
 		MobileUuID:    u.MobileUuID,
 		MobileModel:   u.MobileModel,
@@ -116,7 +114,6 @@ func UserFromProto(u *pbu.User) *User {
 		CreatedAt:     mdtime.TimeFromProto(u.CreatedAt),
 		UpdatedAt:     mdtime.TimeFromProto(u.UpdatedAt),
 		LastLoginAt:   mdtime.TimeFromProto(u.LastLoginAt),
-		PlayTimes:     u.PlayTimes,
 		InviteUserID:  u.InviteUserID,
 		MobileUuID:    u.MobileUuID,
 		MobileModel:   u.MobileModel,

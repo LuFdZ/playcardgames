@@ -3,6 +3,7 @@ package thirteen
 import (
 	"encoding/json"
 	pbt "playcards/proto/thirteen"
+	utilproto "playcards/utils/proto"
 	"time"
 
 	"github.com/jinzhu/gorm"
@@ -25,49 +26,35 @@ type Thirteen struct {
 	Result          *GameResultList `gorm:"-"`
 }
 
-type ThirteenUserLog struct {
-	LogID      int32 `gorm:"primary_key"`
-	GameID     int32
-	UserID     int32
-	RoomID     int32
-	GameResult string
-	Status     int32
-	CreatedAt  *time.Time
-	UpdatedAt  *time.Time
-}
-
 type Card struct {
 	Type  int32
 	Value int32
 }
 
-// type GroupCardList struct {
-// 	List []*GroupCard
-// }
-
-// type CardList struct {
-// 	List []*Card
-// }
-
-type Settle struct {
-	UserID      int32
-	ScoreHead   int32
-	ScoreMiddle int32
-	ScoreTail   int32
-	Score       int32
+type ThirteenSettle struct {
+	Head       string
+	Middle     string
+	Tail       string
+	AddScore   string
+	TotalScore string
 }
 
-type GameResult struct {
-	UserID     int32
-	SettleList []*Settle
-	CardsList  *SubmitCard
-	CardType   string
-	//NullUserCards CardList
+type ThirteenResult struct {
+	UserID int32
+	Settle ThirteenSettle
+	Result ThirteenGroupResult
+	Shoot  []int32
 }
 
-type GameResultList struct {
-	RoomID  int32
-	Results []*GameResult
+type ThirteenGroupResult struct {
+	Head   ResGroup
+	Middle ResGroup
+	Tail   ResGroup
+}
+
+type ResGroup struct {
+	GroupType string
+	CardList  []string
 }
 
 type GameParam struct {
@@ -79,8 +66,6 @@ type GameParam struct {
 
 type GroupCard struct {
 	UserID   int32
-	Type     int32
-	Weight   int32
 	CardList []string
 }
 
@@ -91,21 +76,42 @@ type SubmitCard struct {
 	Tail   []string
 }
 
-func SubmitCardFromProto(sc *pbt.SubmitCard) *SubmitCard {
+type GameResultList struct {
+	RoomID int32
+	Result []*ThirteenResult
+}
+
+func SubmitCardFromProto(sc *pbt.SubmitCard, uid int32) *SubmitCard {
 	return &SubmitCard{
+		UserID: uid,
 		Head:   sc.Head,
 		Middle: sc.Middle,
 		Tail:   sc.Tail,
 	}
 }
 
-func (s *Settle) ToProto() *pbt.Settle {
-	return &pbt.Settle{
-		UserID:      s.UserID,
-		ScoreHead:   s.ScoreHead,
-		ScoreMiddle: s.ScoreMiddle,
-		ScoreTail:   s.ScoreTail,
-		Score:       s.Score,
+func (rg *ResGroup) ToProto() *pbt.ResGroup {
+	return &pbt.ResGroup{
+		GroupType: rg.GroupType,
+		CardList:  rg.CardList,
+	}
+}
+
+func (tgr *ThirteenGroupResult) ToProto() *pbt.ThirteenGroupResult {
+	return &pbt.ThirteenGroupResult{
+		Head:   tgr.Head.ToProto(),
+		Middle: tgr.Middle.ToProto(),
+		Tail:   tgr.Tail.ToProto(),
+	}
+}
+
+func (ts *ThirteenSettle) ToProto() *pbt.ThirteenSettle {
+	return &pbt.ThirteenSettle{
+		Head:       ts.Head,
+		Middle:     ts.Middle,
+		Tail:       ts.Tail,
+		AddScore:   ts.AddScore,
+		TotalScore: ts.TotalScore,
 	}
 }
 
@@ -117,29 +123,24 @@ func (sc *SubmitCard) ToProto() *pbt.SubmitCard {
 	}
 }
 
-func (gr *GameResult) ToProto() *pbt.GameResult {
-	var settleList []*pbt.Settle
-	for _, settle := range gr.SettleList {
-		settleList = append(settleList, settle.ToProto())
-	}
-
-	return &pbt.GameResult{
-		UserID:     gr.UserID,
-		SettleList: settleList,
-		CardsList:  gr.CardsList.ToProto(),
-		CardType:   gr.CardType,
+func (ts *ThirteenResult) ToProto() *pbt.ThirteenResult {
+	return &pbt.ThirteenResult{
+		UserID: ts.UserID,
+		Settle: ts.Settle.ToProto(),
+		Result: ts.Result.ToProto(),
+		Shoot:  ts.Shoot,
 	}
 }
 
 func (grl *GameResultList) ToProto() *pbt.GameResultList {
-	var results []*pbt.GameResult
-	for _, gr := range grl.Results {
+	var results []*pbt.ThirteenResult
+	for _, gr := range grl.Result {
 		results = append(results, gr.ToProto())
 	}
 
 	out := &pbt.GameResultList{
-		RoomID:  grl.RoomID,
-		Results: results,
+		RoomID: grl.RoomID,
+		Result: results,
 	}
 	return out
 }
@@ -155,11 +156,9 @@ func (grl *GameResultList) ToProto() *pbt.GameResultList {
 func (gc *GroupCard) ToProto() *pbt.GroupCard {
 	out := &pbt.GroupCard{
 		UserID:   gc.UserID,
-		Type:     gc.Type,
-		Weight:   gc.Weight,
 		CardList: gc.CardList,
 	}
-	//utilproto.ProtoSlice(gc.CardList, &out.CardList)
+	utilproto.ProtoSlice(gc.CardList, &out.CardList)
 	//fmt.Printf("GroupCard ToProto %v", out.CardList)
 	return out
 }

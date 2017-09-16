@@ -3,6 +3,7 @@ package handler
 import (
 	"encoding/json"
 	pbweb "playcards/proto/web"
+	webbill "playcards/service/web/bill"
 	"playcards/service/web/clients"
 	"playcards/service/web/publish"
 	"playcards/service/web/request"
@@ -32,6 +33,7 @@ func NewWebHandler(c client.Client) *Web {
 		client: c,
 		broker: c.Options().Broker,
 	}
+	webbill.Init(w.broker)
 	webroom.Init(w.broker)
 	webthirteen.Init(w.broker)
 	return w

@@ -28,6 +28,7 @@ func NewHandler(s server.Server) *BillSrv {
 	}
 	return b
 }
+
 func (b *BillSrv) GetBalance(ctx context.Context,
 	req *pbbill.GetBalanceRequest, rsp *pbbill.Balance) error {
 	u := gctx.GetUser(ctx)
@@ -40,6 +41,7 @@ func (b *BillSrv) GetBalance(ctx context.Context,
 	if err != nil {
 		return err
 	}
+
 	*rsp = *balance.ToProto()
 	return nil
 }
@@ -53,13 +55,13 @@ func (b *BillSrv) GainBalance(ctx context.Context, req *pbbill.Balance,
 		return err
 	}
 	*rsp = *ub.ToProto()
-	if req.UserID != u.UserID {
-		msg := &pbbill.BalanceChange{
-			UserID:  req.UserID,
-			Diamond: ub.Diamond,
-		}
-		topic.Publish(b.broker, msg, TopicBillChange)
-	}
+	// if req.UserID != u.UserID {
+	// 	msg := &pbbill.BalanceChange{
+	// 		UserID:  req.UserID,
+	// 		Diamond: ub.Diamond,
+	// 	}
+	// 	topic.Publish(b.broker, msg, TopicBillChange)
+	// }
 	return nil
 }
 
@@ -69,7 +71,7 @@ func (b *BillSrv) Recharge(ctx context.Context, req *pbbill.RechargeRequest,
 	rsp.Code = 101
 	u := gctx.GetUser(ctx)
 	res, ub, err := bill.Recharge(req.UserID, u.UserID, req.Diamond,
-		req.OrderID, enumbill.JournalTypeRecharge)
+		req.OrderID, enumbill.JournalTypeRecharge, u.Channel)
 	if err != nil {
 		rsp.Code = 102
 		return err
@@ -77,9 +79,7 @@ func (b *BillSrv) Recharge(ctx context.Context, req *pbbill.RechargeRequest,
 	if res == 1 {
 		rsp.Code = 0
 		rsp.Result = 1
-	}
 
-	if req.UserID != u.UserID {
 		msg := &pbbill.BalanceChange{
 			UserID:  req.UserID,
 			Diamond: ub.Diamond,

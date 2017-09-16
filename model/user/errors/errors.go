@@ -3,8 +3,8 @@ package errors
 import "playcards/utils/errors"
 
 var (
-	ErrInvalidToken       = errors.BadRequest(10001, "invalid token")
-	ErrUserNotExisted     = errors.NotFound(10002, "user not existed")
-	ErrPropertyNotExisted = errors.NotFound(10003, "property not existed")
-	ErrInvalidUserInfo    = errors.BadRequest(10004, "invalid user info")
+	ErrInvalidToken       = errors.BadRequest(10001, "toekn错误！")
+	ErrUserNotExisted     = errors.NotFound(10002, "用户不存在！")
+	ErrPropertyNotExisted = errors.NotFound(10003, "用户属性不存在！")
+	ErrInvalidUserInfo    = errors.BadRequest(10004, "非法的用户信息！")
 )

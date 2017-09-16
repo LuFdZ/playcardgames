@@ -27,6 +27,7 @@ message RechargeRequest {
     int32 UserID = 1;
     int64 Diamond = 2;
     string OrderID = 3;
+    string Channel = 4;
 }
 
 message RechargeReply {

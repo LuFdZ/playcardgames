@@ -3,9 +3,9 @@ package date
 import "time"
 
 func TimeSubDays(t1, t2 time.Time) int {
-	if t1.Location().String() != t2.Location().String() {
-		return -1
-	}
+	// if t1.Location().String() != t2.Location().String() {
+	// 	return -1
+	// }
 	hours := t1.Sub(t2).Hours()
 
 	if hours <= 0 {

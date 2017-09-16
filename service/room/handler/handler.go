@@ -35,7 +35,7 @@ func NewHandler(s server.Server, gt *gsync.GlobalTimer) *RoomSrv {
 }
 
 func (rs *RoomSrv) update(gt *gsync.GlobalTimer) {
-	lock := "bcr.room.update.lock"
+	lock := "playcards.room.update.lock"
 	f := func() error {
 		log.Debug("room update loop... and has %d rooms")
 		//now := time.Now()
@@ -43,7 +43,6 @@ func (rs *RoomSrv) update(gt *gsync.GlobalTimer) {
 		rooms := room.ReInit()
 		//fmt.Printf("rooms update :%d", len(rooms))
 		for _, room := range rooms {
-
 			RoomResults := mdr.RoomResults{
 				RoomID:      room.RoomID,
 				RoundNumber: room.RoundNumber,
@@ -54,6 +53,11 @@ func (rs *RoomSrv) update(gt *gsync.GlobalTimer) {
 			msg := RoomResults.ToProto()
 			//fmt.Printf("UpdateRoomSrv:%v", room.UserResults)
 			topic.Publish(rs.broker, msg, TopicRoomResult)
+		}
+
+		RoomUserSocket := room.RoomUserStatusCheck()
+		for _, msg := range RoomUserSocket {
+			topic.Publish(rs.broker, msg, TopicRoomUserConnection)
 		}
 		return nil
 	}
@@ -164,8 +168,9 @@ func (rs *RoomSrv) GiveUpGame(ctx context.Context, req *pbr.GiveUpGameRequest,
 	if err != nil {
 		return err
 	}
-	*rsp = *result.ToProto()
-	msg := rsp
+	//	*rsp = *result.ToProto()
+	msg := result.ToProto()
+
 	topic.Publish(rs.broker, msg, TopicRoomGiveup)
 	return nil
 }
@@ -238,6 +243,25 @@ func (rs *RoomSrv) RoomResultList(ctx context.Context, req *pbr.RoomUser,
 	return nil
 }
 
+func (rs *RoomSrv) CheckRoomExist(ctx context.Context, req *pbr.Room,
+	rsp *pbr.CheckRoomExistReply) error {
+	u, err := auth.GetUser(ctx)
+	if err != nil {
+		return err
+	}
+	res := &pbr.CheckRoomExistReply{}
+	room, err := room.CheckRoomExist(u.UserID)
+	if err != nil {
+		res.Result = 2
+		*rsp = *res
+		return err
+	}
+	res.Result = 1
+	res.Room = room.ToProto()
+	*rsp = *res
+	return nil
+}
+
 // func (rs *RoomSrv) OutReady(ctx context.Context, req *pbr.Room,
 // 	rsp *pbr.RoomUser) error {
 // 	u, err := auth.GetUser(ctx)
@@ -257,19 +281,18 @@ func (rs *RoomSrv) RoomResultList(ctx context.Context, req *pbr.RoomUser,
 func (rs *RoomSrv) Heartbeat(ctx context.Context,
 	req *pbr.Room, rsp *pbr.Room) error {
 
-	u, err := auth.GetUser(ctx)
-	if err != nil {
-		return err
-	}
-	err = room.Heartbeat(u.UserID)
-	if err != nil {
-		return err
-	}
-
 	errtest := room.LuaTest()
 	if errtest != nil {
 		return errtest
 	}
+	// u, err := auth.GetUser(ctx)
+	// if err != nil {
+	// 	return err
+	// }
+	// err = room.Heartbeat(u.UserID)
+	// if err != nil {
+	// 	return err
+	// }
 
 	return nil
 }

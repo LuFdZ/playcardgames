@@ -112,7 +112,7 @@ func SendWhereRoomUsers(rid int32, topic, typ string, msg interface{},
 		if f != nil && !f(c) && c.RoomID() == rid {
 			continue
 		}
-		fmt.Printf(" SendWhereRoom:%d|%d|%s /n", c.UserID(), c.RoomID(), topic)
+		//fmt.Printf(" SendWhereRoom:%d|%d|%s /n", c.UserID(), c.RoomID(), topic)
 		c.SendMessage(topic, typ, msg)
 	}
 

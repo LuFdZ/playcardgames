@@ -367,7 +367,7 @@ class Client(object):
         ul = self.Request("/bill/billSrv/Recharge",{
             "UserID":uid,
             "Diamond":diamond,
-            "OrderID":orderCode
+            "OrderID":orderCode,
         })
         return ul
 
@@ -441,6 +441,8 @@ class Client(object):
             "Status":2,
             "StartAt":1501655847,
             "EndAt":1600655847,
+            "Channel":"",
+            "Version":"",
         })
         return ul
 
@@ -506,5 +508,27 @@ class Client(object):
     def GameResultList(self,rid):
         ul = self.Request("/thirteen/thirteenSrv/GameResultList",{
             "RoomID":rid,
+        })
+        return ul
+
+    def Share(self):
+        ul = self.Request("/activity/ActivitySrv/Share",{
+        })
+        return ul
+
+    def Invite(self,uid):
+        ul = self.Request("/activity/ActivitySrv/Invite",{
+            "UserID":uid,
+        })
+        return ul
+
+    def CheckRoomExist(self):
+        ul = self.Request("/room/roomSrv/CheckRoomExist",{
+        })
+        return ul
+
+    def Shock(self,uid):
+        ul = self.Request("/room/roomSrv/Shock",{
+            "UserID":uid,
         })
         return ul

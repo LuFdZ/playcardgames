@@ -6,6 +6,7 @@ import (
 	"playcards/model/room/errors"
 	srvroom "playcards/service/room/handler"
 	"playcards/service/web/clients"
+	enum "playcards/service/web/enum"
 	"playcards/service/web/request"
 	"playcards/utils/auth"
 )
@@ -19,7 +20,7 @@ var RoomEvent = []string{
 	srvroom.TopicRoomResult,
 	srvroom.TopicRoomGiveup,
 	srvroom.TopicRoomShock,
-	srvroom.TopicRoomDropped,
+	srvroom.TopicRoomUserConnection,
 	srvroom.TopicRoomRenewal,
 }
 
@@ -36,9 +37,11 @@ func SubscribeRoomMessage(c *clients.Client, req *request.Request) error {
 	if room == nil {
 		return errors.ErrRoomNotExisted
 	}
-
+	err = cacheroom.UpdateRoomUserSocektStatus(c.User().UserID, enum.SocketAline, 0)
+	if err != nil {
+		return err
+	}
 	c.User().RoomID = room.RoomID
-	//fmt.Printf("SubscribeRoomMessage:%d", c.User().RoomID)
 	c.Subscribe(RoomEvent)
 	return nil
 }

@@ -1,6 +1,8 @@
 package thirteen
 
 import (
+	"encoding/json"
+	"fmt"
 	dbbill "playcards/model/bill/db"
 	enumbill "playcards/model/bill/enum"
 	mdbill "playcards/model/bill/mod"
@@ -41,8 +43,8 @@ func CleanGame() []*mdt.GameResultList {
 		resultList := &mdt.GameResultList{}
 		resultList.RoomID = thirteen.RoomID
 		thirteen.Status = enumt.GameStatusDone
-		//var result *mdt.GameResult
-		var resultArray []*mdt.GameResult
+
+		//var resultArray []*mdt.GameResult
 
 		//获取游戏所属房间缓存 更新房间信息
 		pwd := cachet.GetRoomPaawordRoomID(thirteen.RoomID)
@@ -52,46 +54,120 @@ func CleanGame() []*mdt.GameResultList {
 			return nil
 		}
 
-		//根据玩家牌组计算结果
-		for _, cards := range thirteen.SubmitCards {
-			result := &mdt.GameResult{}
-			result.UserID = cards.UserID
-			result.CardsList = cards
-			var settleArray []*mdt.Settle
-			for _, orderCards := range thirteen.SubmitCards {
-				var totalScore int32
-				if cards.UserID != orderCards.UserID {
-					settle := &mdt.Settle{}
-					settle.UserID = orderCards.UserID
-					settle.ScoreHead = 100
-					settle.ScoreMiddle = 150
-					settle.ScoreTail = -50
-					settle.Score = 200
-					settleArray = append(settleArray, settle)
-					totalScore += settle.Score
-				}
+		var results []*mdt.ThirteenResult
+		// var (
+		// 	rlist   mdt.GameResultList
 
-				//更新房间玩家输赢记录
-				for _, result := range room.UserResults {
-					if result.UserID == cards.UserID {
-						result.Score = totalScore
-						if totalScore > 0 {
-							result.Win += 1
-						} else if totalScore == 0 {
-							result.Tie += 1
-						} else if totalScore == 0 {
-							result.Lost += 1
-						}
+		// )
+
+		for _, cards := range thirteen.SubmitCards {
+			var shoot = []int32{100003, 100004}
+			//var result *mdt.ThirteenResult
+			result := &mdt.ThirteenResult{
+				UserID: cards.UserID,
+				Settle: mdt.ThirteenSettle{
+					Head:       "2",
+					Middle:     "3",
+					Tail:       "4",
+					AddScore:   "9",
+					TotalScore: "9",
+				},
+				Result: mdt.ThirteenGroupResult{
+					Head: mdt.ResGroup{
+						GroupType: "Single",
+						CardList:  cards.Head,
+					},
+					Middle: mdt.ResGroup{
+						GroupType: "Couple",
+						CardList:  cards.Middle,
+					},
+					Tail: mdt.ResGroup{
+						GroupType: "Couple",
+						CardList:  cards.Tail,
+					},
+				},
+				Shoot: shoot,
+			}
+			results = append(results, result)
+		}
+		//rlist.RoomID = thirteen.RoomID
+		resultList.Result = results
+
+		var resultArray []*mdr.GameUserResult
+		for _, result := range resultList.Result {
+			m := InitThirteenGameTypeMap()
+			for _, userResult := range room.UserResults {
+				if userResult.UserID == result.UserID {
+					ts, _ := strconv.ParseInt(result.Settle.TotalScore, 10, 32)
+					userResult.Score = int32(ts)
+					if ts > 0 {
+						userResult.Win += 1
+					} else if ts == 0 {
+						userResult.Tie += 1
+					} else if ts == 0 {
+						userResult.Lost += 1
 					}
+					if _, ok := m[result.Result.Head.GroupType]; ok {
+						m[result.Result.Head.GroupType]++
+					}
+					if _, ok := m[result.Result.Middle.GroupType]; ok {
+						m[result.Result.Head.GroupType]++
+					}
+					if _, ok := m[result.Result.Tail.GroupType]; ok {
+						m[result.Result.Head.GroupType]++
+					}
+					m["Shoot"] += int32(len(result.Shoot))
+					if len(resultList.Result) > 2 && len(result.Shoot) >= (len(resultList.Result)-1) {
+						m["AllShoot"]++
+					}
+					r, _ := json.Marshal(m)
+					userResult.GameCardCount = string(r)
+					resultArray = append(resultArray, userResult)
+					fmt.Printf("Clean Game userResult Array:%+v", userResult)
 				}
 
 			}
-
-			result.SettleList = settleArray
-			result.CardType = "test"
-			resultArray = append(resultArray, result)
 		}
-		resultList.Results = resultArray
+		//根据玩家牌组计算结果
+		// for _, cards := range thirteen.SubmitCards {
+		// 	result := &mdt.GameResult{}
+		// 	result.UserID = cards.UserID
+		// 	result.CardsList = cards
+		// 	var settleArray []*mdt.Settle
+		// 	for _, orderCards := range thirteen.SubmitCards {
+		// 		var totalScore int32
+		// 		if cards.UserID != orderCards.UserID {
+		// 			settle := &mdt.Settle{}
+		// 			settle.UserID = orderCards.UserID
+		// 			settle.ScoreHead = 100
+		// 			settle.ScoreMiddle = 150
+		// 			settle.ScoreTail = -50
+		// 			settle.Score = 200
+		// 			settleArray = append(settleArray, settle)
+		// 			totalScore += settle.Score
+		// 		}
+
+		// 		//更新房间玩家输赢记录
+		// 		for _, result := range room.UserResults {
+		// 			if result.UserID == cards.UserID {
+		// 				result.Score = totalScore
+		// 				if totalScore > 0 {
+		// 					result.Win += 1
+		// 				} else if totalScore == 0 {
+		// 					result.Tie += 1
+		// 				} else if totalScore == 0 {
+		// 					result.Lost += 1
+		// 				}
+		// 			}
+		// 		}
+
+		// 	}
+
+		// 	result.SettleList = settleArray
+		// 	result.CardType = "test"
+		// 	resultArray = append(resultArray, result)
+		// }
+		// resultList.Results = resultArray
 		resultListArray = append(resultListArray, resultList)
 		thirteen.Result = resultList
 		//房间局数
@@ -105,8 +181,19 @@ func CleanGame() []*mdt.GameResultList {
 		// 		user.Ready = enumr.UserUnready
 		// 	}
 		// }
-
 		room.Status = enumr.RoomStatusReInit
+
+		//十三张一局结束后庄家顺位移到下一个人
+		for i := 0; i < len(room.Users); i++ {
+			room.Users[i].Ready = enumr.UserUnready
+			if room.Users[i].Role == enumr.UserRoleMaster {
+				if i == len(room.Users)-1 {
+					room.Users[0].Role = enumr.UserRoleMaster
+				} else {
+					room.Users[i+1].Role = enumr.UserRoleMaster
+				}
+			}
+		}
 
 		f := func(tx *gorm.DB) error {
 			//fmt.Printf("UpdateThirteen:%+v", thirteen)
@@ -147,6 +234,14 @@ func CleanGame() []*mdt.GameResultList {
 	return resultListArray
 }
 
+func InitThirteenGameTypeMap() map[string]int32 {
+	m := make(map[string]int32)
+	for _, value := range enumt.GroupTypeName {
+		m[value] = 0
+	}
+	return m
+}
+
 func CreateThirteen() []*mdt.Thirteen {
 	rooms, err := GetRoomsByStatusAndGameType()
 	if err != nil {
@@ -172,20 +267,8 @@ func CreateThirteen() []*mdt.Thirteen {
 		//logic := l.Get(1)
 		l.Pop(1)
 		//fmt.Printf("return value is : %#v\n", ret)
-
 		var groupCards []*mdt.GroupCard
 		for _, user := range room.Users {
-			//for i := 0; i < 4; i++ {
-			// var userID int32
-			// var role int32
-			// if i+1 > len(room.Users) {
-			// 	userID = -1
-			// 	role = -1
-			// } else {
-			// 	userID = room.Users[i].UserID
-			// 	role = room.Users[i].Role
-			// }
-
 			if room.RoundNow == 1 {
 				userResult := &mdr.GameUserResult{
 					UserID: user.UserID,
@@ -201,7 +284,7 @@ func CreateThirteen() []*mdt.Thirteen {
 			}
 			getCards := l.Get(1)
 			l.Pop(1)
-
+			fmt.Printf("return value is : %#v\n", getCards)
 			var cardList []string
 			if cardsMap, ok := getCards.(*lua.LTable); ok {
 				cardsMap.ForEach(func(key lua.LValue, value lua.LValue) {
@@ -228,8 +311,6 @@ func CreateThirteen() []*mdt.Thirteen {
 				})
 				groupCard := &mdt.GroupCard{
 					UserID:   user.UserID,
-					Type:     user.Role,
-					Weight:   0,
 					CardList: cardList,
 				}
 				groupCards = append(groupCards, groupCard)
@@ -268,7 +349,7 @@ func CreateThirteen() []*mdt.Thirteen {
 					strconv.Itoa(int(room.GameType))+
 						room.Password+
 						strconv.Itoa(int(room.RoomID)),
-					room.Users[0].UserID)
+					room.Users[0].UserID, enumbill.DefaultChannel)
 				if err != nil {
 					return err
 				}
@@ -336,13 +417,12 @@ func SubmitCard(uid int32, submitCard *mdt.SubmitCard) (int32, error) {
 	} else if isReady == 2 {
 		return 0, errorst.ErrUserAlready
 	}
-	//thirteen, err := dbt.GetThitteenByID(db.DB(), gid)
 
 	thirteen, err := cachet.GetGame(room.RoomID)
 	if err != nil {
 		return 0, err
 	}
-	//fmt.Printf("SubmitCardAAAAAAAA:%+v /n", thirteen)
+
 	submitCard.UserID = uid
 	thirteen.SubmitCards = append(thirteen.SubmitCards, submitCard)
 
@@ -351,7 +431,7 @@ func SubmitCard(uid int32, submitCard *mdt.SubmitCard) (int32, error) {
 	}
 	playerNow := cachet.GetGamePlayerNowRoomID(room.RoomID)
 	playerNow += 1
-	//fmt.Printf("SubmitCardAAAAAAA:%d|%d /n", playerNow, room.MaxNumber)
+
 	if playerNow == room.MaxNumber {
 		thirteen.Status = enumt.GameStatusAllReady
 	}
@@ -367,7 +447,7 @@ func SubmitCard(uid int32, submitCard *mdt.SubmitCard) (int32, error) {
 	if err != nil {
 		return 0, err
 	}
-	//fmt.Printf("SubmitCardBBBBBBBBB:%+v /n", thirteen)
+
 	err = cachet.UpdateGameUser(thirteen, uid, playerNow)
 	if err != nil {
 		log.Err("thirteen set session failed, %v", err)
@@ -412,14 +492,14 @@ func GetThirteenByStatusAndGameType() ([]*mdt.Thirteen, error) {
 
 func GameResultList(rid int32) (*pbt.GameResultListReply, error) {
 	var list []*pbt.GameResultList
-	thirteens, err := dbt.GetThirteenByRoomID(db.DB(), rid)
-	if err != nil {
-		return nil, err
-	}
-	for _, thirteen := range thirteens {
-		result := thirteen.Result
-		list = append(list, result.ToProto())
-	}
+	// thirteens, err := dbt.GetThirteenByRoomID(db.DB(), rid)
+	// if err != nil {
+	// 	return nil, err
+	// }
+	// for _, thirteen := range thirteens {
+	// 	result := thirteen.Result
+	// 	list = append(list, result.ToProto())
+	// }
 	out := &pbt.GameResultListReply{
 		List: list,
 	}
@@ -432,30 +512,45 @@ func CleanGiveUpGame() error {
 	if err != nil {
 		log.Err("get thirteen give up room err:%v", err)
 	}
+
 	for _, rid := range rids {
 		game, err := cachet.GetGame(rid)
 		if err != nil {
 			log.Err("get thirteen give up room err:%d|%v", rid, err)
 			continue
 		}
-		gids = append(gids, game.GameID)
-		err = cachet.DeleteGame(rid)
-		if err != nil {
-			log.Err(" delete thirteen set session failed, %v", err)
-			continue
+		if game != nil {
+			gids = append(gids, game.GameID)
+			err = cachet.DeleteGame(rid)
+			if err != nil {
+				log.Err(" delete thirteen set session failed, %v", err)
+				continue
+			}
 		}
+		fmt.Printf("CleanGiveUpGame:%+v", game)
 
 	}
-	f := func(tx *gorm.DB) error {
-		err = dbt.GiveUpGameUpdate(tx, gids)
+	if len(gids) > 0 {
+		f := func(tx *gorm.DB) error {
+			err = dbt.GiveUpGameUpdate(tx, gids)
+			if err != nil {
+				return err
+			}
+			return nil
+		}
+		err = db.Transaction(f)
 		if err != nil {
 			return err
 		}
-		return nil
 	}
-	err = db.Transaction(f)
-	if err != nil {
-		return err
-	}
+
 	return nil
+}
+
+func GetThirteen(rid int32) (*mdt.Thirteen, error) {
+	thirteen, err := cachet.GetGame(rid)
+	if err != nil {
+		return nil, err
+	}
+	return thirteen, nil
 }

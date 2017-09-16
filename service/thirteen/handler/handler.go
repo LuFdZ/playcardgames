@@ -68,7 +68,7 @@ func (ts *ThirteenSrv) SubmitCard(ctx context.Context, req *pbt.SubmitCard,
 	if err != nil {
 		return err
 	}
-	rid, err := thirteen.SubmitCard(u.UserID, mdt.SubmitCardFromProto(req))
+	rid, err := thirteen.SubmitCard(u.UserID, mdt.SubmitCardFromProto(req, u.UserID))
 	if err != nil {
 		return err
 	}
@@ -92,5 +92,25 @@ func (ts *ThirteenSrv) GameResultList(ctx context.Context, req *pbt.GameResultLi
 		return err
 	}
 	*rsp = *results
+	return nil
+}
+
+//GetThirteen
+
+func (rs *ThirteenSrv) GetThirteen(ctx context.Context, req *pbt.GetThirteenRequest,
+	rsp *pbt.GetThirteenReply) error {
+	_, err := auth.GetUser(ctx)
+	if err != nil {
+		return err
+	}
+	var res *pbt.GetThirteenReply
+	_, err = thirteen.GetThirteen(req.RoomID)
+	if err != nil {
+		res.Result = 2
+		*rsp = *res
+		return err
+	}
+	res.Result = 1
+	*rsp = *res
 	return nil
 }

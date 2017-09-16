@@ -62,3 +62,22 @@ const (
 	RoomTypeNom   = 1
 	RoomTypeAgent = 2
 )
+
+// web socket conncthion status
+const (
+	SocketAline = 1
+	SocketClose = 2
+)
+
+const (
+	UserStateLeader  = iota + 1 //带头解散的人
+	UserStateOppose             //已反对
+	UserStateAgree              //已同意
+	UserStateOffline            //离线
+	UserStateWaiting            //等待操作
+)
+
+const (
+	AgreeGiveUpRoom    = 1
+	DisAgreeGiveUpRoom = 2
+)

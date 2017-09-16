@@ -3,7 +3,7 @@ package db
 import (
 	mdpage "playcards/model/page"
 	//errr "playcards/model/notic/errors"
-	"fmt"
+
 	enum "playcards/model/notice/enum"
 	mdn "playcards/model/notice/mod"
 	"playcards/utils/errors"
@@ -12,9 +12,7 @@ import (
 )
 
 func CreateNotice(tx *gorm.DB, n *mdn.Notice) (*mdn.Notice, error) {
-	fmt.Printf("AAAACreateNotice:%v", n)
 	if err := tx.Create(n).Error; err != nil {
-		fmt.Printf("BBBBCreateNotice:%v", err)
 		return nil, errors.Internal("create notice failed", err)
 	}
 	return n, nil
@@ -22,15 +20,16 @@ func CreateNotice(tx *gorm.DB, n *mdn.Notice) (*mdn.Notice, error) {
 
 func UpdateNotice(tx *gorm.DB, n *mdn.Notice) (*mdn.Notice, error) {
 	now := gorm.NowFunc()
-	notice := &mdn.Notice{
-		NoticeContent: n.NoticeContent,
-		Description:   n.Description,
-		Param:         n.Param,
-		StartAt:       n.StartAt,
-		EndAt:         n.EndAt,
-		UpdatedAt:     &now,
-	}
-	if err := tx.Model(n).Updates(notice).Error; err != nil {
+	// notice := &mdn.Notice{
+	// 	NoticeContent: n.NoticeContent,
+	// 	Description:   n.Description,
+	// 	Param:         n.Param,
+	// 	StartAt:       n.StartAt,
+	// 	EndAt:         n.EndAt,
+	// 	UpdatedAt:     &now,
+	// }
+	n.UpdatedAt = &now
+	if err := tx.Model(n).Updates(n).Error; err != nil {
 		return nil, errors.Internal("update notice failed", err)
 	}
 	return n, nil
@@ -42,8 +41,8 @@ func GetNotice(tx *gorm.DB, channel string, versions string) (*mdn.NoticeList, e
 		t       = gorm.NowFunc()
 	)
 	sqlstr := " start_at < ? and end_at > ? and status = ? and" +
-		" (case when CHAR_LENGTH(channels)>0 then FIND_IN_SET(?,channels) else true end)" +
-		"and (case when CHAR_LENGTH(versions)>0 then FIND_IN_SET(?,versions) else true end)"
+		" (case when CHAR_LENGTH(channels)>1 then FIND_IN_SET(?,channels) else true end)" +
+		"and (case when CHAR_LENGTH(versions)>1 then FIND_IN_SET(?,versions) else true end)"
 	if err := tx.Where(sqlstr, t, t, enum.NoticeStatusable,
 		channel, versions,
 	).Find(&notices).Error; err != nil {

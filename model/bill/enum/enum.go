@@ -7,6 +7,9 @@ const (
 	JournalTypeRoom
 	JournalTypeGive
 	JournalTypeRecharge
+	JournalTypeInvite
+	JournalTypeInvited
+	JournalTypeShate
 )
 
 const (
@@ -22,4 +25,8 @@ const (
 	OrderFail    = 0
 	OrderSuccess = 1
 	OrderExist   = 2
+)
+
+const (
+	DefaultChannel = "system"
 )

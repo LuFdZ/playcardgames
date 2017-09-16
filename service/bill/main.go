@@ -34,7 +34,8 @@ func main() {
 	service.Init()
 
 	server := service.Server()
-	server.Handle(server.NewHandler(&handler.BillSrv{}))
+	h := handler.NewHandler(server)
+	server.Handle(server.NewHandler(h))
 
 	err := service.Run()
 	env.ErrExit(err)

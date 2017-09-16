@@ -25,7 +25,7 @@ func CreateBalance(tx *gorm.DB, uid int32, balance *mdbill.Balance) error {
 	}
 
 	err = InsertJournal(tx, uid, balance, enum.JournalTypeInitBalance,
-		strconv.Itoa(int(b.UserID)), b.UserID)
+		strconv.Itoa(int(b.UserID)), b.UserID, enum.DefaultChannel)
 	if err != nil {
 		return err
 	}
@@ -95,7 +95,7 @@ func Deposit(tx *gorm.DB, uid int32, amount int64, typ int32) error {
 		Amount: amount,
 	}
 	return InsertJournal(tx, b.UserID, bal, typ, string(d.ID),
-		enum.SystemOpUserID)
+		enum.SystemOpUserID, enum.DefaultChannel)
 }
 
 // Type:
@@ -103,7 +103,7 @@ func Deposit(tx *gorm.DB, uid int32, amount int64, typ int32) error {
 // JournalTypeDeposit -> Foreign deposit.id
 // JournalTypeMap -> Foreign map_profits.id
 func InsertJournal(tx *gorm.DB, uid int32, b *mdbill.Balance,
-	typ int32, fid string, opuid int32) error {
+	typ int32, fid string, opuid int32, channel string) error {
 	now := gorm.NowFunc()
 
 	m := make(map[string]interface{})
@@ -117,6 +117,7 @@ func InsertJournal(tx *gorm.DB, uid int32, b *mdbill.Balance,
 	m["created_at"] = now
 	m["updated_at"] = now
 	m["op_user_id"] = opuid
+	m["channel"] = channel
 
 	// usql := "amount = amount + ? , gold = gold + ? , " +
 	// 	"diamond = diamond + ? , updated_at = ?"
@@ -141,7 +142,7 @@ func InsertJournal(tx *gorm.DB, uid int32, b *mdbill.Balance,
 }
 
 func GainBalance(tx *gorm.DB, uid int32, b *mdbill.Balance, typ int32,
-	fid string, opuid int32) error {
+	fid string, opuid int32, channel string) error {
 	if b.Amount != 0 {
 		return errbill.ErrNotAllowAmount
 	}
@@ -182,5 +183,5 @@ func GainBalance(tx *gorm.DB, uid int32, b *mdbill.Balance, typ int32,
 		return errors.Internal("gain balance failed", err)
 	}
 
-	return InsertJournal(tx, uid, b, typ, fid, opuid)
+	return InsertJournal(tx, uid, b, typ, fid, opuid, channel)
 }

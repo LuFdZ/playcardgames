@@ -9,6 +9,7 @@ import (
 	"playcards/utils/db"
 	"playcards/utils/errors"
 
+	"github.com/Masterminds/squirrel"
 	"github.com/jinzhu/gorm"
 )
 
@@ -44,10 +45,14 @@ func ValidUserID(tx *gorm.DB, uid int32) error {
 
 func UpdateUser(tx *gorm.DB, u *mdu.User) (*mdu.User, error) {
 	user := &mdu.User{
-		Username: u.Username,
-		Nickname: u.Nickname,
-		Email:    u.Email,
-		Rights:   u.Rights,
+		//Username: u.Username,
+		Nickname:     u.Nickname,
+		Email:        u.Email,
+		Rights:       u.Rights,
+		Mobile:       u.Mobile,
+		Icon:         u.Icon,
+		InviteUserID: u.InviteUserID,
+		LastLoginIP:  u.LastLoginIP,
 	}
 	if err := tx.Model(u).Updates(user).Error; err != nil {
 		return nil, errors.Internal("update user failed", err)
@@ -117,4 +122,24 @@ func PageUserList(tx *gorm.DB, page *mdpage.PageOption, u *mdu.User) (
 	}
 
 	return list, rows, nil
+}
+
+func GetInvitedUserCount(tx *gorm.DB, uid int32) ([]mdu.User, error) {
+	var (
+		out []mdu.User
+	)
+	sql, param, err := squirrel.
+		Select(" user_id,icon "). //
+		From(enumu.UserTableName).
+		Where(" invite_user_id = ? ", uid).ToSql()
+
+	if err != nil {
+		return nil, errors.Internal("get user id list failed", err)
+	}
+
+	err = tx.Raw(sql, param...).Scan(&out).Error
+	if err != nil {
+		return nil, errors.Internal("get list failed", err)
+	}
+	return out, nil
 }

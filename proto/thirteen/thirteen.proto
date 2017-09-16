@@ -4,33 +4,17 @@ package thirteen;
 
 message GroupCard {
     int32 UserID = 1;
-    int32 Type = 2;
-    int32 Weight = 3;    //权重
-    repeated string CardList = 4;
-}
-
-message Settle {
-    int32 UserID = 1;
-    int32 ScoreHead = 3;
-    int32 ScoreMiddle = 4;
-    int32 ScoreTail = 5;
-    int32 Score = 8;
+    repeated string CardList = 2;
 }
 
 message GameReady {
     int32 RoomID = 1;
     int32 UserID = 2;
 }
-message GameResult {
-    int32 UserID = 1;
-    repeated Settle SettleList = 2;
-    SubmitCard CardsList = 3;
-    string CardType = 4;
-}
 
 message GameResultList {
     int32 RoomID = 1;
-    repeated GameResult Results= 2;
+    repeated ThirteenResult Result= 2;
      
 }
 
@@ -42,13 +26,51 @@ message SubmitCard {
 
 message GameResultListRequest {
     int32 RoomID = 1;
+    repeated ThirteenResult ResultList =2;
 }
 
 message GameResultListReply {
     repeated GameResultList List= 1;
 }
 
+message ThirteenSettle {
+    string Middle =1;
+    string Tail = 2;
+    string Head = 3;
+    string AddScore = 4;
+    string TotalScore = 5;
+}
+
+message ThirteenResult {
+    ThirteenGroupResult Result = 1;
+    ThirteenSettle Settle =2;
+    repeated int32 Shoot = 3;
+    int32 UserID = 4;
+}
+
+message ThirteenGroupResult {
+    ResGroup Head = 1;
+    ResGroup Middle = 2;
+    ResGroup Tail = 3;
+}
+
+message ResGroup {
+    string GroupType = 1; 
+    repeated string CardList =2;
+
+}
+
+message GetThirteenRequest {
+    int32 RoomID = 1;
+}
+
+
+message GetThirteenReply {
+    int32 Result = 1;
+}
+
 service ThirteenSrv {
     rpc Submit(SubmitCard) returns (SubmitCard) {}
     rpc GameResultList(GameResultListRequest) returns (GameResultListReply) {}
+    rpc GetThirteen(GetThirteenRequest) returns (GetThirteenReply) {}
 }

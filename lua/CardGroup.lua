@@ -9,7 +9,7 @@ CardGroup = {
     --  对应GroupTypeName
     _type = 1,
     --  关键牌
-    _keyCard
+    _keyCard = {}
 }
 
 CardGroup.__index = CardGroup

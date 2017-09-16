@@ -39,19 +39,13 @@ message Position {
     bool Ready = 4;
 }
 
-message RoomEvent {
-    int32 UserID = 1;
-    int32 RoomID = 2;
-    int32 Type = 3;
-    string Data = 4;
-}
-
 message GameUserResult {
     int32 UserID =1;
     int32 Win    =2;
     int32 Lost   =3;
     int32 Tie    =4;
     int32 Score  =5;
+    string GameCardCount = 6;
 }
 
 message RoomResults {
@@ -68,12 +62,14 @@ message GiveUpGameRequest {
 }
 
 message GiveUpGameResult {
-    int32 Total = 1;
-    int32 Agree =2;
-    int32 DisAgree = 3;
-    int32 Wairting = 4;
-    int32 Status = 5;// 1投票进行中 2游戏继续 3游戏解散
-    int32 RoomID =6;
+    int32 RoomID =1; 
+    int32 Status =2; 
+    repeated UserState UserStateList = 3;
+}
+
+message UserState {
+    int32 State = 1;
+    int32 UserID = 2;
 }
 
 message RenewalRoomReady {
@@ -87,8 +83,10 @@ message Shock {
     int32 UserIDTo = 3;
 }
 
-message Dropped {
-    int32 UserID = 1;
+message UserConnection {
+    int32 RoomID = 1;
+    int32 UserID = 2;
+    int32 Status = 3;//1 重连 2掉线
 }
 
 message HeartbeatRequest {
@@ -128,6 +126,16 @@ message RoomResultListReply {
     repeated RoomResults List= 1;
 }
 
+message CheckRoomExistRequest{
+    
+}
+
+message CheckRoomExistReply{
+    int32 Result = 1;
+    Room Room = 2;
+}
+
+
 service RoomSrv {
     rpc CreateRoom(Room) returns (Room) {}
     rpc EnterRoom(Room) returns (Room) {}
@@ -139,8 +147,10 @@ service RoomSrv {
     rpc GiveUpGame(GiveUpGameRequest) returns (GiveUpGameResult) {}
     rpc Shock(RoomUser) returns (RoomUser) {}
     rpc Renewal(Room) returns (Room) {}
+    rpc CreateFeedback(Feedback) returns (Feedback) {}
     rpc PageFeedbackList(PageFeedbackListRequest) returns (PageFeedbackListReply) {}
     rpc RoomResultList(RoomUser) returns (RoomResultListReply) {}
+    rpc CheckRoomExist(Room) returns (CheckRoomExistReply) {}
 }
 
 

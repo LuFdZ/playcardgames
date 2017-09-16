@@ -21,3 +21,5 @@ const (
 	GameStatusDestroy  = 5
 	GameStatusGiveUp   = 6
 )
+
+var GroupTypeName = [...]string{"Single", "Couple", "TwoCouple", "Three", "Straight", "Flush", "ThreeCouple", "Four", "FlushStright", "Shoot", "AllShoot"}

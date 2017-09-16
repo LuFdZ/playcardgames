@@ -112,7 +112,19 @@ func PageUserList(page *mdpage.PageOption, u *mdu.User) ([]*mdu.User, int64,
 }
 
 func UpdateUser(u *mdu.User) (*mdu.User, error) {
-	return dbu.UpdateUser(db.DB(), u)
+	f := func(tx *gorm.DB) error {
+		user, err := dbu.UpdateUser(tx, u)
+		if err != nil {
+			return err
+		}
+		u = user
+		return nil
+	}
+	err := db.Transaction(f)
+	if err != nil {
+		return nil, err
+	}
+	return u, err
 }
 
 func GetUserInfoSimple(userID int32) *mdu.User {
