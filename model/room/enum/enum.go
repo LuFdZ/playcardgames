@@ -22,15 +22,16 @@ const (
 
 // room status desc
 const (
-	RoomStatusInit        = 1 //建立房间
-	RoomStatusAllReady    = 2 //房间满员并且全部确认准备
-	RoomStatusStarted     = 3 //游戏开始
-	RoomStatusReInit      = 4 //一局游戏结束，等待下一轮确认开始
-	RoomStatusDelay       = 5 //房间到达游戏最大局数，留存一段时间等待同房续费
-	RoomStatusDone        = 6 //房间正常结束
-	RoomStatusDestroy     = 7 //房间非正常结束(所有人员离开)
-	RoomStatusGiveUp      = 8 //房间投票放弃
-	RoomStatusWairtGiveUp = 9 //发起投票弃权的等待状态
+	RoomStatusInit          = 1  //建立房间
+	RoomStatusAllReady      = 2  //房间满员并且全部确认准备
+	RoomStatusStarted       = 3  //游戏开始
+	RoomStatusReInit        = 4  //一局游戏结束，等待下一轮确认开始
+	RoomStatusWaitGiveUp    = 5  //发起投票弃权的等待状态
+	RoomStatusDelay         = 6  //房间到达游戏最大局数，留存一段时间等待同房续费
+	RoomStatusDone          = 7  //房间正常结束
+	RoomStatusDestroy       = 8  //房间非正常结束(所有人员离开)
+	RoomStatusGiveUp        = 9  //房间投票放弃
+	RoomStatusOverTimeClean = 10 //房间长时间无人操作被超时清除
 )
 
 // room user role
@@ -41,8 +42,8 @@ const (
 
 // room user ready status
 const (
-	UserUnready = 0
 	UserReady   = 1
+	UserUnready = 2
 )
 
 // game cost
@@ -80,4 +81,9 @@ const (
 const (
 	AgreeGiveUpRoom    = 1
 	DisAgreeGiveUpRoom = 2
+)
+
+const (
+	ThirteenGameType = 1001
+	NiuniuGameType   = 1002
 )

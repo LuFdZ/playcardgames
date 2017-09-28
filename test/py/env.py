@@ -3,11 +3,11 @@
 import time
 from client import Client
 
-a = Client("aaaaaa")
-b = Client("bbbbbb")
-c = Client("cccccc")
-d = Client("dddddd")
-e = Client("eeeeee")
+a = Client("aaaaaa","1001","1001")
+b = Client("bbbbbb","1002","1002")
+c = Client("cccccc","1003","1003")
+d = Client("dddddd","1004","1004")
+e = Client("eeeeee","1005","1005")
 
 def Init(account):
     account.Login()
@@ -17,3 +17,6 @@ def Init(account):
 
     account.SubscribeRegionMessage(1)
     account.SubscribeRegionChat(1)
+    account.SubscribeThirteen()
+    account.SubscribeNiu()
+    account.SubscribeBill()

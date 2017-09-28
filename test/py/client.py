@@ -10,14 +10,14 @@ Host = "http://127.0.0.1:8080"
 
 
 class Client(object):
-    def __init__(self, name, host=Host):
+    def __init__(self, name, opid,unid,host=Host):
         self.token = ""
         self.user_id = 0
         self.user = None
-        self.account = self.GenAccount(name)
+        self.account = self.GenAccount(name,opid,unid)
         self.host = host
 
-    def GenAccount(self, name):
+    def GenAccount(self, name,opid,unid):
         return {
             "Username": name,
             "Password": name,
@@ -25,8 +25,8 @@ class Client(object):
             "Email": name + "@x.com",
             "Icon":"12345567",
             "Sex":1,
-            "OpenID":"123445",
-            "UnionID":"123445",
+            "OpenID":opid,
+            "UnionID":unid,
         }
 
     def Request(self, path, data):
@@ -55,113 +55,6 @@ class Client(object):
         u = self.Request("/user/UserSrv/Login", self.account)
         self.token = u["Token"]
         return u
-
-    def GetProperty(self):
-        """
-        获得用户属性信息
-        :return: 用户属性
-        """
-        return self.Request("/user/UserSrv/GetProperty", self.account)
-
-    def AddFriend(self, friendid):
-        """
-        添加
-        :return: 朋友列表
-        """
-        ul = self.Request("/friend/FriendSrv/AddFriend", {
-            "FriendID": friendid
-        })
-        return ul
-
-    def DelFriend(self,friendid):
-        """
-        删除
-        :return:朋友列表
-        """
-        ul = self.Request("/friend/FriendSrv/DelFriend",{
-            "FriendID": friendid
-        })
-        return ul
-
-    def FriendList(self):
-        """
-        查询
-        :return:朋友列表
-        """
-        ul = self.Request("/friend/FriendSrv/FriendList",{
-        })
-        return ul
-
-    def ItemList(self):
-        """
-        列出玩家所有物品
-        """
-        return self.Request("/store/StoreSrv/ItemList", {})
-
-    def AddRegion(self):
-        """
-        添加区域
-        :return: 添加结果
-        """
-        return self.Request("/region/RegionSrv/AddRegion", {
-            "RegionName" : "111111",
-            "Description" : "new brige 1",
-            "Level" : 10,
-            "ProfitTime" : 5,
-            "Status" : 1
-        })
-
-    def AddRegionEvent(self):
-        """
-        添加区域事件
-        """
-        return self.Request("/region/RegionSrv/AddRegionEvent", {
-            "EventName" : "one event",
-            "Description" : "test event description",
-            "Rate" : 85,
-            "ValueStart" : 500,
-            "ValueEnd" : 50000,
-            "ValueType" : 1,
-            "RegionID" : 1
-        })
-
-    def RegionList(self):
-        """
-        列出所有区域
-        """
-        return self.Request("/region/RegionSrv/RegionList", {})
-
-    def OpenRegion(self, rid, uid):
-        """
-        为指定用户开通区域
-        """
-        return self.Request("/region/RegionSrv/OpenRegion", {
-            "RegionID" : rid,
-            "UserID" : uid
-        })
-
-    def EnterRegion(self, rid):
-        """
-        进入指定区域
-        """
-        return self.Request("/region/RegionSrv/EnterRegion", {
-            "RegionID" : rid
-        })
-
-    def LeaveRegion(self):
-        """
-        退出指定区域
-        """
-        return self.Request("/region/RegionSrv/LeaveRegion", {})
-
-    def RegionChat(self, msg):
-        """
-        地域聊天
-        """
-        return self.Request("/chat/ChatSrv/Chat", {
-            "Message" : msg,
-            "Type" : 2
-        })
 
     def Stream(self):
 
@@ -202,12 +95,6 @@ class Client(object):
         b = json.dumps(data)
         self.ws.send(b)
 
-    def SubscribeRegionMessage(self, region_id):
-        self.StreamSend("SubscribeRegionMessage", region_id)
-
-    def SubscribeChat(self):
-        self.StreamSend("SubscribeChatMessage", {})
-
     def AddZodiacConfig(self):
         """
         活动配置添加
@@ -224,99 +111,13 @@ class Client(object):
             })
         })
 
-    def ListConfig(self):
-        ul = self.Request("/activity/ActivitySrv/ListConfig", {})
 
-    def UpdateConfig(self):
-        ul = self.Request("/activity/ActivitySrv/UpdateConfig",{
-            "COnfigID":10001,
-            "Description": "十二星座json活动配置",
-            "Parameter": json.dumps({
-                "StartDurationInday": "0s",
-                "EndEDurationInDay": "1439m",
-                "LifeDuration": "1m",
-                "InitialGoldPool": 60000,
-                "Rate": 0.1
-            })
-        });
 
     def GetConfigByID(self, configid):
         ul = self.Request("/activity/ActivitySrv/GetConfigByID", {
           "ID":configid
         })
 
-    def ZodiacRoundList(self, code="", status=0):
-        """
-        星座查询
-        """
-        ul = self.Request("/zodiac/ZodiacSrv/RoundList",{
-            "Code": code,
-            "Staatus": status,
-        })
-        return ul
-
-    def AddZodiacBet(self, code, zodiac={}):
-        """
-        星座下注
-        """
-        ul = self.Request("/zodiac/ZodiacSrv/Bet",{
-            "Code" : code,
-            "Zodiac": zodiac
-        })
-        return ul
-
-    def ZodiacRoundAllList(self,code):
-        """
-        星座查询
-        """
-        ul = self.Request("/zodiac/ZodiacSrv/ZodiacRoundAllList",{
-            "Code": code
-        })
-        return ul
-
-
-    def ZodiacRoundFix(self,code,result1,result2,result3):
-        """
-        星座结果更改
-        """
-        ul = self.Request("/zodiac/ZodiacSrv/ZodiacRoundFix",{
-            "Code" : code,
-            "Result1" : result1,
-            "Reuslt2" : result2,
-            "Result3" : result3,
-        })
-        return ul
-
-    def SubscribeZodiacUpdate(self):
-        self.StreamSend("SubscribeZodiacMessage",None)
-
-
-    def PageZodiacList(self):
-        """
-        星座查询
-        """
-        ul = self.Request("/zodiac/ZodiacSrv/PageZodiacList",{
-            "Code" :"",
-            "Type" : 1,
-            "Status" : 1,
-            "UserID":0,
-            "Page" :{
-                "Page":0,
-                "PageSize":15,
-                "Time":{
-                    "End":0,
-                    "Start":0,
-                }
-            },
-        })
-        return ul
-
-    def ZRList(self,code,status):
-        ul = self.Request("/zodiac/ZodiacSrv/ZodiacRoundList",{
-            "Code":code,
-            "Status":status
-        })
-        return ul
 
     def Heartbeat(self):
         ul = self.Request("/room/roomSrv/Heartbeat",{
@@ -324,12 +125,12 @@ class Client(object):
         })
         return ul
 
-    def CreateRoom(self,gameType,maxNumber,roundNumber,gameParam):
+    def CreateTRoom(self,gameType,maxNumber,roundNumber):
         ul = self.Request("/room/roomSrv/CreateRoom",{
             "RoundNumber":roundNumber,
             "MaxNumber":maxNumber,
             "GameType":gameType,
-            "GameParam":gameParam
+            "GameParam":"{\"BankerAddScore\":2,\"Time\":30,\"Joke\":0,\"Times\":2}"
         })
         return ul
 
@@ -361,6 +162,12 @@ class Client(object):
 
     def SubscribeThirteen(self):
         self.StreamSend("SubscribeThirteenMessage",{})
+
+    def SubscribeBill(self):
+        self.StreamSend("SubscribeBillMessage",{})
+
+    def SubscribeNiu(self):
+        self.StreamSend("SubscribeNiuniuMessage",{})
 
 
     def Recharge(self,uid,diamond,orderCode):
@@ -395,6 +202,7 @@ class Client(object):
                 },
                 "Sum":False,
             },
+            "OpenID":"123123"
         })
         return ul
 
@@ -466,15 +274,15 @@ class Client(object):
 
     def PageFeedbackList(self,page,pagesize):
         ul = self.Request("/room/roomSrv/PageFeedbackList",{
-            # "Page":{
-            #     "Page":page,
-            #     "PageSize":pagesize,
-            #     "Time":{
-            #         "Start":0,
-            #         "End":0,
-            #     },
-            #     "Sum":False,
-            # },
+            "Page":{
+                "Page":page,
+                "PageSize":pagesize,
+                "Time":{
+                    "Start":0,
+                    "End":0,
+                },
+                "Sum":False,
+            },
             "Feedback":{}
         })
         return ul
@@ -500,8 +308,9 @@ class Client(object):
         })
         return ul
 
-    def RoomResultList(self):
+    def RoomResultList(self,gtype):
         ul = self.Request("/room/roomSrv/RoomResultList",{
+            "GameType":gtype,
         })
         return ul
 
@@ -530,5 +339,60 @@ class Client(object):
     def Shock(self,uid):
         ul = self.Request("/room/roomSrv/Shock",{
             "UserID":uid,
+        })
+        return ul
+
+    def ThirteenRecovery(self,rid):
+        ul = self.Request("/thirteen/thirteenSrv/ThirteenRecovery",{
+            "RoomID":rid,
+        })
+        return ul
+
+    def WXLogin(self,core):
+        ul = self.Request("/user/userSrv/WXLogin",{
+            "Code":core,
+            "Channel":"test",
+            "MobileUuID":"23123123",
+	    "MobileModel"   :"dfsfsdfs",
+	    "MobileNetWork" :"dwdqdwd",
+	    "MobileOs"      :"qqweqweeesd",
+        })
+        return ul
+
+    def CreateNRoom(self,maxNumber,roundNumber,bType):
+        ul = self.Request("/room/roomSrv/CreateRoom",{
+            "RoundNumber":roundNumber,
+            "MaxNumber":maxNumber,
+            "GameType":1002,
+            "GameParam":"{\"Times\":3,\"BankerType\":%d}"%(bType)
+        })
+        return ul
+
+    def GetBanker(self,value):
+        ul = self.Request("/niuniu/niuniuSrv/GetBanker",{
+            "Key":value,
+        })
+        return ul
+
+    def SetBet(self,value):
+        ul = self.Request("/niuniu/niuniuSrv/SetBet",{
+            "Key":value,
+        })
+        return ul
+
+    def SubmitCard(self):
+        ul = self.Request("/niuniu/niuniuSrv/SubmitCard",{
+        })
+        return ul
+
+    def NiuniuResultListRequest(self,rid):
+        ul = self.Request("/niuniu/niuniuSrv/GameResultList",{
+            "RoomID":rid,
+        })
+        return ul
+
+    def NiuniuRecovery(self,rid):
+        ul = self.Request("/niuniu/niuniuSrv/NiuniuRecovery",{
+            "RoomID":rid,
         })
         return ul

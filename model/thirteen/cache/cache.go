@@ -68,7 +68,7 @@ func UpdateGameUser(t *mdt.Thirteen, uid int32, playernow int32) error {
 	}
 
 	if err := cache.KV().Watch(f, key); err != nil {
-		return errors.Internal("set room failed", err)
+		return errors.Internal("update niuniu game user failed", err)
 	}
 
 	return nil
@@ -86,7 +86,7 @@ func DeleteGame(rid int32) error {
 	}
 	err := cache.KV().Watch(f, key)
 	if err != nil {
-		return errors.Internal("del thirteen user error", err)
+		return errors.Internal("del thirteen game redis error", err)
 	}
 	return nil
 }

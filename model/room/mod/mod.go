@@ -57,11 +57,13 @@ type RoomUser struct {
 
 type GameUserResult struct {
 	UserID        int32
+	Nickname      string
 	Win           int32
 	Lost          int32
 	Tie           int32
 	Score         int32
-	GameCardCount string
+	Role          int32
+	GameCardCount string //interface{}
 }
 
 type RoomResults struct {
@@ -69,6 +71,9 @@ type RoomResults struct {
 	RoundNumber int32
 	RoundNow    int32
 	Status      int32
+	Password    string
+	GameType    int32
+	CreatedAt   *time.Time
 	List        []*GameUserResult
 }
 
@@ -87,8 +92,8 @@ type RoomResultList struct {
 }
 
 func (r *Room) String() string {
-	return fmt.Sprintf("[roomid: %d userlist: %s status: %d gametype: %d]",
-		r.RoomID, r.UserList, r.Status, r.GameType)
+	return fmt.Sprintf("[roomid: %d pwd: %s status: %d gametype: %d]",
+		r.RoomID, r.Password, r.Status, r.GameType)
 }
 
 func (us *UserState) ToProto() *pbr.UserState {
@@ -144,8 +149,10 @@ func (r *RoomUser) ToProto() *pbr.RoomUser {
 func (r *RoomResults) ToProto() *pbr.RoomResults {
 	out := &pbr.RoomResults{
 		RoomID:      r.RoomID,
+		Password:    r.Password,
 		RoundNumber: r.RoundNumber,
 		RoundNow:    r.RoundNow,
+		CreatedAt:   mdtime.TimeToProto(r.CreatedAt),
 		Status:      r.Status,
 	}
 	utilproto.ProtoSlice(r.List, &out.List)
@@ -155,6 +162,7 @@ func (r *RoomResults) ToProto() *pbr.RoomResults {
 func (ur *GameUserResult) ToProto() *pbr.GameUserResult {
 	return &pbr.GameUserResult{
 		UserID:        ur.UserID,
+		Nickname:      ur.Nickname,
 		Win:           ur.Win,
 		Lost:          ur.Lost,
 		Tie:           ur.Tie,

@@ -41,6 +41,7 @@ message BalanceChange{
 }
 
 service BillSrv {
+    rpc GetUserBalance(GetBalanceRequest) returns (Balance) {}
     rpc GetBalance(GetBalanceRequest) returns (Balance) {}
     rpc GainBalance(Balance) returns (Balance) {}
     rpc Recharge(RechargeRequest) returns(RechargeReply) {}

@@ -93,6 +93,23 @@ message CheckUserReply{
     int32 Code = 2;
 }
 
+message WXLoginRequest{
+    string Code = 1;
+    string Channel = 2;
+    string MobileUuID   = 3;
+    string MobileModel   = 4;
+    string MobileNetWork= 6;
+    string MobileOs     = 5;
+    string OpenID = 7;
+    string Mobile = 8;
+}
+
+message WXLoginRsply{
+    int32 Result = 1;
+    User  User =2;
+    string OpenID = 3;
+    string Token = 4;
+}
 
 
 service UserSrv {
@@ -105,4 +122,5 @@ service UserSrv {
     rpc GetToken(GetTokenRequest) returns (GetTokenReply) {}
     rpc CheckUser(CheckUserRequest) returns (CheckUserReply) {}
     rpc GetUser(User) returns (User) {}
+    rpc WXLogin(WXLoginRequest) returns (User) {}
 }

@@ -13,9 +13,10 @@ import (
 )
 
 var FuncRights = map[string]int32{
-	"BillSrv.GetBalance":  auth.RightsPlayer | auth.RightsBillView,
-	"BillSrv.GainBalance": auth.RightsBillEdit,
-	"BillSrv.Recharge":    auth.RightsBillEdit,
+	"BillSrv.GetUserBalance": auth.RightsPlayer,
+	"BillSrv.GetBalance":     auth.RightsPlayer | auth.RightsBillView,
+	"BillSrv.GainBalance":    auth.RightsBillEdit,
+	"BillSrv.Recharge":       auth.RightsBillEdit,
 }
 
 func main() {

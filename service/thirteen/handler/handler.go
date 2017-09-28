@@ -31,7 +31,7 @@ func NewHandler(s server.Server, gt *gsync.GlobalTimer) *ThirteenSrv {
 }
 
 func (ts *ThirteenSrv) update(gt *gsync.GlobalTimer) {
-	lock := "bcr.thirteen.update.lock"
+	lock := "playcards.thirteen.update.lock"
 	f := func() error {
 		log.Debug("thirteen update loop... and has %d thirteens")
 
@@ -63,7 +63,7 @@ func (ts *ThirteenSrv) update(gt *gsync.GlobalTimer) {
 }
 
 func (ts *ThirteenSrv) SubmitCard(ctx context.Context, req *pbt.SubmitCard,
-	rsp *pbt.SubmitCard) error {
+	rsp *pbt.ThirteenReply) error {
 	u, err := auth.GetUser(ctx)
 	if err != nil {
 		return err
@@ -72,6 +72,10 @@ func (ts *ThirteenSrv) SubmitCard(ctx context.Context, req *pbt.SubmitCard,
 	if err != nil {
 		return err
 	}
+	reply := &pbt.ThirteenReply{
+		Result: 1,
+	}
+	*rsp = *reply
 	//fmt.Printf("SubmitCardSrv:%v \n", rid)
 	msg := &pbt.GameReady{
 		RoomID: rid,
@@ -95,21 +99,21 @@ func (ts *ThirteenSrv) GameResultList(ctx context.Context, req *pbt.GameResultLi
 	return nil
 }
 
-//GetThirteen
-
-func (rs *ThirteenSrv) GetThirteen(ctx context.Context, req *pbt.GetThirteenRequest,
-	rsp *pbt.GetThirteenReply) error {
-	_, err := auth.GetUser(ctx)
+func (rs *ThirteenSrv) ThirteenRecovery(ctx context.Context, req *pbt.ThirteenRequest,
+	rsp *pbt.ThirteenReply) error {
+	u, err := auth.GetUser(ctx)
 	if err != nil {
 		return err
 	}
-	var res *pbt.GetThirteenReply
-	_, err = thirteen.GetThirteen(req.RoomID)
+	res := &pbt.ThirteenReply{}
+	recovery, err := thirteen.ThirteenRecovery(req.RoomID, u.UserID)
+	//fmt.Printf("get thirteen recovery:%v", recovery)
 	if err != nil {
 		res.Result = 2
 		*rsp = *res
 		return err
 	}
+	res = recovery.ToProto()
 	res.Result = 1
 	*rsp = *res
 	return nil

@@ -32,8 +32,9 @@ type User struct {
 	RegIP         string
 	OpenID        string
 	UnionID       string
-	RoomID        int32 `gorm:"-"` // Ignore this field
-	Diamond       int64 `gorm:"-"`
+	RoomID        int32  `gorm:"-"` // Ignore this field
+	Diamond       int64  `gorm:"-"`
+	AccessToken   string `gorm:"-"`
 }
 
 type UserInfo struct {
@@ -44,9 +45,30 @@ type UserInfo struct {
 	Sex      int32
 }
 
+type AccessTokenResponse struct {
+	AccessToken  string  `json:"access_token"`
+	ExpiresIn    float64 `json:"expires_in"`
+	RefreshToken string  `json:"refresh_token"`
+	OpenID       string  `json:"openid"`
+	Scope        string  `json:"scope"`
+}
+
+type AccessTokenErrorResponse struct {
+	Errcode float64 `json:"errcode"`
+	Errmsg  string  `json:"errmsg"`
+}
+
+type UserInfoResponse struct {
+	OpenID     string `json:"openid"`
+	Nickname   string `json:"nickname"`
+	Sex        int32  `json:"sex"`
+	Headimgurl string `json:"headimgurl"`
+	UnionID    string `json:"unionid"`
+}
+
 func (u *User) String() string {
-	return fmt.Sprintf("[uid: %d, name: %s, rights: %d]", u.UserID,
-		u.Username, u.Rights)
+	return fmt.Sprintf("[uid: %d, name: %s, rights: %d,openid:%s,mobile:%s,nickname:%s]", u.UserID,
+		u.Username, u.Rights, u.OpenID, u.Mobile, u.Nickname)
 }
 
 func (u *User) ToProto() *pbu.User {
@@ -125,6 +147,18 @@ func UserFromProto(u *pbu.User) *User {
 		Sex:           u.Sex,
 		OpenID:        u.OpenID,
 		UnionID:       u.UnionID,
+	}
+}
+
+func UserFromWXLoginRequestProto(u *pbu.WXLoginRequest) *User {
+	return &User{
+		OpenID:        u.OpenID,
+		Mobile:        u.Mobile,
+		Channel:       u.Channel,
+		MobileUuID:    u.MobileUuID,
+		MobileModel:   u.MobileModel,
+		MobileNetWork: u.MobileNetWork,
+		MobileOs:      u.MobileOs,
 	}
 }
 

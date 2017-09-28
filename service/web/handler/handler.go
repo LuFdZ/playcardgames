@@ -5,6 +5,7 @@ import (
 	pbweb "playcards/proto/web"
 	webbill "playcards/service/web/bill"
 	"playcards/service/web/clients"
+	webniu "playcards/service/web/niuniu"
 	"playcards/service/web/publish"
 	"playcards/service/web/request"
 	webroom "playcards/service/web/room"
@@ -36,6 +37,7 @@ func NewWebHandler(c client.Client) *Web {
 	webbill.Init(w.broker)
 	webroom.Init(w.broker)
 	webthirteen.Init(w.broker)
+	webniu.Init(w.broker)
 	return w
 }
 

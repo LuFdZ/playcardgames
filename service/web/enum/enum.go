@@ -27,5 +27,15 @@ const (
 )
 
 const (
+	MsgNiuniuGameResult = "NiuniuGameResult"
+	MsgNiuniuBeBanker   = "NiuniuBeBanker"
+	MsgNiuniuSetBet     = "NiuniuSetBet"
+	MsgNiuniuAllBet     = "NiuniuAllBet"
+	MsgNiuniuGameReady  = "NiuniuGameReady"
+	MsgNiuniuGameStart  = "NiuniuGameStart"
+	MsgNiuniuCountDown  = "NiuniuCountDown"
+)
+
+const (
 	MsgBillChange = "BillChange"
 )

@@ -69,7 +69,8 @@ func DeleteRoom(password string) error {
 			room, err := GetRoom(password)
 			if err == nil && room != nil {
 				for _, user := range room.Users {
-					tx.HDel(key, string(user.UserID))
+					deluserkey := UserHKey(user.UserID)
+					tx.Del(deluserkey)
 					//userKey := UserHKey(user.UserID)
 					//rid := cache.KV().HGet(userKey, "roomid").Val()
 					//if rid == strconv.Itoa(int(room.RoomID)) {
@@ -140,6 +141,11 @@ func SetRoomUser(rid int32, password string, uid int32) error {
 
 func UpdateRoomUserSocektStatus(uid int32, socketStatus int32, socketNotice int32) error {
 	key := UserHKey(uid)
+	rid := cache.KV().HGet(key, "roomid").Val()
+	if len(rid) == 0 {
+		return nil
+	}
+
 	f := func(tx *redis.Tx) error {
 		tx.Pipelined(func(p *redis.Pipeline) error {
 			tx.HSet(key, "socketstatus", socketStatus) //scoket连接状态 1在线 2掉线
@@ -179,9 +185,11 @@ func DeleteAllRoomUser(password string) error {
 		//orig, _ := tx.HGet(key, "password").Bytes()
 		tx.Pipelined(func(p *redis.Pipeline) error {
 			room, err := GetRoom(password)
+			//fmt.Printf("delete room user room:%v \n", room)
 			if err == nil && room != nil {
 				for _, user := range room.Users {
-					tx.HDel(key, string(user.UserID))
+					userkey := UserHKey(user.UserID)
+					tx.Del(userkey)
 				}
 			}
 			//tx.HDel(key, string(orig))

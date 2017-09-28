@@ -41,6 +41,7 @@ type ThirteenSettle struct {
 
 type ThirteenResult struct {
 	UserID int32
+	Role   int32
 	Settle ThirteenSettle
 	Result ThirteenGroupResult
 	Shoot  []int32
@@ -65,12 +66,14 @@ type GameParam struct {
 }
 
 type GroupCard struct {
-	UserID   int32
-	CardList []string
+	UserID     int32
+	CardList   []string
+	RoomStatus int32
 }
 
 type SubmitCard struct {
 	UserID int32
+	Role   int32
 	Head   []string
 	Middle []string
 	Tail   []string
@@ -79,6 +82,21 @@ type SubmitCard struct {
 type GameResultList struct {
 	RoomID int32
 	Result []*ThirteenResult
+}
+
+type ThirteenRecovery struct {
+	Result     int32
+	Status     int32
+	Cards      GroupCard
+	ReadyUser  []int32
+	GameResult GameResultList
+}
+
+type ThirteenRoomParam struct {
+	BankerAddScore int32
+	Time           int32
+	Joke           int32
+	Times          int32
 }
 
 func SubmitCardFromProto(sc *pbt.SubmitCard, uid int32) *SubmitCard {
@@ -129,6 +147,7 @@ func (ts *ThirteenResult) ToProto() *pbt.ThirteenResult {
 		Settle: ts.Settle.ToProto(),
 		Result: ts.Result.ToProto(),
 		Shoot:  ts.Shoot,
+		Role:   ts.Role,
 	}
 }
 
@@ -145,6 +164,16 @@ func (grl *GameResultList) ToProto() *pbt.GameResultList {
 	return out
 }
 
+func (tr *ThirteenRecovery) ToProto() *pbt.ThirteenReply {
+	return &pbt.ThirteenReply{
+		Result:     tr.Result,
+		Status:     tr.Status,
+		Cards:      tr.Cards.ToProto(),
+		GameResult: tr.GameResult.ToProto(),
+		ReadyUser:  tr.ReadyUser,
+	}
+}
+
 // func (c *Card) ToProto() *pbt.Card {
 // 	out := &pbt.Card{
 // 		Type:  c.Type,
@@ -155,8 +184,9 @@ func (grl *GameResultList) ToProto() *pbt.GameResultList {
 
 func (gc *GroupCard) ToProto() *pbt.GroupCard {
 	out := &pbt.GroupCard{
-		UserID:   gc.UserID,
-		CardList: gc.CardList,
+		UserID:     gc.UserID,
+		CardList:   gc.CardList,
+		RoomStatus: gc.RoomStatus,
 	}
 	utilproto.ProtoSlice(gc.CardList, &out.CardList)
 	//fmt.Printf("GroupCard ToProto %v", out.CardList)

@@ -18,6 +18,10 @@ func UserHKey(uid int32) string {
 	return fmt.Sprintf(cache.KeyPrefix("USER:%d"), uid)
 }
 
+func UserHWXKey(openid string) string {
+	return fmt.Sprintf(cache.KeyPrefix("USER:%d"), openid)
+}
+
 func UserHKeySearch() string {
 	return cache.KeyPrefix("USER:*")
 }
@@ -38,6 +42,38 @@ func UserIDFromToken(token string) (int32, error) {
 	}
 
 	return int32(n), nil
+}
+
+func GetAccessToken(openid string) (string, error) {
+	key := UserHWXKey(openid)
+	val := cache.KV().HGet(key, "accesstoken").Val()
+	return val, nil
+}
+
+func GetRefreshToken(openid string) (string, error) {
+	key := UserHWXKey(openid)
+	val := cache.KV().HGet(key, "refreshtoken").Val()
+	return val, nil
+}
+
+func SetUserWXInfo(openid string, accesstoken string, refreshtoken string) error {
+	key := UserHWXKey(openid)
+
+	f := func(tx *redis.Tx) error {
+		tx.Pipelined(func(p *redis.Pipeline) error {
+			tx.HSet(key, "accesstoken", accesstoken)
+			tx.HSet(key, "refreshtoken", refreshtoken)
+			return nil
+		})
+		return nil
+	}
+
+	err := cache.KV().Watch(f, key)
+	if err != nil {
+		return errors.Internal("set user wx info error", err)
+	}
+
+	return nil
 }
 
 func GetUser(token string) (*mdu.User, error) {

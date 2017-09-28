@@ -75,6 +75,16 @@ func GetThirteenByRoomID(tx *gorm.DB, rid int32) ([]*mdt.Thirteen, error) {
 	return out, nil
 }
 
+func GetLastThirteenByRoomID(tx *gorm.DB, rid int32) (*mdt.Thirteen, error) {
+	out := &mdt.Thirteen{}
+	if err := tx.Where(" room_id = ? ", rid).
+		Order("index").Last(&out).Error; err != nil {
+		return nil, errors.Internal("get last thirteen by room_id failed", err)
+	}
+
+	return out, nil
+}
+
 func GiveUpGameUpdate(tx *gorm.DB, gids []int32) error {
 	if err := tx.Table(enum.ThirteenTableName).Where(" game_id IN (?)", gids).
 		Updates(map[string]interface{}{"status": enum.GameStatusGiveUp}).

@@ -16,6 +16,7 @@ import (
 var FuncRights = map[string]int32{
 	"UserSrv.Register":       auth.RightsNone,
 	"UserSrv.Login":          auth.RightsNone,
+	"UserSrv.WXLogin":        auth.RightsNone,
 	"UserSrv.GetProperty":    auth.RightsPlayer | auth.RightsUserView,
 	"UserSrv.UserInfo":       auth.RightsUserView,
 	"UserSrv.PageUserList":   auth.RightsUserView,

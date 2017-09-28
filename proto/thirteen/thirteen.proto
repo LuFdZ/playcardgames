@@ -5,6 +5,7 @@ package thirteen;
 message GroupCard {
     int32 UserID = 1;
     repeated string CardList = 2;
+    int32 RoomStatus = 3;
 }
 
 message GameReady {
@@ -26,7 +27,6 @@ message SubmitCard {
 
 message GameResultListRequest {
     int32 RoomID = 1;
-    repeated ThirteenResult ResultList =2;
 }
 
 message GameResultListReply {
@@ -46,6 +46,7 @@ message ThirteenResult {
     ThirteenSettle Settle =2;
     repeated int32 Shoot = 3;
     int32 UserID = 4;
+    int32 Role = 5;
 }
 
 message ThirteenGroupResult {
@@ -57,20 +58,22 @@ message ThirteenGroupResult {
 message ResGroup {
     string GroupType = 1; 
     repeated string CardList =2;
-
 }
 
-message GetThirteenRequest {
+message ThirteenRequest {
     int32 RoomID = 1;
 }
 
-
-message GetThirteenReply {
+message ThirteenReply {
     int32 Result = 1;
+    int32 Status =2;
+    GameResultList GameResult = 3;
+    GroupCard Cards = 4;
+    repeated int32 ReadyUser = 5;
 }
 
 service ThirteenSrv {
-    rpc Submit(SubmitCard) returns (SubmitCard) {}
+    rpc Submit(SubmitCard) returns (ThirteenReply) {}
     rpc GameResultList(GameResultListRequest) returns (GameResultListReply) {}
-    rpc GetThirteen(GetThirteenRequest) returns (GetThirteenReply) {}
+    rpc ThirteenRecovery(ThirteenRequest) returns (ThirteenReply) {}
 }

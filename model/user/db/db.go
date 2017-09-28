@@ -29,7 +29,7 @@ func GetUser(tx *gorm.DB, u *mdu.User) (*mdu.User, error) {
 
 	if err := tx.Select(selsql).Table(enumu.UserTableName).
 		Where(u).Find(qr).Error; err != nil {
-		return nil, errors.Internal("get user failed", err)
+		return nil, errors.Internal("get user failedyong", err)
 	}
 	return &qr.User, nil
 }
@@ -142,4 +142,16 @@ func GetInvitedUserCount(tx *gorm.DB, uid int32) ([]mdu.User, error) {
 		return nil, errors.Internal("get list failed", err)
 	}
 	return out, nil
+}
+
+func FindAndGetUser(tx *gorm.DB, u *mdu.User) (*mdu.User, error) {
+	fmt.Printf("WXLogin:%v", u)
+	found, err := db.FoundRecord(tx.Where("open_id = ?", u.OpenID).Find(&u).Error)
+	if err != nil {
+		return nil, errors.Internal("get user failed ", err)
+	}
+	if !found {
+		return nil, nil
+	}
+	return u, nil
 }

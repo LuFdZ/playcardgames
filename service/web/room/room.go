@@ -180,7 +180,7 @@ func RoomShockHandler(p broker.Publication) error {
 		return err
 	}
 	//fmt.Printf("RoomGiveup:%+v", rs)
-	err = clients.SendRoomUsers(rs.RoomID, t, enum.MsgRoomShock, rs)
+	err = clients.SendTo(rs.UserIDTo, t, enum.MsgRoomShock, rs)
 	if err != nil {
 		return err
 	}
@@ -195,7 +195,7 @@ func RoomRenewalHandler(p broker.Publication) error {
 	if err != nil {
 		return err
 	}
-	//fmt.Printf("RoomGiveup:%+v", rs)
+	//fmt.Printf("RoomRenewal:%+v", rs)
 	err = clients.SendRoomUsers(rs.RoomID, t, enum.MsgRoomRenewal, rs)
 	if err != nil {
 		return err
@@ -218,10 +218,10 @@ func UserConnectionHandler(p broker.Publication) error {
 	return nil
 }
 
-func AutoSubscribe(uid int32) {
-	clients.AutoSubscribe(uid, RoomEvent)
-}
+// func AutoSubscribe(uid int32) {
+// 	clients.AutoSubscribe(uid, RoomEvent)
+// }
 
-func AutoUnSubscribe(uid int32) {
-	clients.AutoUnSubscribe(uid, RoomEvent)
-}
+// func AutoUnSubscribe(uid int32) {
+// 	clients.AutoUnSubscribe(uid, RoomEvent)
+// }

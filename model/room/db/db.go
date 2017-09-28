@@ -1,6 +1,7 @@
 package db
 
 import (
+	"fmt"
 	mdpage "playcards/model/page"
 	"playcards/model/room/enum"
 	enumr "playcards/model/room/enum"
@@ -111,6 +112,7 @@ func PageFeedbackList(tx *gorm.DB, page *mdpage.PageOption,
 	if rtx.Error != nil {
 		return nil, 0, errors.Internal("page feed back failed", rtx.Error)
 	}
+	fmt.Printf("Page Feedback List:%v", out[0])
 	return out, rows, nil
 }
 
@@ -126,7 +128,7 @@ func DeleteAll(tx *gorm.DB) error {
 	return nil
 }
 
-func GetRoomResultByUserId(tx *gorm.DB, uid int32) ([]*mdr.Room, error) {
+func GetRoomResultByUserIdAndGameType(tx *gorm.DB, uid int32, gtype int32) ([]*mdr.Room, error) {
 	var out []*mdr.Room
 	// sql, param, err := squirrel.
 	// 	Select(" r.room_id,status,game_user_result "). //
@@ -144,8 +146,8 @@ func GetRoomResultByUserId(tx *gorm.DB, uid int32) ([]*mdr.Room, error) {
 	// 	return nil, errors.Internal("get player list failed", err)
 	// }
 
-	sqlstr := " room_id in (select room_id from player_rooms where user_id = ?)"
-	if err := tx.Where(sqlstr, uid).
+	sqlstr := " game_type =? and room_id in (select room_id from player_rooms where user_id = ?)"
+	if err := tx.Where(sqlstr, gtype, uid).
 		Order("created_at").Find(&out).Error; err != nil {
 		return nil, errr.ErrRoomNotExisted
 	}
@@ -181,4 +183,36 @@ func GetGiveUpRoomIDByGameType(tx *gorm.DB,
 		return nil, errors.Internal("get list failed", err)
 	}
 	return out, nil
+}
+
+func GetDeadRoomPassword(tx *gorm.DB) ([]string, error) {
+	var (
+		out []string
+	)
+	sql, param, err := squirrel.
+		Select(" password "). //
+		From(enum.RoomTableName+" r ").
+		Where("status < ? and updated_at <  date_sub(curdate(),interval 1 day)",
+			enumr.RoomStatusDone).ToSql()
+
+	if err != nil {
+		return nil, errors.Internal("get dead room list failed", err)
+	}
+
+	err = tx.Raw(sql, param...).Scan(&out).Error
+	if err != nil {
+		return nil, errors.Internal("get list failed", err)
+	}
+	return out, nil
+}
+
+func CleanDeadRoomByUpdateAt(tx *gorm.DB) error {
+	if err := tx.Model(&mdr.Room{}).
+		Where("status < ? and updated_at <  date_sub(curdate(),interval 1 day)",
+			enumr.RoomStatusDone).
+		UpdateColumn("status", enumr.RoomStatusOverTimeClean).
+		Error; err != nil {
+		return errors.Internal("update player room play times failed", err)
+	}
+	return nil
 }

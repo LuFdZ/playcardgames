@@ -1,5 +1,5 @@
 --  定义牌组的类型
-GroupTypeName = {"Single", "Couple", "TwoCouple", "Three", "Straight", "Flush", "ThreeCouple", "Four", "FlushStright"}
+GroupTypeName = {"Single", "Couple", "TwoCouple", "Three", "Straight", "Flush", "ThreeCouple", "Four", "FlushStraight"}
 
 
 
@@ -21,5 +21,6 @@ function CardGroup:new(cards, t, key)
     self._cards = cards
     self._type = t
     self._keyValue = key
+
     return self
 end

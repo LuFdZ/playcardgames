@@ -14,12 +14,10 @@ const (
 )
 
 const (
-	GameStatusInit     = 1
-	GameStatusAllReady = 2
-	GameStatusStarted  = 3
-	GameStatusDone     = 4
-	GameStatusDestroy  = 5
-	GameStatusGiveUp   = 6
+	GameStatusInit    = 1 //游戏初始化发牌
+	GameStatusStarted = 2 //所有人都已提交牌
+	GameStatusDone    = 3 //游戏已结算
+	GameStatusGiveUp  = 4 //游戏被放弃
 )
 
 var GroupTypeName = [...]string{"Single", "Couple", "TwoCouple", "Three", "Straight", "Flush", "ThreeCouple", "Four", "FlushStright", "Shoot", "AllShoot"}

@@ -46,6 +46,22 @@ func (b *BillSrv) GetBalance(ctx context.Context,
 	return nil
 }
 
+func (b *BillSrv) GetUserBalance(ctx context.Context,
+	req *pbbill.GetBalanceRequest, rsp *pbbill.Balance) error {
+	u, err := auth.GetUser(ctx)
+	if err != nil {
+		return err
+	}
+
+	balance, err := bill.GetUserBalance(u.UserID)
+	if err != nil {
+		return err
+	}
+
+	*rsp = *balance.ToProto()
+	return nil
+}
+
 func (b *BillSrv) GainBalance(ctx context.Context, req *pbbill.Balance,
 	rsp *pbbill.Balance) error {
 	u := gctx.GetUser(ctx)

@@ -15,9 +15,10 @@ all:  api-srv           \
       config-srv        \
       log-srv           \
       activity-srv      \
-      room-srv      \
+      room-srv          \
       thirteen-srv      \
-	notice-srv      \
+      notice-srv        \
+      niuniu-srv        \
 
 dev:
 	-${GOGET} github.com/golang/lint
@@ -77,6 +78,7 @@ gen: dep
 	${PROTO_BUILD} ./proto/room/room.proto
 	${PROTO_BUILD} ./proto/thirteen/thirteen.proto
 	${PROTO_BUILD} ./proto/notice/notice.proto
+	${PROTO_BUILD} ./proto/niuniu/niuniu.proto
 
 api-srv: gen
 	${BUILD} -o ./bin/api-srv service/api/main.go
@@ -107,6 +109,9 @@ thirteen-srv: gen
 
 notice-srv: gen
 	${BUILD} -o ./bin/notice-srv service/notice/main.go
+
+niuniu-srv: gen
+	${BUILD} -o ./bin/niuniu-srv service/niuniu/main.go
 
 db-reset-init:
 	${MIGRATE_CMD} goto 1

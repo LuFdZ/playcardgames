@@ -46,6 +46,7 @@ message GameUserResult {
     int32 Tie    =4;
     int32 Score  =5;
     string GameCardCount = 6;
+    string Nickname = 7;
 }
 
 message RoomResults {
@@ -53,7 +54,9 @@ message RoomResults {
     int32 RoundNumber = 2;
     int32 RoundNow = 3;
     int32 Status = 4;
-    repeated GameUserResult List = 5;
+    string Password = 5;
+    repeated GameUserResult List = 6;
+    int64 CreatedAt = 7; 
 }
 
 message GiveUpGameRequest {
@@ -75,6 +78,7 @@ message UserState {
 message RenewalRoomReady {
     int32 RoomID = 1;
     string Password = 2;
+    int32 Status    =3;
 }
 
 message Shock {
@@ -131,8 +135,9 @@ message CheckRoomExistRequest{
 }
 
 message CheckRoomExistReply{
-    int32 Result = 1;
-    Room Room = 2;
+    Room Room = 1;
+    GiveUpGameResult GiveupResult = 2;
+    RoomResults GameResult = 3;
 }
 
 
@@ -149,7 +154,7 @@ service RoomSrv {
     rpc Renewal(Room) returns (Room) {}
     rpc CreateFeedback(Feedback) returns (Feedback) {}
     rpc PageFeedbackList(PageFeedbackListRequest) returns (PageFeedbackListReply) {}
-    rpc RoomResultList(RoomUser) returns (RoomResultListReply) {}
+    rpc RoomResultList(Room) returns (RoomResultListReply) {}
     rpc CheckRoomExist(Room) returns (CheckRoomExistReply) {}
 }
 

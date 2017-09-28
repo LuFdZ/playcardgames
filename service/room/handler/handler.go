@@ -43,18 +43,27 @@ func (rs *RoomSrv) update(gt *gsync.GlobalTimer) {
 		rooms := room.ReInit()
 		//fmt.Printf("rooms update :%d", len(rooms))
 		for _, room := range rooms {
-			RoomResults := mdr.RoomResults{
+			roomResults := mdr.RoomResults{
 				RoomID:      room.RoomID,
 				RoundNumber: room.RoundNumber,
 				RoundNow:    room.RoundNow,
 				Status:      room.Status,
+				Password:    room.Password,
 				List:        room.UserResults,
 			}
-			msg := RoomResults.ToProto()
+			if room.Status == enum.RoomStatusDone {
+				roomResults.List = room.UserResults
+			}
+
+			msg := roomResults.ToProto()
 			//fmt.Printf("UpdateRoomSrv:%v", room.UserResults)
 			topic.Publish(rs.broker, msg, TopicRoomResult)
 		}
 
+		err := room.RoomDestroy()
+		if err != nil {
+			log.Err("room destroy loop:%v", err)
+		}
 		RoomUserSocket := room.RoomUserStatusCheck()
 		for _, msg := range RoomUserSocket {
 			topic.Publish(rs.broker, msg, TopicRoomUserConnection)
@@ -87,16 +96,19 @@ func (rs *RoomSrv) Renewal(ctx context.Context, req *pbr.Room,
 	if err != nil {
 		return err
 	}
-	r, err := room.RenewalRoom(req.Password, u)
+	oldid, r, err := room.RenewalRoom(req.Password, u)
 	if err != nil {
 		return err
 	}
+
 	//webroom.AutoSubscribe(u.UserID)
 	*rsp = *r.ToProto()
 	msg := &pbr.RenewalRoomReady{
-		RoomID:   r.RoomID,
+		RoomID:   oldid,
 		Password: r.Password,
+		Status:   r.Status,
 	}
+
 	topic.Publish(rs.broker, msg, TopicRoomRenewal)
 	return nil
 }
@@ -147,7 +159,8 @@ func (rs *RoomSrv) SetReady(ctx context.Context, req *pbr.Room,
 	if err != nil {
 		return err
 	}
-	r, rid, err := room.GetReadyOrUnReady(req.Password, u.UserID, enum.UserReady)
+
+	r, rid, err := room.GetReady(req.Password, u.UserID)
 	if err != nil {
 		return err
 	}
@@ -228,14 +241,13 @@ func (rs *RoomSrv) CreateFeedback(ctx context.Context, req *pbr.Feedback,
 	return nil
 }
 
-func (rs *RoomSrv) RoomResultList(ctx context.Context, req *pbr.RoomUser,
+func (rs *RoomSrv) RoomResultList(ctx context.Context, req *pbr.Room,
 	rsp *pbr.RoomResultListReply) error {
 	u, err := auth.GetUser(ctx)
 	if err != nil {
 		return err
 	}
-
-	roomresult, err := room.RoomResultList(u.UserID)
+	roomresult, err := room.RoomResultList(u.UserID, req.GameType)
 	if err != nil {
 		return err
 	}
@@ -249,16 +261,32 @@ func (rs *RoomSrv) CheckRoomExist(ctx context.Context, req *pbr.Room,
 	if err != nil {
 		return err
 	}
+	//GiveupResult
 	res := &pbr.CheckRoomExistReply{}
 	room, err := room.CheckRoomExist(u.UserID)
 	if err != nil {
-		res.Result = 2
-		*rsp = *res
 		return err
 	}
-	res.Result = 1
 	res.Room = room.ToProto()
+	if room.Status == enum.RoomStatusWaitGiveUp {
+		res.GiveupResult = room.GiveupGame.ToProto()
+	}
+
+	roomResults := mdr.RoomResults{
+		RoomID:      room.RoomID,
+		RoundNumber: room.RoundNumber,
+		RoundNow:    room.RoundNow,
+		Status:      room.Status,
+		Password:    room.Password,
+		List:        room.UserResults,
+	}
+	if room.Status == enum.RoomStatusDone {
+		roomResults.List = room.UserResults
+	}
+	res.GameResult = roomResults.ToProto()
+
 	*rsp = *res
+
 	return nil
 }
 

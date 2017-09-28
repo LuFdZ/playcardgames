@@ -13,3 +13,4 @@ DROP TABLE IF EXISTS `notices`;
 DROP TABLE IF EXISTS `feedbacks`;
 DROP TABLE IF EXISTS `player_rooms`;
 DROP TABLE IF EXISTS `player_shares`;
+DROP TABLE IF EXISTS `niunius`;

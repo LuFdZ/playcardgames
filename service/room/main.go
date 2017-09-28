@@ -14,7 +14,7 @@ import (
 )
 
 var FuncRights = map[string]int32{
-	"RoomSrv.Heartbeat":        auth.RightsPlayer,
+	"RoomSrv.Heartbeat":        auth.RightsNone,
 	"RoomSrv.CreateRoom":       auth.RightsPlayer,
 	"RoomSrv.EnterRoom":        auth.RightsPlayer,
 	"RoomSrv.LeaveRoom":        auth.RightsPlayer,
