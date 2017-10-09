@@ -89,6 +89,11 @@ func CleanGame() []*mdt.GameResultList {
 			m := InitThirteenGameTypeMap()
 			for _, userResult := range room.UserResults {
 				if userResult.UserID == result.UserID {
+					if err := json.Unmarshal([]byte(userResult.GameCardCount), &m); err != nil {
+						fmt.Printf("room param str to map err %v: \n", err)
+						log.Err("BBB  lua str do struct %v", err)
+					}
+
 					ts, _ := strconv.ParseInt(result.Settle.TotalScore, 10, 32)
 					userResult.Score += int32(ts)
 

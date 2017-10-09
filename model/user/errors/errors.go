@@ -11,4 +11,5 @@ var (
 	ErrWXResponse         = errors.BadRequest(10006, "微信服务器请求返回异常！")
 	ErrWXResponseJson     = errors.BadRequest(10007, "微信服务器返回解析异常！")
 	ErrWXLoginParam       = errors.BadRequest(10008, "OpenID或Code为空！")
+	ErrWXParam            = errors.BadRequest(10009, "微信登录参数错误！")
 )

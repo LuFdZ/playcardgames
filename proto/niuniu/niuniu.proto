@@ -16,7 +16,7 @@ message SubmitCardRequest {
     
 }
 
-message NiuniuResultListRequest {
+message GameResultListRequest {
     int32 RoomID = 1;
 } 
 
@@ -51,7 +51,7 @@ message NiuniuRoomResult {
     repeated NiuniuUserResult List= 3;
 }
 
-message NiuniuRoomResultList {
+message GameResultListReply {
     repeated NiuniuRoomResult List= 1;
 }
 
@@ -87,7 +87,8 @@ message BeBanker{
 
 message AllBet{
     int32 Status = 1;
-    int32 RoomID = 2;
+    int32 UserID = 2;
+    string Card = 3;
 }
 
 message SetBet{
@@ -111,6 +112,6 @@ service NiuniuSrv {
     rpc GetBanker(GetBankerRequest) returns (DefaultReply) {}
     rpc SetBet(SetBetRequest) returns (DefaultReply) {}
     rpc Submit(SubmitCardRequest) returns (DefaultReply) {}
-    rpc GameResultList(NiuniuResultListRequest) returns (NiuniuRoomResultList) {}
+    rpc GameResultList(GameResultListRequest) returns (GameResultListReply) {}
     rpc NiuniuRecovery(NiuniuRequest) returns (NiuniuReply) {}
 }

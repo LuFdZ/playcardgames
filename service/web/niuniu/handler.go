@@ -114,7 +114,7 @@ func NiuniuAllBetHandler(p broker.Publication) error {
 		return err
 	}
 	fmt.Printf("Niuniu Set All Bet:%v \n", rs)
-	err = clients.SendRoomUsers(rs.RoomID, t, enum.MsgNiuniuAllBet, rs)
+	err = clients.SendTo(rs.UserID, t, enum.MsgNiuniuAllBet, rs)
 	if err != nil {
 		return err
 	}
@@ -130,7 +130,7 @@ func NiuniuGameReadyHandler(p broker.Publication) error {
 		return err
 	}
 	fmt.Printf("Niuniu Game Ready:%v \n", rs)
-	err = clients.SendRoomUsers(rs.RoomID, t, enum.MsgNiuniuAllBet, rs)
+	err = clients.SendRoomUsers(rs.RoomID, t, enum.MsgNiuniuGameReady, rs)
 	if err != nil {
 		return err
 	}
@@ -161,7 +161,6 @@ func NiuniuCountDownHandler(p broker.Publication) error {
 	if err != nil {
 		return err
 	}
-	fmt.Printf("Niuniu Count Down:%v \n", rs)
 	err = clients.SendRoomUsers(rs.RoomID, t, enum.MsgNiuniuCountDown, rs)
 	if err != nil {
 		return err

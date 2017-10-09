@@ -36,7 +36,7 @@ func SetGame(n *mdniu.Niuniu, pwd string) error {
 func UpdateGame(n *mdniu.Niuniu) error {
 	key := NiuniuHKey(n.RoomID)
 	ishas := cache.KV().Exists(key).Val()
-	if ishas {
+	if !ishas {
 		return nil
 	}
 	f := func(tx *redis.Tx) error {

@@ -37,7 +37,7 @@ type BankerAndBet struct {
 }
 
 type UserCard struct {
-	CardType int32
+	CardType string
 	CardList []string
 }
 
@@ -50,10 +50,9 @@ type NiuniuUserResult struct {
 }
 
 type NiuniuRoomParam struct {
-	Times        int32
-	BankerType   int32
-	BankerHasNiu int32
-	PreBankerID  int32
+	Times       int32
+	BankerType  int32
+	PreBankerID int32
 }
 
 type NiuniuRoomResult struct {
@@ -75,16 +74,22 @@ func (bab *BankerAndBet) ToProto() *pbniu.BankerAndBet {
 
 func (uc *UserCard) ToProto() *pbniu.UserCard {
 	return &pbniu.UserCard{
-		CardType: tools.String2int(uc.CardType),
+		CardType: uc.CardType,
 		CardList: uc.CardList,
 	}
 }
 
 func (ur *NiuniuUserResult) ToProto() *pbniu.NiuniuUserResult {
+	var info *pbniu.BankerAndBet
+	if ur.Info == nil {
+		info = nil
+	} else {
+		info = ur.Info.ToProto()
+	}
 	return &pbniu.NiuniuUserResult{
 		UserID: ur.UserID,
 		Status: ur.Status,
-		Info:   ur.Info.ToProto(),
+		Info:   info,
 		Cards:  ur.Cards.ToProto(),
 		Score:  tools.String2int(ur.Score),
 	}
@@ -98,8 +103,8 @@ func (rr *NiuniuRoomResult) ToProto() *pbniu.NiuniuRoomResult {
 	return out
 }
 
-func (rrl *NiuniuRoomResultList) ToProto() *pbniu.NiuniuRoomResultList {
-	out := &pbniu.NiuniuRoomResultList{}
+func (rrl *NiuniuRoomResultList) ToProto() *pbniu.GameResultListReply {
+	out := &pbniu.GameResultListReply{}
 	utilproto.ProtoSlice(rrl.List, &out.List)
 	return out
 }

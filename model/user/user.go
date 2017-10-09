@@ -166,11 +166,9 @@ func GetWXToken(code string) (*mdu.AccessTokenResponse, error) {
 		if err != nil {
 			return nil, erru.ErrWXResponseJson
 		}
-		msg := "微信登录提示：" + ater.Errmsg
-		//strconv.FormatFloat(ater.Errcode, 'f', -1, 64) + "|" + ater.Errmsg
-		// fmt.Printf("BBBBBLogin :%s \n", msg)
-		//errors.NotFound(10008, msg)
-		return nil, errors.BadRequest(1009, msg)
+		fmt.Printf("Refresh WX Token :%v \n", ater)
+		log.Err("Refresh WX Token :%v \n", ater)
+		return nil, erru.ErrWXParam
 	}
 	return atr, nil
 }
@@ -203,11 +201,9 @@ func RefreshWXToken(refreshtoken string) (*mdu.AccessTokenResponse, error) {
 		if err != nil {
 			return nil, erru.ErrWXResponseJson
 		}
-		msg := "微信登录提示：" + ater.Errmsg
-		//strconv.FormatFloat(ater.Errcode, 'f', -1, 64) + "|" + ater.Errmsg
-		// fmt.Printf("BBBBBLogin :%s \n", msg)
-		//errors.NotFound(10008, msg)
-		return nil, errors.BadRequest(1009, msg)
+		fmt.Printf("Refresh WX Token :%v \n", ater)
+		log.Err("Refresh WX Token :%v \n", ater)
+		return nil, erru.ErrWXParam
 	}
 	return atr, nil
 }

@@ -26,6 +26,7 @@ func UpdateNiuniu(tx *gorm.DB, n *mdniu.Niuniu) (*mdniu.Niuniu, error) {
 		GameResults: n.GameResults,
 		Status:      n.Status,
 		UpdatedAt:   &now,
+		OpDateAt:    n.OpDateAt,
 	}
 	if err := tx.Model(n).Updates(niuniu).Error; err != nil {
 		return nil, errors.Internal("update niuniu failed", err)

@@ -149,6 +149,7 @@ func JoinRoom(pwd string, user *mdu.User) (*mdr.RoomUser, *mdr.Room, error) {
 	if len(checkpwd) != 0 && pwd != checkpwd {
 		return nil, nil, errors.ErrUserAlreadyInRoom
 	}
+	fmt.Printf("AAA Join Room:%s", checkpwd)
 	room, err := cacher.GetRoom(pwd)
 	if err != nil {
 		return nil, nil, err
@@ -156,27 +157,30 @@ func JoinRoom(pwd string, user *mdu.User) (*mdr.RoomUser, *mdr.Room, error) {
 	if room == nil {
 		return nil, nil, errors.ErrRoomNotExisted
 	}
-
-	//num := len(strings.Split(room.UserList, ","))
 	num := len(room.Users)
 	if num >= (int)(room.MaxNumber) {
 		return nil, nil, errors.ErrRoomFull
 	}
+	//var position int32
+	// isOrder := true
+	// for index, roomUser := range room.Users {
+	// 	if int32(index+1) != roomUser.Position {
+	// 		isOrder = false
+	// 		position = index + 1
+	// 		break
+	// 	}
+	// }
+	// if isOrder {
+	// 	position = num + 1
+	// }
 
-	//room.UserList = room.UserList + "," + fmt.Sprint(userID)
-	position := 0
-	isOrder := true
-	for index, roomUser := range room.Users {
-		if int32(index+1) != roomUser.Position {
-			isOrder = false
-			position = index + 1
-			break
+	for _, roomuser := range room.Users {
+		if roomuser.UserID == user.UserID {
+			return nil, nil, errors.ErrUserAlreadyInRoom
 		}
 	}
-	if isOrder {
-		position = num + 1
-	}
-	roomUser := GetRoomUser(user, enumr.UserUnready, int32(position),
+
+	roomUser := GetRoomUser(user, enumr.UserUnready, int32(num+1),
 		enumr.UserRoleSlave)
 	newUsers := append(room.Users, roomUser)
 	room.Users = newUsers
@@ -298,6 +302,9 @@ func GetReady(pwd string, uid int32) (*mdr.RoomUser, int32, error) {
 	for _, user := range room.Users {
 		num++
 		if user.UserID == uid {
+			if user.Ready == enumr.UserReady {
+				return nil, 0, errors.ErrAlreadyReady
+			}
 			user.Ready = enumr.UserReady
 			user.UpdatedAt = &t
 			//out = user

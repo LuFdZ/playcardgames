@@ -1,10 +1,11 @@
 package enum
 
 const (
-	LoopTime       = 3
+	LoopTime       = 1
 	MaxRecordCount = 50
-	GetBankerTime  = 5000.0
-	SetBetTime     = 5000.0
+	GetBankerTime  = 5.0
+	SetBetTime     = 5.0
+	SubmitCardTime = 5.0
 	MinSetBet      = 5
 )
 
@@ -17,14 +18,14 @@ const (
 )
 
 const (
-	GameStatusInit      = 1 //游戏初始化发牌开始抢庄
-	GameStatusGetBanker = 2 //游戏抢庄结束
-	GameStatusBeBanker  = 3 //游戏选出庄家
-	GameStatusSetBet    = 4 //游戏开始下注抢
-	GameStatusAllSetBet = 5 //游戏所有玩家都已下注结束开始交牌
-	GameStatusStarted   = 6 //所有人都已提交牌并计算结果
-	GameStatusDone      = 7 //游戏已结算
-	GameStatusGiveUp    = 8 //游戏被放弃
+	GameStatusInit       = 1 //游戏初始化发牌开始抢庄
+	GameStatusGetBanker  = 2 //游戏抢庄结束
+	GameStatusSetBet     = 3 //游戏开始下注抢
+	GameStatusAllSetBet  = 4 //游戏所有玩家都已下注结束
+	GameStatusSubmitCard = 5 //游戏开始交牌
+	GameStatusStarted    = 6 //计算结果
+	GameStatusDone       = 7 //游戏已结算
+	GameStatusGiveUp     = 8 //游戏被放弃
 )
 
 const (
@@ -60,9 +61,17 @@ const (
 	BankerNoNiu   = 1 //无牛下庄
 	BankerTurns   = 2 //轮流上庄
 	BankerSeeCard = 3 //看牌上庄
+	BankerDefault = 4 //固定庄家
 )
 
 var (
 	BankerScoreMap map[int32]int32
 	BetScoreMap    map[int32]int32
+
+	ToBankerScoreMap map[int32]int32
+	ToBetScoreMap    map[int32]int32
+
+	GameStatusMap map[int32]int32
+
+	RoomParamMap map[string]int32
 )

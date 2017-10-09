@@ -2,7 +2,6 @@ package handler
 
 import (
 	"context"
-	"fmt"
 	"playcards/model/niuniu"
 	enumniu "playcards/model/niuniu/enum"
 	enumr "playcards/model/room/enum"
@@ -14,6 +13,7 @@ import (
 	"playcards/utils/topic"
 	"time"
 
+	"github.com/jinzhu/gorm"
 	"github.com/micro/go-micro/broker"
 	"github.com/micro/go-micro/server"
 )
@@ -31,21 +31,15 @@ func NewHandler(s server.Server, gt *gsync.GlobalTimer) *NiuniuSrv {
 	b.Update(gt)
 
 	//enumniu.BankerScoreMap = *make(map[int32]int32)
-	enumniu.BankerScoreMap = map[int32]int32{
-		1: 0,
-		2: 1,
-		3: 2,
-		4: 3,
-		5: 4,
-	}
+	enumniu.BankerScoreMap = map[int32]int32{1: 0, 2: 1, 3: 2, 4: 3, 5: 4}
 
-	enumniu.BetScoreMap = map[int32]int32{
-		1: 5,
-		2: 10,
-		3: 15,
-		4: 20,
-		5: 25,
-	}
+	enumniu.BetScoreMap = map[int32]int32{1: 5, 2: 10, 3: 15, 4: 20, 5: 25}
+
+	enumniu.ToBankerScoreMap = map[int32]int32{0: 1, 1: 2, 2: 3, 3: 4, 4: 5}
+
+	//enumniu.ToBetScoreMap = map[int32]int32{5: 1, 10: 2, 15: 3, 20: 4, 25: 5}
+
+	enumniu.ToBetScoreMap = map[int32]int32{1: 1, 2: 2, 3: 2, 4: 3, 5: 3, 6: 4, 7: 4, 8: 4}
 
 	return b
 }
@@ -78,43 +72,70 @@ func (ns *NiuniuSrv) Update(gt *gsync.GlobalTimer) {
 		if updateGames != nil {
 			for _, game := range updateGames {
 				if game.Status == enumniu.GameStatusInit {
-					fmt.Printf("1111 Game Status Init time")
+					//fmt.Printf("1111 Game Status Init time")
 					sub := time.Now().Sub(*game.OpDateAt)
 					countDown := enumniu.GetBankerTime - sub.Seconds()
 					msg := &pbniu.CountDown{
 						RoomID: game.RoomID,
-						Status: game.Status,
+						Status: enumniu.ToBetScoreMap[game.Status],
 						Time:   int32(countDown),
 					}
 					topic.Publish(ns.broker, msg, TopicNiuniuCountDown)
-				} else if game.Status == enumniu.GameStatusBeBanker {
+				} else if game.Status == enumniu.GameStatusGetBanker {
 					msg := &pbniu.BeBanker{
 						BankerID:   game.BankerID,
-						GameStatus: game.Status,
+						GameStatus: enumniu.ToBetScoreMap[game.Status],
 						RoomID:     game.RoomID,
 					}
 					utilproto.ProtoSlice(game.GetBankerList, &msg.List)
 					topic.Publish(ns.broker, msg, TopicNiuniuBeBanker)
+					game.Status = enumniu.GameStatusSetBet
+					now := gorm.NowFunc()
+					game.OpDateAt = &now
+					niuniu.UpdateNiuniu(game, true)
 				} else if game.Status == enumniu.GameStatusSetBet {
 					sub := time.Now().Sub(*game.OpDateAt)
 					countDown := enumniu.GetBankerTime - sub.Seconds()
 					msg := &pbniu.CountDown{
 						RoomID: game.RoomID,
-						Status: game.Status,
+						Status: enumniu.ToBetScoreMap[game.Status],
 						Time:   int32(countDown),
 					}
 					topic.Publish(ns.broker, msg, TopicNiuniuCountDown)
-				} else if game.Status == enumniu.GameStatusStarted {
-					msg := &pbniu.AllBet{
-						RoomID: game.RoomID,
-						Status: game.Status,
+				} else if game.Status == enumniu.GameStatusAllSetBet {
+					for _, UserResult := range game.Result.List {
+						msg := &pbniu.AllBet{
+							UserID: UserResult.UserID,
+							Status: enumniu.ToBetScoreMap[game.Status],
+							Card:   UserResult.Cards.CardList[4],
+						}
+						topic.Publish(ns.broker, msg, TopicNiuniuAllBet)
 					}
-					topic.Publish(ns.broker, msg, TopicNiuniuAllBet)
+					now := gorm.NowFunc()
+					game.OpDateAt = &now
+					game.Status = enumniu.GameStatusSubmitCard
+					niuniu.UpdateNiuniu(game, true)
+				} else if game.Status == enumniu.GameStatusSubmitCard {
+					sub := time.Now().Sub(*game.OpDateAt)
+					countDown := enumniu.GetBankerTime - sub.Seconds()
+					msg := &pbniu.CountDown{
+						RoomID: game.RoomID,
+						Status: enumniu.ToBetScoreMap[game.Status],
+						Time:   int32(countDown),
+					}
+					topic.Publish(ns.broker, msg, TopicNiuniuCountDown)
 				} else if game.Status == enumniu.GameStatusDone {
 					msg := game.Result.ToProto()
+					msg.Status = enumniu.ToBetScoreMap[game.Status]
 					topic.Publish(ns.broker, msg, TopicNiuniuGameResult)
+					game.Status = enumniu.GameStatusDone
+					niuniu.UpdateNiuniu(game, false)
 				}
 			}
+		}
+		err := niuniu.CleanGiveUpGame()
+		if err != nil {
+			log.Err("clean give up game loop err:%v", err)
 		}
 		return nil
 	}
@@ -131,18 +152,11 @@ func (ns *NiuniuSrv) GetBanker(ctx context.Context, req *pbniu.GetBankerRequest,
 	reply := &pbniu.DefaultReply{
 		Result: enumniu.Success,
 	}
-	fmt.Printf("AAAddd User Get Banker%d", req.Key)
 	_, err = niuniu.GetBanker(u.UserID, req.Key)
 	if err != nil {
 		return err
 	}
 	*rsp = *reply
-	// msg := &pbniu.GetBanker{
-	// 	UserID: u.UserID,
-	// 	Value:  req.Value,
-	// 	RoomID: rid,
-	// }
-	// topic.Publish(ns.broker, msg, TopicNiuniuGetBanker)
 	return nil
 }
 
@@ -191,5 +205,39 @@ func (ns *NiuniuSrv) SubmitCard(ctx context.Context, req *pbniu.SubmitCardReques
 		RoomID: rid,
 	}
 	topic.Publish(ns.broker, msg, TopicNiuniuGameReady)
+	return nil
+}
+
+func (ns *NiuniuSrv) GameResultList(ctx context.Context, req *pbniu.GameResultListRequest,
+	rsp *pbniu.GameResultListReply) error {
+	_, err := auth.GetUser(ctx)
+	if err != nil {
+		return err
+	}
+	results, err := niuniu.GameResultList(req.RoomID)
+	if err != nil {
+		return err
+	}
+	*rsp = *results
+	return nil
+}
+
+func (ns *NiuniuSrv) NiuniuRecovery(ctx context.Context, req *pbniu.NiuniuRequest,
+	rsp *pbniu.NiuniuReply) error {
+	u, err := auth.GetUser(ctx)
+	if err != nil {
+		return err
+	}
+
+	status, recovery, err := niuniu.NiuniuRecovery(req.RoomID, u.UserID)
+	//fmt.Printf("get thirteen recovery:%v", recovery)
+	if err != nil {
+		return err
+	}
+	res := &pbniu.NiuniuReply{
+		Result: recovery.ToProto(),
+	}
+	res.Result.Status = enumniu.ToBetScoreMap[status]
+	*rsp = *res
 	return nil
 }

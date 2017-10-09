@@ -157,8 +157,10 @@ func (us *UserSrv) CheckUser(ctx context.Context, req *pbu.CheckUserRequest,
 
 func (us *UserSrv) WXLogin(ctx context.Context, req *pbu.WXLoginRequest,
 	rsp *pbu.WXLoginRsply) error {
+	fmt.Printf("AAA WXLoginErr:%v", req)
 	_, u, err := user.WXLogin(mdu.UserFromWXLoginRequestProto(req), req.Code)
 	if err != nil {
+		fmt.Printf("BBB WXLoginErr:%v", err)
 		return err
 	}
 	// resply := &pbu.WXLoginRsply{
