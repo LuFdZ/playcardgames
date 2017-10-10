@@ -42,7 +42,7 @@ func addError(err *Error) *Error {
 func BadRequest(code int, detail string) error {
 	return addError(&Error{
 		Code:   code,
-		Status: 400,
+		Status: 200,//400
 		Detail: detail,
 	})
 }
@@ -50,7 +50,7 @@ func BadRequest(code int, detail string) error {
 func Conflict(code int, detail string) error {
 	return addError(&Error{
 		Code:   code,
-		Status: 409,
+		Status: 200,//409,
 		Detail: detail,
 	})
 }
@@ -58,7 +58,7 @@ func Conflict(code int, detail string) error {
 func Unauthorized(code int, detail string) error {
 	return addError(&Error{
 		Code:   code,
-		Status: 401,
+		Status: 200,//401,
 		Detail: detail,
 	})
 }
@@ -66,7 +66,7 @@ func Unauthorized(code int, detail string) error {
 func Forbidden(code int, detail string) error {
 	return addError(&Error{
 		Code:   code,
-		Status: 403,
+		Status: 200,//403,
 		Detail: detail,
 	})
 }
@@ -74,7 +74,7 @@ func Forbidden(code int, detail string) error {
 func NotFound(code int, detail string) error {
 	return addError(&Error{
 		Code:   code,
-		Status: 404,
+		Status: 200,//404,
 		Detail: detail,
 	})
 }
@@ -86,7 +86,7 @@ func Internal(detail string, err error) error {
 	}
 
 	return &Error{
-		Status:   500,
+		Status:   200,//500,
 		Detail:   detail,
 		Internal: internal,
 	}

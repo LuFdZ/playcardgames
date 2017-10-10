@@ -21,11 +21,12 @@ const (
 	GameStatusInit       = 1 //游戏初始化发牌开始抢庄
 	GameStatusGetBanker  = 2 //游戏抢庄结束
 	GameStatusSetBet     = 3 //游戏开始下注抢
-	GameStatusAllSetBet  = 4 //游戏所有玩家都已下注结束
+	GameStatusAllSetBet  = 4 //游戏下注结束
 	GameStatusSubmitCard = 5 //游戏开始交牌
 	GameStatusStarted    = 6 //计算结果
 	GameStatusDone       = 7 //游戏已结算
 	GameStatusGiveUp     = 8 //游戏被放弃
+	GameStatusCountDown  = 9 //游戏倒计时
 )
 
 const (

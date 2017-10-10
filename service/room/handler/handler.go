@@ -290,6 +290,25 @@ func (rs *RoomSrv) CheckRoomExist(ctx context.Context, req *pbr.Room,
 	return nil
 }
 
+func (rs *RoomSrv) VoiceChat(ctx context.Context, req *pbr.VoiceChatRequest) error {
+	u, err := auth.GetUser(ctx)
+	if err != nil {
+		return err
+	}
+
+	rid, err := room.VoiceChat(u.UserID)
+	if err != nil {
+		return err
+	}
+	msg := &pbr.VoiceChat{
+		RoomID:   req.UserID,
+		UserID:   rid,
+		FileCode: req.FileCode,
+	}
+	topic.Publish(rs.broker, msg, TopicRoomVoiceChat)
+	return nil
+}
+
 // func (rs *RoomSrv) OutReady(ctx context.Context, req *pbr.Room,
 // 	rsp *pbr.RoomUser) error {
 // 	u, err := auth.GetUser(ctx)

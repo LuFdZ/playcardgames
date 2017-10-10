@@ -24,6 +24,7 @@ var FuncRights = map[string]int32{
 	"RoomSrv.RoomResultList":   auth.RightsPlayer,
 	"RoomSrv.CheckRoomExist":   auth.RightsPlayer,
 	"RoomSrv.Shock":            auth.RightsPlayer,
+	"RoomSrv.VoiceChat":        auth.RightsPlayer,
 	"RoomSrv.PageFeedbackList": auth.RightsRoomAdmin,
 	"RoomSrv.CreateFeedback":   auth.RightsRoomAdmin,
 	"RoomSrv.TestClean":        auth.RightsNone,

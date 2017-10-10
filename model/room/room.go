@@ -755,6 +755,21 @@ func Shock(uid int32, sendid int32) (int32, error) {
 	return room.RoomID, nil
 }
 
+func VoiceChat(uid int32) (int32, error) {
+	pwd := cacher.GetRoomPasswordByUserID(uid)
+	if len(pwd) == 0 {
+		return 0, errors.ErrUserNotInRoom
+	}
+	room, err := cacher.GetRoom(pwd)
+	if err != nil {
+		return 0, err
+	}
+	if room.Status > enumr.RoomStatusDone {
+		return 0, errors.ErrGameIsDone
+	}
+	return room.RoomID, nil
+}
+
 func LuaTest() error {
 
 	l := lua.NewState()

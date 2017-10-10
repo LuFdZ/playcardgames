@@ -25,8 +25,8 @@ CREATE TABLE `users` (
   `open_id`         VARCHAR(30)           DEFAULT NULL,
   `union_id`        VARCHAR(30)           DEFAULT NULL,
   PRIMARY KEY (`user_id`),
-  UNIQUE KEY `email_unique` (`email`),
-  UNIQUE KEY `username_unique` (`username`),
+#   UNIQUE KEY `email_unique` (`email`),
+#   UNIQUE KEY `username_unique` (`username`),
   UNIQUE KEY `openid_unique` (`open_id`)
 
 )

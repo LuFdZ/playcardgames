@@ -11,4 +11,5 @@ const (
 	TopicRoomShock          = "playcards.room.Shock"
 	TopicRoomUserConnection = "playcards.room.UserConnection"
 	TopicRoomRenewal        = "playcards.room.Renewal"
+	TopicRoomVoiceChat      = "playcards.room.VoiceChat"
 )

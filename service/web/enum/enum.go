@@ -17,6 +17,7 @@ const (
 	MsgRoomShock          = "RoomShock"
 	MsgRoomUserConnection = "UserConnection"
 	MsgRoomRenewal        = "RoomRenewal"
+	MsgRoomVoiceChat      = "RoomVoiceChat"
 )
 
 const (

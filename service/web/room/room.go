@@ -52,9 +52,11 @@ func SubscribeAllRoomMessage(brk broker.Broker) error {
 	subscribe.SrvSubscribe(brk, topic.Topic(srvroom.TopicRoomUserConnection),
 		UserConnectionHandler,
 	)
-
 	subscribe.SrvSubscribe(brk, topic.Topic(srvroom.TopicRoomRenewal),
 		RoomRenewalHandler,
+	)
+	subscribe.SrvSubscribe(brk, topic.Topic(srvroom.TopicRoomVoiceChat),
+		RoomVoiceChatHandler,
 	)
 
 	return nil
@@ -212,6 +214,22 @@ func UserConnectionHandler(p broker.Publication) error {
 		return err
 	}
 	err = clients.SendRoomUsers(rs.RoomID, t, enum.MsgRoomUserConnection, rs)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func RoomVoiceChatHandler(p broker.Publication) error {
+	t := p.Topic()
+	msg := p.Message()
+	rs := &pbroom.VoiceChat{}
+	err := proto.Unmarshal(msg.Body, rs)
+	if err != nil {
+		return err
+	}
+	//fmt.Printf("RoomRenewal:%+v", rs)
+	err = clients.SendRoomUsers(rs.RoomID, t, enum.MsgRoomVoiceChat, rs)
 	if err != nil {
 		return err
 	}

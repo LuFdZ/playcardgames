@@ -23,6 +23,7 @@ type Niuniu struct {
 	OpDateAt      *time.Time
 	BankerID      int32        `gorm:"-"`
 	GetBankerList []*GetBanker `gorm:"-"`
+	BroStatus     int32        `gorm:"-"`
 }
 
 type GetBanker struct {

@@ -121,7 +121,7 @@ message Feedback {
     string MobileModel   =6;
     string MobileNetWork =7;
     string MobileOs      =8;
-    string LoginIP      =9;
+    string LoginIP       =9;
     int64 CreatedAt      =10;
     int64 UpdatedAt      =11;
 }
@@ -140,6 +140,17 @@ message CheckRoomExistReply{
     RoomResults GameResult = 3;
 }
 
+message VoiceChat{
+    int32   UserID        =1;
+    int32   RoomID        =2;
+    string  FileCode      =3;
+}
+
+message VoiceChatRequest{
+    string  FileCode      =3;
+}
+
+
 
 service RoomSrv {
     rpc CreateRoom(Room) returns (Room) {}
@@ -156,6 +167,7 @@ service RoomSrv {
     rpc PageFeedbackList(PageFeedbackListRequest) returns (PageFeedbackListReply) {}
     rpc RoomResultList(Room) returns (RoomResultListReply) {}
     rpc CheckRoomExist(Room) returns (CheckRoomExistReply) {}
+    rpc VoiceChat(VoiceChatRequest) returns (RoomUser) {}
 }
 
 

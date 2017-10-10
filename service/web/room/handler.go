@@ -22,6 +22,7 @@ var RoomEvent = []string{
 	srvroom.TopicRoomShock,
 	srvroom.TopicRoomUserConnection,
 	srvroom.TopicRoomRenewal,
+	srvroom.TopicRoomVoiceChat,
 }
 
 func SubscribeRoomMessage(c *clients.Client, req *request.Request) error {
