@@ -206,7 +206,7 @@ class Client(object):
         })
         return ul
 
-    def SubmitCard(self):
+    def SubmitCardT(self):
         ul = self.Request("/thirteen/thirteenSrv/SubmitCard",{
             "Head":["1_1","1_2","1_3"],
             "Middle":["2_1","2_2","2_3","2_4","2_5"],
@@ -380,7 +380,7 @@ class Client(object):
         })
         return ul
 
-    def SubmitCard(self):
+    def SubmitCardN(self):
         ul = self.Request("/niuniu/niuniuSrv/SubmitCard",{
         })
         return ul

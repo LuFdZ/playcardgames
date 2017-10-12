@@ -89,11 +89,12 @@ func CleanGame() []*mdt.GameResultList {
 			m := InitThirteenGameTypeMap()
 			for _, userResult := range room.UserResults {
 				if userResult.UserID == result.UserID {
-					if err := json.Unmarshal([]byte(userResult.GameCardCount), &m); err != nil {
-						fmt.Printf("room param str to map err %v: \n", err)
-						log.Err("BBB  lua str do struct %v", err)
+					if len(userResult.GameCardCount) > 0 {
+						if err := json.Unmarshal([]byte(userResult.GameCardCount), &m); err != nil {
+							fmt.Printf("room param str to map err %v: \n", err)
+							log.Err("thirteen game card count lua str do struct %v", err)
+						}
 					}
-
 					ts, _ := strconv.ParseInt(result.Settle.TotalScore, 10, 32)
 					userResult.Score += int32(ts)
 
@@ -218,13 +219,11 @@ func CreateThirteen() []*mdt.Thirteen {
 		l := lua.NewState()
 		defer l.Close()
 		if err := l.DoFile("lua/thirteenlua/Logic.lua"); err != nil {
-			fmt.Printf("AAA: %v\n", err)
 			log.Err("thirteen logic do file %v", err)
 			continue
 		}
 
 		if err := l.DoString("return Logic:new()"); err != nil {
-			fmt.Printf("AAA: %v\n", err)
 			log.Err("thirteen logic do string %v", err)
 			continue
 		}
@@ -248,7 +247,6 @@ func CreateThirteen() []*mdt.Thirteen {
 				userResults = append(userResults, userResult)
 			}
 			if err := l.DoString("return Logic:GetCards()"); err != nil {
-				fmt.Printf("BBB: %#v\n", err)
 				log.Err("thirteen logic do string %v", err)
 			}
 			getCards := l.Get(1)
@@ -393,17 +391,17 @@ func SubmitCard(uid int32, submitCard *mdt.SubmitCard) (int32, error) {
 		return 0, err
 	}
 
-	var checkCards []string
-	for _, cardGroup := range thirteen.Cards {
-		if cardGroup.UserID == uid {
-			checkCards = cardGroup.CardList
-		}
-	}
+	//var checkCards []string
+	// for _, cardGroup := range thirteen.Cards {
+	// 	if cardGroup.UserID == uid {
+	// 		checkCards = cardGroup.CardList
+	// 	}
+	// }
 
-	checkHasCard := CheckHasCards(submitCard, checkCards)
-	if !checkHasCard {
-		return 0, errorst.ErrCardNotExist
-	}
+	// checkHasCard := CheckHasCards(submitCard, checkCards)
+	// if !checkHasCard {
+	// 	return 0, errorst.ErrCardNotExist
+	// }
 
 	for _, user := range room.Users {
 		if user.UserID == uid {

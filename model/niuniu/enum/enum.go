@@ -3,9 +3,9 @@ package enum
 const (
 	LoopTime       = 1
 	MaxRecordCount = 50
-	GetBankerTime  = 5.0
-	SetBetTime     = 5.0
-	SubmitCardTime = 5.0
+	GetBankerTime  = 500.0
+	SetBetTime     = 500.0
+	SubmitCardTime = 500.0
 	MinSetBet      = 5
 )
 
@@ -76,3 +76,6 @@ var (
 
 	RoomParamMap map[string]int32
 )
+
+var NiuniuCardType = [...]string{"0", "1", "2", "3", "4", "5", "6", "7", "8",
+	"9", "10", "11", "12", "13", "14"}

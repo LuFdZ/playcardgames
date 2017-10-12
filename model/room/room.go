@@ -246,12 +246,22 @@ func LeaveRoom(user *mdu.User) (*mdr.RoomUser, *mdr.Room, error) {
 	if handle == 0 {
 		return nil, nil, errors.ErrUserNotInRoom
 	}
-	cacher.DeleteRoomUser(user.UserID)
+
 	if isDestroy == 1 || len(newUsers) == 0 {
 		room.Status = enumr.RoomStatusDestroy
 		cacher.DeleteRoom(room.Password)
+		err = cacher.DeleteAllRoomUser(room.Password)
+		if err != nil {
+			log.Err("room leave room delete all users failed, %d|%v",
+				room.RoomID, err)
+		}
 	} else {
 		cacher.UpdateRoom(room)
+		err = cacher.DeleteRoomUser(user.UserID)
+		if err != nil {
+			log.Err("room leave room delete user failed, %d|%v",
+				room.RoomID, err)
+		}
 	}
 
 	room.Users = newUsers
@@ -436,10 +446,10 @@ func ReInit() []*mdr.Room {
 		//房间数局
 		//若到最大局数 则房间流程结束 若没到则重置房间状态和玩家准备状态
 		//roundNow := room.RoundNow + 1
-		fmt.Printf("rooms round now:%d|%d", room.RoundNow, room.RoundNumber)
+		//fmt.Printf("rooms round now:%d|%d", room.RoundNow, room.RoundNumber)
 		if room.RoundNow == room.RoundNumber {
 			room.Status = enumr.RoomStatusDelay
-			fmt.Printf("rooms status now:%d", room.Status)
+			//fmt.Printf("rooms status now:%d", room.Status)
 		} else {
 			room.Status = enumr.RoomStatusInit
 			room.RoundNow++
@@ -607,6 +617,11 @@ func RoomDestroy() error {
 					log.Err("room destroy delete room redis err, %v", err)
 					continue
 				}
+				err = cacher.DeleteAllRoomUser(room.Password)
+				if err != nil {
+					log.Err("room destroy delete room users redis err, %v", err)
+					continue
+				}
 			}
 			room.Status = enumr.RoomStatusDone
 			f := func(tx *gorm.DB) error {
@@ -631,15 +646,18 @@ func RoomDestroy() error {
 		if err != nil {
 			return err
 		}
-
 		for _, pwd := range pwdList {
 			err = cacher.DeleteRoom(pwd)
 			if err != nil {
-				log.Err("reinit update room redis err, %v", err)
+				log.Err("delete dead room redis err, %s|%v", pwd, err)
+				continue
+			}
+			err = cacher.DeleteAllRoomUser(pwd)
+			if err != nil {
+				log.Err("delete dead room users redis err, %s|%v", pwd, err)
 				continue
 			}
 		}
-
 		err = dbr.CleanDeadRoomByUpdateAt(tx)
 		if err != nil {
 			return err

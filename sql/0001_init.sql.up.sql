@@ -119,7 +119,7 @@ CREATE TABLE `activity_configs` (
 CREATE TABLE `rooms` (
   `room_id`          INT           NOT NULL AUTO_INCREMENT,
   `password`         VARCHAR(16)   NOT NULL,
-  `user_list`        VARCHAR(700)  NOT NULL DEFAULT '',
+  `user_list`        VARCHAR(3200)  NOT NULL DEFAULT '',
   `max_number`       INT           NOT NULL DEFAULT '0',
   `round_number`     INT           NOT NULL DEFAULT '0',
   `round_now`        INT           NOT NULL DEFAULT '0',
@@ -246,6 +246,7 @@ CREATE TABLE `niunius` (
   `room_id`           INT           NOT NULL DEFAULT '0',
   `index`             INT           NOT NULL DEFAULT '0',
   `banker_type`       INT           NOT NULL DEFAULT '0',
+  `banker_id`         INT           NOT NULL DEFAULT '0',
   `user_cards`        VARCHAR(1000) NOT NULL DEFAULT '',
   `game_results`      VARCHAR(1500) NOT NULL DEFAULT '',
   `status`            INT           NOT NULL DEFAULT '0',

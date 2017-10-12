@@ -28,6 +28,7 @@ func UpdateRoom(tx *gorm.DB, r *mdr.Room) (*mdr.Room, error) {
 		Status:    r.Status,
 		RoundNow:  r.RoundNow,
 		UpdatedAt: &now,
+		GameParam: r.GameParam,
 	}
 	if err := tx.Model(r).Updates(room).Error; err != nil {
 		return nil, errors.Internal("update room failed", err)

@@ -2,6 +2,7 @@ package handler
 
 import (
 	"context"
+	"fmt"
 	"playcards/model/room/enum"
 	"playcards/model/thirteen"
 	mdt "playcards/model/thirteen/mod"
@@ -32,9 +33,10 @@ func NewHandler(s server.Server, gt *gsync.GlobalTimer) *ThirteenSrv {
 
 func (ts *ThirteenSrv) update(gt *gsync.GlobalTimer) {
 	lock := "playcards.thirteen.update.lock"
-	f := func() error {
-		log.Debug("thirteen update loop... and has %d thirteens")
 
+	f := func() error {
+		s := time.Now()
+		log.Debug("thirteen update loop... and has %d thirteens")
 		newGames := thirteen.CreateThirteen()
 		if newGames != nil {
 			for _, game := range newGames {
@@ -57,6 +59,8 @@ func (ts *ThirteenSrv) update(gt *gsync.GlobalTimer) {
 		if err != nil {
 			log.Err("clean give up game loop err:%v", err)
 		}
+		e := time.Now().Sub(s).Nanoseconds()
+		fmt.Printf("Update times :%d", e)
 		return nil
 	}
 	gt.Register(lock, time.Second*enum.LoopTime, f)

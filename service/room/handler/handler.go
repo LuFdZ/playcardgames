@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"fmt"
 	mdpage "playcards/model/page"
 	"playcards/model/room"
 	enum "playcards/model/room/enum"
@@ -37,6 +38,7 @@ func NewHandler(s server.Server, gt *gsync.GlobalTimer) *RoomSrv {
 func (rs *RoomSrv) update(gt *gsync.GlobalTimer) {
 	lock := "playcards.room.update.lock"
 	f := func() error {
+		s := time.Now()
 		log.Debug("room update loop... and has %d rooms")
 		//now := time.Now()
 
@@ -68,7 +70,10 @@ func (rs *RoomSrv) update(gt *gsync.GlobalTimer) {
 		for _, msg := range RoomUserSocket {
 			topic.Publish(rs.broker, msg, TopicRoomUserConnection)
 		}
+		e := time.Now().Sub(s).Nanoseconds()
+		fmt.Printf("Update times :%d", e)
 		return nil
+
 	}
 	gt.Register(lock, time.Second*enum.LoopTime, f)
 }
@@ -301,8 +306,8 @@ func (rs *RoomSrv) VoiceChat(ctx context.Context, req *pbr.VoiceChatRequest) err
 		return err
 	}
 	msg := &pbr.VoiceChat{
-		RoomID:   req.UserID,
-		UserID:   rid,
+		RoomID:   rid,
+		UserID:   u.UserID,
 		FileCode: req.FileCode,
 	}
 	topic.Publish(rs.broker, msg, TopicRoomVoiceChat)

@@ -56,7 +56,7 @@ func Register(u *mdu.User) (int32, error) {
 
 		b := &mdbill.Balance{
 			Gold:    0,
-			Diamond: 0,
+			Diamond: 30,
 			Amount:  enum.RegisterBalance,
 		}
 		err = dbbill.CreateBalance(tx, uid, b)
@@ -334,9 +334,10 @@ func CreateUserByWX(u *mdu.User, atr *mdu.AccessTokenResponse) (*mdu.User, error
 	if err != nil {
 		return nil, err
 	}
-
+	u.Rights = auth.RightsPlayer
 	f := func(tx *gorm.DB) error {
 		fmt.Printf("AAA Create User ByWX:%v", u)
+
 		uid, err := dbu.AddUser(tx, u)
 		if err != nil {
 			return err
@@ -344,7 +345,7 @@ func CreateUserByWX(u *mdu.User, atr *mdu.AccessTokenResponse) (*mdu.User, error
 		fmt.Printf("BBB Create User ByWX:%v", u)
 		b := &mdbill.Balance{
 			Gold:    0,
-			Diamond: 0,
+			Diamond: 30,
 			Amount:  enum.RegisterBalance,
 		}
 		err = dbbill.CreateBalance(tx, uid, b)
