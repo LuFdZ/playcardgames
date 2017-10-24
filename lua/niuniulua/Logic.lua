@@ -65,6 +65,7 @@ function Logic:CalculateRes(playerTbl, roomData)
     print(playerTbl)
     print(roomData)
     playerTbl = json.decode(playerTbl)
+    roomData = json.decode(roomData)
 
     dump(playerTbl, "playerTbl", 100)
     local banker = {}
@@ -92,7 +93,11 @@ function Logic:CalculateRes(playerTbl, roomData)
             local win = 0
             if roomData.BankerType == 3 then
                 --看牌抢庄
-                win = player.Info.BetScore * winN * banker.Info.BankerScore * player.Info.BankerScore
+                if banker.Info.BankerScore == 0 then
+                    banker.Info.BankerScore = 1
+                end
+
+                win = player.Info.BetScore * winN * banker.Info.BankerScore
             else
                 win = player.Info.BetScore * winN
             end
@@ -105,6 +110,7 @@ function Logic:CalculateRes(playerTbl, roomData)
 
     local str = json.encode(playerTbl)
 
+    dump(playerTbl, "playerTbl", 100)
     return str
 end
 
@@ -180,6 +186,7 @@ function Logic:CompareGroup(group1, group2, module)
         win = -1
     end
 
+    print("module:" .. module)
     if module == 3 then
         res = global_win3[res+1]
     elseif module == 5 then

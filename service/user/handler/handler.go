@@ -49,8 +49,8 @@ func (us *UserSrv) AddUser(ctx context.Context, req *pbu.User,
 
 func (us *UserSrv) Login(ctx context.Context, req *pbu.User,
 	rsp *pbu.LoginReply) error {
-
-	u, err := user.Login(mdu.UserFromProto(req))
+	address, _ := ctx.Value("X-Real-Ip").(string)
+	u, err := user.Login(mdu.UserFromProto(req), address)
 	if err != nil {
 		return err
 	}
@@ -157,8 +157,9 @@ func (us *UserSrv) CheckUser(ctx context.Context, req *pbu.CheckUserRequest,
 
 func (us *UserSrv) WXLogin(ctx context.Context, req *pbu.WXLoginRequest,
 	rsp *pbu.WXLoginRsply) error {
-	fmt.Printf("AAA WXLoginErr:%v", req)
-	_, u, err := user.WXLogin(mdu.UserFromWXLoginRequestProto(req), req.Code)
+	address, _ := ctx.Value("X-Real-Ip").(string)
+	fmt.Printf("CCCCCCC:%s", address)
+	_, u, err := user.WXLogin(mdu.UserFromWXLoginRequestProto(req), req.Code, address)
 	if err != nil {
 		fmt.Printf("BBB WXLoginErr:%v", err)
 		return err

@@ -1,6 +1,7 @@
 package cache
 
 import (
+	"bcr/utils/log"
 	"encoding/json"
 	"fmt"
 	mdr "playcards/model/room/mod"
@@ -18,6 +19,10 @@ func RoomHKey(pwd string) string {
 
 func UserHKey(uid int32) string {
 	return fmt.Sprintf(cache.KeyPrefix("ROOMUSER:%d"), uid)
+}
+
+func RoomHKeySearch() string {
+	return cache.KeyPrefix("ROOM:*")
 }
 
 func SetRoom(r *mdr.Room) error {
@@ -62,23 +67,9 @@ func UpdateRoom(r *mdr.Room) error {
 
 func DeleteRoom(password string) error {
 	key := RoomHKey(password)
-
 	f := func(tx *redis.Tx) error {
 		//orig, _ := tx.HGet(key, "password").Bytes()
 		tx.Pipelined(func(p *redis.Pipeline) error {
-			room, err := GetRoom(password)
-			if err == nil && room != nil {
-				for _, user := range room.Users {
-					deluserkey := UserHKey(user.UserID)
-					tx.Del(deluserkey)
-					//userKey := UserHKey(user.UserID)
-					//rid := cache.KV().HGet(userKey, "roomid").Val()
-					//if rid == strconv.Itoa(int(room.RoomID)) {
-					//	tx.Del(userKey)
-					//}
-				}
-			}
-			//tx.HDel(key, string(orig))
 			tx.Del(key)
 			return nil
 		})
@@ -86,7 +77,7 @@ func DeleteRoom(password string) error {
 	}
 	err := cache.KV().Watch(f, key)
 	if err != nil {
-		return errors.Internal("set room error", err)
+		return errors.Internal("delete room error", err)
 	}
 	return nil
 }
@@ -180,9 +171,7 @@ func DeleteRoomUser(uid int32) error {
 
 func DeleteAllRoomUser(password string) error {
 	key := RoomHKey(password)
-
 	f := func(tx *redis.Tx) error {
-		//orig, _ := tx.HGet(key, "password").Bytes()
 		tx.Pipelined(func(p *redis.Pipeline) error {
 			room, err := GetRoom(password)
 			//fmt.Printf("delete room user room:%v \n", room)
@@ -192,8 +181,6 @@ func DeleteAllRoomUser(password string) error {
 					tx.Del(userkey)
 				}
 			}
-			//tx.HDel(key, string(orig))
-			//tx.Del(key)
 			return nil
 		})
 		return nil
@@ -208,7 +195,6 @@ func DeleteAllRoomUser(password string) error {
 func GetRoomPasswordByUserID(uid int32) string {
 	key := UserHKey(uid)
 	pwd := cache.KV().HGet(key, "password").Val()
-
 	return pwd
 }
 
@@ -235,4 +221,45 @@ func GetUserSocketNotice(uid int32) int32 {
 
 func FlushAll() {
 	cache.KV().FlushAll()
+}
+
+func GetAllRoomKey() ([]string, error) {
+	var curson uint64
+	var rks []string
+	var count int64
+	count = 999
+	for {
+		scan := cache.KV().Scan(curson, RoomHKeySearch(), count)
+		keys, cur, err := scan.Result()
+		if err != nil {
+			return nil, errors.Internal("list room list failed", err)
+		}
+
+		curson = cur
+		rks = append(rks, keys...)
+
+		if curson == 0 {
+			break
+		}
+	}
+	return rks, nil
+}
+
+func GetAllRoom(f func(*mdr.Room) bool) []*mdr.Room {
+	var rooms []*mdr.Room
+	keys, err := GetAllRoomKey()
+	if err != nil {
+		log.Err("redis get all room err: %v", err)
+	}
+	for _, k := range keys {
+		room, err := GetRoom(k)
+		if err != nil {
+			log.Err("redis get room err: %v", err)
+		}
+		if f != nil && !f(room) {
+			continue
+		}
+		rooms = append(rooms, room)
+	}
+	return rooms
 }

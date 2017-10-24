@@ -1,9 +1,12 @@
 package handler
 
 import (
+	"fmt"
 	"playcards/model/activity"
+	"playcards/model/activity/errors"
 	mda "playcards/model/activity/mod"
 	pba "playcards/proto/activity"
+	"playcards/utils/auth"
 	gctx "playcards/utils/context"
 	utilproto "playcards/utils/proto"
 
@@ -50,8 +53,12 @@ func (*ActivitySrv) Invite(ctx context.Context, req *pba.InviteRequest,
 	rsp *pba.InviteReply) error {
 	u := gctx.GetUser(ctx)
 	result, balances, err := activity.Invite(u, req.UserID)
+	fmt.Printf("Invite Err:%+v", err)
 	if err != nil {
 		return err
+	}
+	if result == 2 {
+		return errors.ErrInviterOverdue
 	}
 	var diamond int64
 	if len(balances) > 1 {
@@ -82,6 +89,19 @@ func (*ActivitySrv) Share(ctx context.Context, req *pba.ShareRequest,
 	*rsp = pba.ShareReply{
 		Result:  1,
 		Diamond: diamond,
+	}
+	return nil
+}
+
+func (*ActivitySrv) InviteUserInfo(ctx context.Context, req *pba.InviteRequest,
+	rsp *pba.InviteUserInfoReply) error {
+	u, err := auth.GetUser(ctx)
+	if err != nil {
+		return err
+	}
+	count, err := activity.InviteUserInfo(u.UserID)
+	*rsp = pba.InviteUserInfoReply{
+		Count: count,
 	}
 	return nil
 }

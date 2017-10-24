@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"playcards/model/niuniu"
 	enumniu "playcards/model/niuniu/enum"
+	cacheniu "playcards/model/niuniu/cache"
 	enumr "playcards/model/room/enum"
 	pbniu "playcards/proto/niuniu"
 	"playcards/utils/auth"
@@ -16,6 +17,7 @@ import (
 
 	"github.com/micro/go-micro/broker"
 	"github.com/micro/go-micro/server"
+	"github.com/jinzhu/gorm"
 )
 
 type NiuniuSrv struct {
@@ -24,28 +26,16 @@ type NiuniuSrv struct {
 }
 
 func NewHandler(s server.Server, gt *gsync.GlobalTimer) *NiuniuSrv {
-	b := &NiuniuSrv{
+	n := &NiuniuSrv{
 		server: s,
 		broker: s.Options().Broker,
 	}
-	b.Update(gt)
-
-	//enumniu.BankerScoreMap = *make(map[int32]int32)
-	enumniu.BankerScoreMap = map[int32]int32{1: 0, 2: 1, 3: 2, 4: 3, 5: 4}
-
-	enumniu.BetScoreMap = map[int32]int32{1: 5, 2: 10, 3: 15, 4: 20, 5: 25}
-
-	enumniu.ToBankerScoreMap = map[int32]int32{0: 1, 1: 2, 2: 3, 3: 4, 4: 5}
-
-	//enumniu.ToBetScoreMap = map[int32]int32{5: 1, 10: 2, 15: 3, 20: 4, 25: 5}
-
-	enumniu.ToBetScoreMap = map[int32]int32{1: 1, 2: 2, 3: 2, 4: 3, 5: 3, 6: 4, 7: 4, 8: 4}
-
-	return b
+	n.Update(gt)
+	return n
 }
 
 func (ns *NiuniuSrv) Update(gt *gsync.GlobalTimer) {
-	lock := "playcards.niuniu.update.lock"
+	lock := "playcards.niu.update.lock"
 
 	f := func() error {
 		s := time.Now()
@@ -76,27 +66,34 @@ func (ns *NiuniuSrv) Update(gt *gsync.GlobalTimer) {
 			for _, game := range updateGames {
 				if game.BroStatus == enumniu.GameStatusCountDown {
 					//fmt.Printf("1111 Game Status Init time")
-					// sub := int32(time.Now().Sub(*game.OpDateAt).Seconds())
-					// if sub > 0 {
-					// 	var totalTime int32
-					// 	if game.Status < enumniu.GameStatusGetBanker {
-					// 		totalTime = enumniu.GetBankerTime
-					// 	} else if game.Status < enumniu.GameStatusAllSetBet {
-					// 		totalTime = enumniu.SetBetTime
-					// 	} else if game.Status < enumniu.GameStatusStarted {
-					// 		totalTime = enumniu.SubmitCardTime
-					// 	}
-					// 	countDown := totalTime - sub
-					// 	//fmt.Printf("1111 Game Status Count Down:%f", sub.Seconds())
-					// 	if countDown >= 0 {
-					// 		msg := &pbniu.CountDown{
-					// 			RoomID: game.RoomID,
-					// 			Status: enumniu.ToBetScoreMap[game.Status],
-					// 			Time:   int32(countDown),
-					// 		}
-					// 		topic.Publish(ns.broker, msg, TopicNiuniuCountDown)
-					// 	}
-					// }
+					sub := int32(time.Now().Sub(*game.OpDateAt).Seconds())
+					if sub > 1{
+						var totalTime int32
+						if game.Status < enumniu.GameStatusGetBanker {
+							totalTime = enumniu.GetBankerTime
+						} else if game.Status < enumniu.GameStatusAllSetBet {
+							totalTime = enumniu.SetBetTime
+						} else if game.Status < enumniu.GameStatusStarted {
+							totalTime = enumniu.SubmitCardTime
+						}
+						countDown := totalTime - sub
+						//fmt.Printf("2222 Game Status Count Down:%d", countDown)
+						if countDown >0 {
+							msg := &pbniu.CountDown{
+								RoomID: game.RoomID,
+								Status: enumniu.ToBetScoreMap[game.Status],
+								Time:   int32(countDown),
+							}
+							topic.Publish(ns.broker, msg, TopicNiuniuCountDown)
+							now := gorm.NowFunc()
+							game.SubDateAt = &now
+							err := cacheniu.UpdateGame(game)
+							if err != nil {
+								log.Err("niuniu set session failed, %v", err)
+								return nil
+							}
+						}
+					}
 				} else if game.BroStatus == enumniu.GameStatusGetBanker {
 					msg := &pbniu.BeBanker{
 						BankerID:   game.BankerID,
@@ -131,7 +128,7 @@ func (ns *NiuniuSrv) Update(gt *gsync.GlobalTimer) {
 		fmt.Printf("Update times :%d", e)
 		return nil
 	}
-	gt.Register(lock, time.Second*enumniu.LoopTime, f)
+	gt.Register(lock, time.Millisecond*enumniu.LoopTime, f)
 }
 
 func (ns *NiuniuSrv) GetBanker(ctx context.Context, req *pbniu.GetBankerRequest,

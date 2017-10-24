@@ -4,8 +4,7 @@ import (
 	"fmt"
 	mdpage "playcards/model/page"
 	"playcards/model/room"
-	enum "playcards/model/room/enum"
-	enumroom "playcards/model/room/enum"
+	enumr "playcards/model/room/enum"
 	mdr "playcards/model/room/mod"
 	pbr "playcards/proto/room"
 	"playcards/utils/auth"
@@ -52,14 +51,21 @@ func (rs *RoomSrv) update(gt *gsync.GlobalTimer) {
 				Status:      room.Status,
 				Password:    room.Password,
 				List:        room.UserResults,
+				CreatedAt:   room.CreatedAt,
 			}
-			if room.Status == enum.RoomStatusDone {
+			if room.Status == enumr.RoomStatusDone {
 				roomResults.List = room.UserResults
 			}
 
 			msg := roomResults.ToProto()
 			//fmt.Printf("UpdateRoomSrv:%v", room.UserResults)
 			topic.Publish(rs.broker, msg, TopicRoomResult)
+		}
+
+		giveups := room.GiveUpRoomDestroy()
+		for _, giveup := range giveups {
+			msg := giveup.GiveupGame.ToProto()
+			topic.Publish(rs.broker, msg, TopicRoomGiveup)
 		}
 
 		err := room.RoomDestroy()
@@ -75,7 +81,7 @@ func (rs *RoomSrv) update(gt *gsync.GlobalTimer) {
 		return nil
 
 	}
-	gt.Register(lock, time.Second*enum.LoopTime, f)
+	gt.Register(lock, time.Second*enumr.LoopTime, f)
 }
 
 func (rs *RoomSrv) CreateRoom(ctx context.Context, req *pbr.Room,
@@ -151,7 +157,7 @@ func (rs *RoomSrv) LeaveRoom(ctx context.Context, req *pbr.Room,
 	msg := r.ToProto()
 	msg.RoomID = room.RoomID
 
-	if room.Status == enumroom.RoomStatusDestroy {
+	if room.Status == enumr.RoomStatusDestroy {
 		msg.Destroy = 1
 	}
 	topic.Publish(rs.broker, msg, TopicRoomUnJoin)
@@ -182,7 +188,7 @@ func (rs *RoomSrv) GiveUpGame(ctx context.Context, req *pbr.GiveUpGameRequest,
 	if err != nil {
 		return err
 	}
-	result, err := room.GiveUpGame(req.Password, req.AgreeOrNot, u.UserID)
+	result, err := room.GiveUpGame(req.Password, u.UserID)
 	if err != nil {
 		return err
 	}
@@ -190,6 +196,30 @@ func (rs *RoomSrv) GiveUpGame(ctx context.Context, req *pbr.GiveUpGameRequest,
 	msg := result.ToProto()
 
 	topic.Publish(rs.broker, msg, TopicRoomGiveup)
+	return nil
+}
+
+func (rs *RoomSrv) GiveUpVote(ctx context.Context, req *pbr.GiveUpVoteRequest,
+	rsp *pbr.GiveUpGameResult) error {
+	u, err := auth.GetUser(ctx)
+	if err != nil {
+		return err
+	}
+	result, err := room.GiveUpVote(req.Password, req.AgreeOrNot, u.UserID)
+	if err != nil {
+		return err
+	}
+	//	*rsp = *result.ToProto()
+	msg := result.ToProto()
+
+	topic.Publish(rs.broker, msg, TopicRoomGiveup)
+
+	if result.Status == enumr.RoomStatusStarted {
+		for _, userstate := range result.UserStateList {
+			userstate.State = enumr.UserStateWaiting
+		}
+	}
+
 	return nil
 }
 
@@ -267,31 +297,17 @@ func (rs *RoomSrv) CheckRoomExist(ctx context.Context, req *pbr.Room,
 		return err
 	}
 	//GiveupResult
-	res := &pbr.CheckRoomExistReply{}
-	room, err := room.CheckRoomExist(u.UserID)
+	result, roomResults, err := room.CheckRoomExist(u.UserID)
 	if err != nil {
 		return err
 	}
-	res.Room = room.ToProto()
-	if room.Status == enum.RoomStatusWaitGiveUp {
-		res.GiveupResult = room.GiveupGame.ToProto()
-	}
 
-	roomResults := mdr.RoomResults{
-		RoomID:      room.RoomID,
-		RoundNumber: room.RoundNumber,
-		RoundNow:    room.RoundNow,
-		Status:      room.Status,
-		Password:    room.Password,
-		List:        room.UserResults,
+	if result == 1 {
+		*rsp = *roomResults.ToProto()
+	} else {
+		rsp.Result = 2
 	}
-	if room.Status == enum.RoomStatusDone {
-		roomResults.List = room.UserResults
-	}
-	res.GameResult = roomResults.ToProto()
-
-	*rsp = *res
-
+	fmt.Printf("Check Room Exist:%d|%+v", u.UserID, roomResults)
 	return nil
 }
 
@@ -333,10 +349,10 @@ func (rs *RoomSrv) VoiceChat(ctx context.Context, req *pbr.VoiceChatRequest) err
 func (rs *RoomSrv) Heartbeat(ctx context.Context,
 	req *pbr.Room, rsp *pbr.Room) error {
 
-	errtest := room.LuaTest()
-	if errtest != nil {
-		return errtest
-	}
+	//errtest := room.LuaTest()
+	//if errtest != nil {
+	//	return errtest
+	//}
 	// u, err := auth.GetUser(ctx)
 	// if err != nil {
 	// 	return err

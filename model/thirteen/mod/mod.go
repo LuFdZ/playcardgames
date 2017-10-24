@@ -13,6 +13,7 @@ import (
 type Thirteen struct {
 	GameID          int32 `gorm:"primary_key"`
 	RoomID          int32
+	BankerID        int32
 	Status          int32
 	Index           int32
 	UserCards       string
@@ -44,13 +45,13 @@ type ThirteenResult struct {
 	Role   int32
 	Settle ThirteenSettle
 	Result ThirteenGroupResult
-	Shoot  []int32
 }
 
 type ThirteenGroupResult struct {
 	Head   ResGroup
 	Middle ResGroup
 	Tail   ResGroup
+	Shoot  []int32
 }
 
 type ResGroup struct {
@@ -87,6 +88,7 @@ type GameResultList struct {
 type ThirteenRecovery struct {
 	Result     int32
 	Status     int32
+	BankerID   int32
 	Cards      GroupCard
 	ReadyUser  []int32
 	GameResult GameResultList
@@ -120,6 +122,7 @@ func (tgr *ThirteenGroupResult) ToProto() *pbt.ThirteenGroupResult {
 		Head:   tgr.Head.ToProto(),
 		Middle: tgr.Middle.ToProto(),
 		Tail:   tgr.Tail.ToProto(),
+		Shoot:  tgr.Shoot,
 	}
 }
 
@@ -146,7 +149,6 @@ func (ts *ThirteenResult) ToProto() *pbt.ThirteenResult {
 		UserID: ts.UserID,
 		Settle: ts.Settle.ToProto(),
 		Result: ts.Result.ToProto(),
-		Shoot:  ts.Shoot,
 		Role:   ts.Role,
 	}
 }
@@ -164,8 +166,8 @@ func (grl *GameResultList) ToProto() *pbt.GameResultList {
 	return out
 }
 
-func (tr *ThirteenRecovery) ToProto() *pbt.ThirteenReply {
-	return &pbt.ThirteenReply{
+func (tr *ThirteenRecovery) ToProto() *pbt.ThirteenRecoveryReply {
+	return &pbt.ThirteenRecoveryReply{
 		Result:     tr.Result,
 		Status:     tr.Status,
 		Cards:      tr.Cards.ToProto(),

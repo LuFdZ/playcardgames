@@ -169,6 +169,8 @@ class Client(object):
     def SubscribeNiu(self):
         self.StreamSend("SubscribeNiuniuMessage",{})
 
+    def ClinetHearbeat(self):
+        self.StreamSend("ClinetHearbeat",{})
 
     def Recharge(self,uid,diamond,orderCode):
         ul = self.Request("/bill/billSrv/Recharge",{
@@ -208,9 +210,17 @@ class Client(object):
 
     def SubmitCardT(self):
         ul = self.Request("/thirteen/thirteenSrv/SubmitCard",{
-            "Head":["1_1","1_2","1_3"],
-            "Middle":["2_1","2_2","2_3","2_4","2_5"],
-            "Tail":["3_1","3_2","3_3","3_4","3_5"]
+            "Head":['2_8','2_5','2_3'],
+            "Middle":['3_13','1_13','3_12','3_11','3_9'],
+            "Tail":['4_14','4_5','1_4','4_3','4_2']
+        })
+        return ul
+
+    def SubmitCardT2(self):
+        ul = self.Request("/thirteen/thirteenSrv/SubmitCard",{
+            "Head":['4_14','4_13','2_12'],
+            "Middle":['4_9','3_9','3_7','2_7','4_3'],
+            "Tail":['1_6','2_6','1_6','1_4','1_4']
         })
         return ul
 
@@ -219,8 +229,14 @@ class Client(object):
         })
         return ul
 
-    def GiveUpGame(self,pwd,status):
+    def GiveUpGame(self,pwd):
         ul = self.Request("/room/roomSrv/GiveUpGame",{
+            "Password": pwd,
+        })
+        return ul
+
+    def GiveUpVote(self,pwd,status):
+        ul = self.Request("/room/roomSrv/GiveUpVote",{
             "Password": pwd,
             "AgreeOrNot": status,
         })
@@ -394,5 +410,10 @@ class Client(object):
     def NiuniuRecovery(self,rid):
         ul = self.Request("/niuniu/niuniuSrv/NiuniuRecovery",{
             "RoomID":rid,
+        })
+        return ul
+
+    def InviteUserInfo(self):
+        ul = self.Request("/activity/ActivitySrv/InviteUserInfo",{
         })
         return ul

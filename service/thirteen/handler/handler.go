@@ -3,8 +3,8 @@ package handler
 import (
 	"context"
 	"fmt"
-	"playcards/model/room/enum"
 	"playcards/model/thirteen"
+	"playcards/model/thirteen/enum"
 	mdt "playcards/model/thirteen/mod"
 	pbt "playcards/proto/thirteen"
 	"playcards/utils/auth"
@@ -33,7 +33,6 @@ func NewHandler(s server.Server, gt *gsync.GlobalTimer) *ThirteenSrv {
 
 func (ts *ThirteenSrv) update(gt *gsync.GlobalTimer) {
 	lock := "playcards.thirteen.update.lock"
-
 	f := func() error {
 		s := time.Now()
 		log.Debug("thirteen update loop... and has %d thirteens")
@@ -42,6 +41,7 @@ func (ts *ThirteenSrv) update(gt *gsync.GlobalTimer) {
 			for _, game := range newGames {
 				for _, groupCard := range game.Cards {
 					msg := groupCard.ToProto()
+					msg.BankerID =game.BankerID
 					topic.Publish(ts.broker, msg, TopicThirteenGameStart)
 				}
 			}
@@ -104,17 +104,15 @@ func (ts *ThirteenSrv) GameResultList(ctx context.Context, req *pbt.GameResultLi
 }
 
 func (rs *ThirteenSrv) ThirteenRecovery(ctx context.Context, req *pbt.ThirteenRequest,
-	rsp *pbt.ThirteenReply) error {
+	rsp *pbt.ThirteenRecoveryReply) error {
 	u, err := auth.GetUser(ctx)
 	if err != nil {
 		return err
 	}
-	res := &pbt.ThirteenReply{}
+	res := &pbt.ThirteenRecoveryReply{}
 	recovery, err := thirteen.ThirteenRecovery(req.RoomID, u.UserID)
 	//fmt.Printf("get thirteen recovery:%v", recovery)
 	if err != nil {
-		res.Result = 2
-		*rsp = *res
 		return err
 	}
 	res = recovery.ToProto()

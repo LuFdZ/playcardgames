@@ -20,4 +20,10 @@ const (
 	GameStatusGiveUp  = 4 //游戏被放弃
 )
 
-var GroupTypeName = [...]string{"Single", "Couple", "TwoCouple", "Three", "Straight", "Flush", "ThreeCouple", "Four", "FlushStright", "Shoot", "AllShoot"}
+const (
+	RecoveryInitNoReady = 1 //十三张初始化玩家未交牌
+	RecoveryInitReady   = 2 //十三张初始化玩家已交牌
+	RecoveryGameStart   = 3 //游戏结算
+)
+
+var GroupTypeName = [...]string{"Single", "Couple", "TwoCouple", "Three", "Straight", "Flush", "ThreeCouple", "Four", "FlushStraight", "Shoot", "AllShoot"}

@@ -26,8 +26,11 @@ func UpdateRoom(tx *gorm.DB, r *mdr.Room) (*mdr.Room, error) {
 	room := &mdr.Room{
 		Users:     r.Users,
 		Status:    r.Status,
+		Giveup:    r.Giveup,
 		RoundNow:  r.RoundNow,
 		UpdatedAt: &now,
+		CreatedAt: &now,
+		GiveupAt:  r.GiveupAt,
 		GameParam: r.GameParam,
 	}
 	if err := tx.Model(r).Updates(room).Error; err != nil {
@@ -216,4 +219,16 @@ func CleanDeadRoomByUpdateAt(tx *gorm.DB) error {
 		return errors.Internal("update player room play times failed", err)
 	}
 	return nil
+}
+
+func GetRoomsGiveup(tx *gorm.DB) ([]*mdr.Room, error) {
+	var (
+		out []*mdr.Room
+	)
+	if err := tx.Where(" giveup = ? and status < ?", enumr.WaitGiveUp,
+		enumr.RoomStatusDone).
+		Order("created_at").Find(&out).Error; err != nil {
+		return nil, errr.ErrRoomNotExisted
+	}
+	return out, nil
 }

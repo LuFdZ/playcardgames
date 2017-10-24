@@ -7,7 +7,7 @@ const (
 )
 
 const (
-	ShareDiamond      = 100
-	ShareLimitTimes   = 3
-	ShareLimitDiamond = 1000
+	ShareDiamond      = 50
+	ShareLimitTimes   = 1
+	ShareLimitDiamond = 5000
 )

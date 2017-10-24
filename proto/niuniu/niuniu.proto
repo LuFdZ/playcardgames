@@ -60,7 +60,8 @@ message NiuniuRequest{
 }
 
 message NiuniuReply {
-    NiuniuRoomResult Result  =1;
+    int32 Status = 1;
+    NiuniuRoomResult Result  =2;
 }
 
 message GetBanker{

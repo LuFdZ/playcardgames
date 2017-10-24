@@ -3,6 +3,8 @@ require "lua/thirteenlua/Card"
 require "lua/thirteenlua/Tools"
 require "../../lua/thirteenlua/json"
 
+
+
 Logic = {cards = {}, cardNum = 52, existKing = false}
 Logic.__index = Logic
 GroupType = {}
@@ -45,12 +47,15 @@ function Logic:GetCards()
     local cardvec = {}
 
     if #self.cards < 13 then
-        print("没有那么多牌了")
+        MyLog("没有那么多牌了")
         return cardvec
     end
 
     for i = 1, 13 do
-        local rn = math.random(self.cardNum)
+        local rn = 1
+        if self.cardNum ~= 1 then
+            rn = math.random(self.cardNum)
+        end
         table.insert(cardvec, i, self.cards[rn])
         self.cards[rn], self.cards[self.cardNum] = self.cards[self.cardNum], self.cards[rn]
         self.cardNum = self.cardNum - 1
@@ -86,33 +91,35 @@ end
 function Logic:CompareGroup(group1, group2)
 
     if group1._type > group2._type then
-        return 1 * group1._type
+        return 1 * (group1._type + 1)
     elseif group1._type < group2._type then
-        return -1 * group2._type
+        return -1 * (group2._type + 1)
     end
 
     --如果类型相等，则比关键牌
     local res = 0
+    -- dump(group1._keyCard, "group1:", 100)
+    -- dump(group2._keyCard, "group2:", 100)
+
     for k, keycard in pairs(group1._keyCard) do
-        if k > #group2 then
-            res = group1._type
+        -- print("k :" .. k .. "#group2: " .. #group2._keyCard)
+        if k > #group2._keyCard then
+            res = group1._type + 1
             break
         end
 
         res = CompareCard(keycard, group2._keyCard[k])
+        -- print("res: " .. res)
         if res > 0 then
-            res = res * group1._type
+            res = res * (group1._type + 1)
             break
         elseif res < 0 then
-            res = res * group2._type * -1
+            res = res * (group2._type + 1)
             break
         end
     end
 
-    if res == 0 and #group1 == 3 then
-        res = group2._type
-    end
-
+    -- print("return res : " .. res)
     return res
 end
 
@@ -129,7 +136,7 @@ end
 -- --根据玩家的牌，取得结果
 function Logic:GetResult( data, roomData )
 
-    --print(roomData)
+    --MyLog(roomData)
 
     local datas = json.decode(data)
 
@@ -156,7 +163,7 @@ function Logic:GetResult( data, roomData )
         --被打枪
         ThirteenResult.Result.BeShoot = {}
         --记录赢每一个人的数分
-        ThirteenResult.winScore = {}
+        ThirteenResult.otherScoreList = {}
         ThirteenResult.Settle = {Head = 0, Middle = 0, Tail = 0, AddScore = 0, TotalScore = 0}
         table.insert( ThirteenResultList,ThirteenResult )
     end
@@ -167,27 +174,36 @@ function Logic:GetResult( data, roomData )
             --value和temp对比
             local Settle = {}
             local addScore = 0
+
             if value.UserID ~= value1.UserID then
+                local tempHead = 1
+                local tempMiddle = 2
+                local tempTail = 3
+
                 --对比大小
                 local resHead = self:CompareGroup(value.Result.Head, value1.Result.Head)
+                -- print("resHead: " .. resHead)
                 --大于0的标记
                 local temp = 1
                 if resHead < 0 then
                     --小于0
                     temp = -1
-                    addScore = roomData.BankerAddScore * -1 + addScore
+                    --addScore = roomData.BankerAddScore * -1 + addScore
                 else
-                    addScore = roomData.BankerAddScore + addScore
+                    --addScore = roomData.BankerAddScore + addScore
                 end
+
                 --计分
-                if resHead == GroupTypeName.Three then
+                if 	math.abs(resHead) == GroupType.Three + 1 then
                     Settle.Head = 3
+                    tempHead = 3
                 elseif resHead ~= 0 then
                     Settle.Head = 1
                 else
                     Settle.Head = 0
                 end
                 --乘于大于0的标记，如果标记小于0，value输，分数为负
+
                 Settle.Head = Settle.Head * temp
 
                 --对比大小
@@ -199,12 +215,12 @@ function Logic:GetResult( data, roomData )
                     resMiddle = resMiddle * temp
                 end
 
-                if resMiddle == GroupType.Four then
+                if math.abs(resMiddle) == GroupType.Four + 1 then
                     Settle.Middle = 7
-
-                elseif resMiddle == GroupType.FlushStraight then
+                    tempMiddle = 7
+                elseif math.abs(resMiddle) == GroupType.FlushStraight + 1 then
                     Settle.Middle = 8
-
+                    tempMiddle = 8
                 elseif resMiddle ~= 0 then
                     Settle.Middle = 2
                 else
@@ -214,17 +230,20 @@ function Logic:GetResult( data, roomData )
                 Settle.Middle = Settle.Middle * temp
 
                 local resTail = self:CompareGroup(value.Result.Tail, value1.Result.Tail)
+                print("resTail:" .. resTail)
+
+                print("GroupType.Four + 1:" .. (GroupType.Four + 1))
                 temp = 1
                 if resTail < 0 then
                     temp = -1
                     resTail = resTail * temp
                 end
-                if resTail == GroupType.Four then
+                if math.abs(resTail) == GroupType.Four + 1 then
                     Settle.Tail = 7
-
-                elseif resTail == GroupType.FlushStraight then
+                    tempTail = 7
+                elseif math.abs(resTail) == GroupType.FlushStraight + 1 then
                     Settle.Tail = 8
-
+                    tempTail = 8
                 elseif resTail ~= 0 then
                     Settle.Tail = 3
                 else
@@ -241,82 +260,38 @@ function Logic:GetResult( data, roomData )
                             Settle.Middle = 0
                             Settle.Tail = 0
                         elseif Settle.Middle > 0 then
-                            --中道大,计算得分，中道大，尾送也大，尾道大，头道大
-                            if value.Result.Tail._type == GroupType.FlushStraight then
-                                --同花顺，8分
-                                Settle.Tail = 8
-
-                            else
-                                Settle.Tail = 3
-                            end
-                            Settle.Head = 1
+                            --中道大,计算得分，中道大，尾道也大，尾道大，头道大
+                            Settle.Tail = tempTail
+                            Settle.Head = tempHead
                         else
                             --中道大，计算得分，中道小，尾道小，头道小
-
-                            if value1.Result.Tail._type == GroupType.FlushStraight then
-                                --同花顺，8分
-                                Settle.Tail = -8
-
-                            else
-                                Settle.Tail = -3
-                            end
-                            Settle.Head = -1
+                            Settle.Tail = tempTail * -1
+                            Settle.Head = tempHead * -1
                         end
                     elseif Settle.Tail > 0 then --尾道大，头道也大
-                        Settle.Head = 1
+                        Settle.Head = tempHead
                     else--尾道小，头道也小
-                        Settle.Head = -1
+                        Settle.Head = tempHead * -1
                     end
                 end
+
                 if Settle.Middle == 0 then--中道等
                     if Settle.Tail == 0 then--按尾道比大小，尾道等，接头道比大小
                         if Settle.Head > 0 then--头道大，尾道也大，尾道大，中道也大
                             --尾
-                            if value.Result.Tail._type == GroupType.FlushStraight then
-                                Settle.Tail = 8
-
-                            else
-                                Settle.Tail = 3
-                            end
-                            --中
-                            if value.Result.Middle._type == GroupType.FlushStraight then
-                                Settle.Middle = 8
-
-                            else
-                                Settle.Middle =2
-                            end
+                            Settle.Tail = tempTail
+                            Settle.Middle = tempMiddle
                         else --如果头道小，尾道和中道都小
                             --尾道
-                            if value1.Result.Tail._type == GroupType.FlushStraight then
-                                Settle.Tail = -8
-
-                            else
-                                Settle.Tail = -3
-                            end
-                            --中道
-                            if value1.Result.Middle._type == GroupType.FlushStraight then
-                                Settle.Middle = -8
-
-                            else
-                                Settle.Middle = -2
-                            end
+                            Settle.Tail = tempTail * -1
+                            Settle.Middle = tempMiddle * -1
                         end
                     elseif Settle.Tail > 0 then--尾道大，中道大
                         --中
-                        if value.Result.Middle._type == GroupType.FlushStraight then
-                            Settle.Middle = 8
-
-                        else
-                            Settle.Middle = 2
-                        end
+                        Settle.Middle = tempMiddle
                     else --尾道小，中道小
                         --中道
-                        if value1.Result.Middle._type == GroupType.FlushStraight then
-                            Settle.Middle = -8
-
-                        else
-                            Settle.Middle = -2
-                        end
+                        Settle.Middle = tempMiddle * -1
                     end
                 end
 
@@ -332,53 +307,20 @@ function Logic:GetResult( data, roomData )
                             Settle.Tail = 0
                         elseif Settle.Head > 0 then
                             --尾
-                            if value.Result.Tail._type == GroupType.FlushStraight then
-                                Settle.Tail = 8
-
-                            else
-                                Settle.Tail = 3
-                            end
-                            --中
-                            if value.Result.Middle._type == GroupType.FlushStraight then
-                                Settle.Middle = 8
-
-                            else
-                                Settle.Middle = 2
-                            end
+                            Settle.Middle = tempMiddle
+                            Settle.Tail = tempTail
                         else
-                            --尾
-                            if value1.Result.Tail._type == GroupType.FlushStraight then
-                                Settle.Tail = -8
-
-                            else
-                                Settle.Tail = -3
-                            end
-                            --中
-                            if value1.Result.Middle._type == GroupType.FlushStraight then
-                                Settle.Middle = -8
-
-                            else
-                                Settle.Middle = -2
-                            end
+                            Settle.Middle = tempMiddle * -1
+                            Settle.Tail = tempTail * -1
                         end
                     elseif Settle.Middle > 0 then
                         --中道大，尾道也大
                         --尾
-                        if value.Result.Tail._type == GroupType.FlushStraight then
-                            Settle.Tail = 8
-
-                        else
-                            Settle.Tail = 3
-                        end
+                        Settle.Tail = tempTail
                     else
                         --中道小，尾道也小
                         --尾
-                        if value1.Result.Tail._type == GroupType.FlushStraight then
-                            Settle.Tail = -8
-
-                        else
-                            Settle.Tail = -3
-                        end
+                        Settle.Tail = tempTail * -1
                     end
                 end
 
@@ -394,31 +336,31 @@ function Logic:GetResult( data, roomData )
 
                     --打枪
                     table.insert( value.Result.BeShoot, value1.UserID )
-                    --print(value1.UserID .. "--------> beshoot: ")
+                    --MyLog(value1.UserID .. "--------> beshoot: ")
                     --dump(value1.Result.BeShoot)
                 end
 
                 value.Settle.Head = value.Settle.Head + Settle.Head
                 value.Settle.Middle = value.Settle.Middle + Settle.Middle
                 value.Settle.Tail = value.Settle.Tail + Settle.Tail
-                value.Settle.AddScore = addScore
-                local winScore = {}
-                winScore.winID = value1.UserID
-                winScore.Score = (value.Settle.Head + value.Settle.Middle + value.Settle.Tail)
-                table.insert( value.winScore, winScore )
+                --value.Settle.AddScore = addScore
+                local otherScore = {}
+                otherScore.ID = value1.UserID
+                otherScore.Score = (Settle.Head + Settle.Middle + Settle.Tail)
+                table.insert( value.otherScoreList, otherScore )
             end
         end
     end
 
     for k, value in pairs(ThirteenResultList) do
-        --玩家对其他玩家的缘分
-        for kk, value1 in pairs(value.winScore) do
+        --玩家对其他玩家的比分
+        for kk, value1 in pairs(value.otherScoreList) do
             local times = 1
             if value1.Score > 0 then
                 --如果是赢的
                 --查打是否有打他的枪
                 for i, shootid in pairs(value.Result.Shoot)do
-                    if shootid == value1.winID then
+                    if shootid == value1.ID then
                         --打枪
                         times = 2
                         break
@@ -429,7 +371,7 @@ function Logic:GetResult( data, roomData )
                 if roomData.Times == 3 then
                     --3翻模式-没有全垒打
                     times = math.pow(2,#value.Result.Shoot)
-                elseif #value.Result.Shoot == #ThirteenResultList  and #ThirteenResultList ~= 2 then
+                elseif #value.Result.Shoot == (#ThirteenResultList - 1)  and #ThirteenResultList ~= 2 then
                     times = 4
                 end
                 --计算分数
@@ -439,24 +381,26 @@ function Logic:GetResult( data, roomData )
                 --查看是否被他打枪
                 --dump(value.Result.BeShoot)
                 for i, shootid in pairs(value.Result.BeShoot)do
-                   -- print("all be shoot: " .. shootid)
-                    if shootid == value1.winID then
+                    -- MyLog("all be shoot: " .. shootid)
+                    if shootid == value1.ID then
                         --打枪
-                       -- print("be shoot: " .. shootid .. "shoot ->" .. value.UserID)
+                        -- MyLog("be shoot: " .. shootid .. "shoot ->" .. value.UserID)
                         times = 2
                         break
                     end
                 end
 
+                --根据value1的id找到value对应的值
+                local tempValue = self:GetUserResult(value1.ID, ThirteenResultList)
                 --查看是否3翻模式
                 if roomData.Times == 3 then
                     --3翻模式-没有全垒打
-                    times = math.pow(2,#value.Result.BeShoot)
-                elseif #value.Result.BeShoot == #ThirteenResultList and #ThirteenResultList ~= 2 then
+                    times = math.pow(2,#tempValue.Result.Shoot)
+                elseif #tempValue.Result.Shoot == (#ThirteenResultList-1) and #ThirteenResultList ~= 2 then
                     times = 4
                 end
 
-                --print("times: " .. times .. " win score: " .. value1.Score)
+                --MyLog("times: " .. times .. " win score: " .. value1.Score)
                 --计算分数
                 value.Settle.TotalScore = value.Settle.TotalScore + times * value1.Score
             end
@@ -464,7 +408,7 @@ function Logic:GetResult( data, roomData )
             --如果一方是庄家，则+庄家分
             if roomData.BankerAddScore ~= 0 then
                 --取到跟value对比的玩家结果信息
-                local winUser = self:GetUserResult(value1.winID, ThirteenResultList)
+                local winUser = self:GetUserResult(value1.ID, ThirteenResultList)
                 if value.Banker or winUser.Banker then
                     --当前比牌有一个是庄家
                     local bankerAddScore = 0
@@ -473,7 +417,7 @@ function Logic:GetResult( data, roomData )
                     elseif value1.Score < 0 then
                         bankerAddScore = roomData.BankerAddScore * -1
                     end
-
+                    value.AddScore = bankerAddScore
                     value.Settle.TotalScore = value.Settle.TotalScore + bankerAddScore
                 end
             end
@@ -504,10 +448,10 @@ function Logic:GetResult( data, roomData )
         local result = {Result = res, Settle = settle, UserID = value.UserID}
         table.insert(results, result)
     end
-    --dump(results, "results", 100)
+    dump(results, "results", 100)
     local str = json.encode(results)
-    print(str)
-     --dump(ThirteenResultList, "ThirteenResultList", 100)
+    -- print(str)
+   -- dump(ThirteenResultList, "ThirteenResultList", 100)
     return str
 end
 
@@ -518,7 +462,7 @@ function Logic:GetUserResult(id, list)
             return v
         end
     end
-    print("找不到玩家结果")
+    MyLog("找不到玩家结果")
     return nil
 end
 
@@ -591,7 +535,7 @@ function Logic:GetGroup( cards )
 
         if res1 then
             --顺子
-            local group = CardGroup:new(cards, GroupType.Straight, keycards)
+            local group = CardGroup:new(cards, GroupType.Straight, keycards1)
             return group
         end
         --判断是否铁支
@@ -607,7 +551,7 @@ function Logic:GetGroup( cards )
             end
         end
         if res then
-            for k, v in cards do
+            for k, v in pairs(cards) do
                 if v._value ~= keycards[1]._value then
                     table.insert(keycards, v)
                     break
@@ -645,10 +589,36 @@ function Logic:GetGroup( cards )
                     end
                 end
                 --如果运行到此，说明代码sb了，请检查代码
-                print("明代码sb了，请检查代码 a")
+                MyLog("明代码sb了，请检查代码 a")
                 dump(cards)
             end
         end
+
+        --是否三条
+        --找到所有三张的组合
+        res = false
+        keycards = {}
+        combs = {}
+        result = {}
+        self:Combine_increase(combs, cards, result, 1, 3, 3)
+        for k, v in pairs(combs) do
+            res, keycards = self:IsThree(v)
+            if res then
+                break
+            end
+        end
+
+        if res then
+            --找到，再找出其他的牌
+            for k, v in pairs(cards) do
+                if v._value ~= keycards[1]._value then
+                    table.insert( keycards, v )
+                end
+            end
+            local group = CardGroup:new(cards, GroupType.Three, keycards)
+            return group
+        end
+
 
         --判断是否对子
         res = false
@@ -675,7 +645,7 @@ function Logic:GetGroup( cards )
         end
     else
         --不符合配牌牌型
-        print("出错了，请检查传过来的牌是否正常:")
+        MyLog("出错了，请检查传过来的牌是否正常:")
         dump(cards)
     end
 
@@ -826,7 +796,7 @@ function Logic:CalculateAllGroupTypes(cards)
     TableInsert2Table(self.groups, temp)
 
     --for k, v in pairs(self.groups) do
-    -- print("========================================group: " , v._type)
+    -- MyLog("========================================group: " , v._type)
     --dump(v)
     --end
 end
@@ -861,8 +831,8 @@ function Logic:IsThree(cards)
     local keycards = {}
     local sameCard = self:EqualsNumber(cards)
     if sameCard.Num == 3 then
-        table.insert(keycards, sameCard.card)
-        return true, keycards
+        --table.insert(keycards, sameCard.card)
+        return true, cards
     end
     return false, nil
 end
@@ -877,7 +847,7 @@ function Logic:IsCouple(cards)
 
     local sameCard = self:EqualsNumber(cards)
     if sameCard.Num == 2 then
-        return true, {sameCard.card}
+        return true, cards
     end
 
     return false, 0
@@ -896,8 +866,8 @@ function Logic:IsFour(cards)
     if sameCard.Num == 4 then
 
         --添加一张关键牌
-        table.insert(keycards, sameCard.card)
-        return true, keycards
+        --table.insert(keycards, sameCard.card)
+        return true, cards
     end
 
     return false, 0
@@ -924,7 +894,7 @@ function Logic:EqualsNumber(cards)
     end)
 
     if #tempList <= 0 then
-        print("sb了，数据有错:")
+        MyLog("sb了，数据有错:")
         dump(cards)
     end
 
@@ -965,6 +935,10 @@ function Logic:IsStraight(cards)
         return false, 0
     end
 
+    if cards[1]._value == 14 and cards[2]._value == 5 and cards[3]._value == 4 and cards[4]._value == 3 and cards[5]._value == 2 then
+        return true, {cards[2], cards[3], cards[4], cards[5], cards[1]}
+    end
+
     local temp = cards[1]
 
 
@@ -1003,8 +977,8 @@ function Logic:IsThreeWithCouple(cards)
             --三张相等的牌
             three = sameCard.card
             --添加一张关键牌
-            table.insert(keycards, three)
-            --print("three..........................", three._type, three._value)
+            TableInsert2Table(keycards, vcards)
+            --MyLog("three..........................", three._type, three._value)
             break
         end
     end
@@ -1024,11 +998,11 @@ function Logic:IsThreeWithCouple(cards)
         if v._value == three._value then
             same = true
         end
-        --print("v: ", v._type, v._value, "v1: ", v1._type, v1._value)
+        --MyLog("v: ", v._type, v._value, "v1: ", v1._type, v1._value)
 
         --如果不在，那么把这张牌加到列表里面
         if not same then
-            --print("not same : ", v._type, v._value)
+            --MyLog("not same : ", v._type, v._value)
             table.insert(tempcards, v)
 
         end
@@ -1039,13 +1013,13 @@ function Logic:IsThreeWithCouple(cards)
     if sameCard.Num == 2 then
         --两张牌相等，是对子，符合三带对的规则
         --把对子的牌加入为关键牌
-        table.insert(keycards, temp)
+        TableInsert2Table(keycards, tempcards)
         return true, keycards
     end
 
-    -- print("........................................................>> 没有对子 tempcards:")
+    -- MyLog("........................................................>> 没有对子 tempcards:")
     -- for k, v in pairs(tempcards) do
-    --     print("card ", v._type , v._value )
+    --     MyLog("card ", v._type , v._value )
     -- end
     return false, 0
 end
@@ -1067,11 +1041,16 @@ function Logic:IsTwoCouple(cards)
         end
     end
 
+    local keycards = {}
     if #tempCombs == 2 then
         if CompareCard(tempCombs[1][1], tempCombs[2][1]) == 1 then
-            return true, {tempCombs[1][1], tempCombs[2][1]}
+            TableInsert2Table(keycards, tempCombs[1])
+            TableInsert2Table(keycards, tempCombs[2])
+            return true, keycards
         else
-            return true, {tempCombs[2][1], tempCombs[1][1]}
+            TableInsert2Table(keycards, tempCombs[2])
+            TableInsert2Table(keycards, tempCombs[1])
+            return true, keycards
         end
     end
 

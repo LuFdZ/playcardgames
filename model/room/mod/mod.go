@@ -15,6 +15,7 @@ type Room struct {
 	RoomID         int32  `gorm:"primary_key"`
 	Password       string `reg:"required,min=6,max=32,excludesall= 	"`
 	Status         int32
+	Giveup         int32
 	MaxNumber      int32 `reg:"required"`
 	RoundNumber    int32 `reg:"required"`
 	RoundNow       int32
@@ -26,10 +27,10 @@ type Room struct {
 	GameUserResult string
 	CreatedAt      *time.Time
 	UpdatedAt      *time.Time
-
-	UserResults []*GameUserResult `gorm:"-"`
-	Users       []*RoomUser       `gorm:"-"`
-	GiveupGame  GiveUpGameResult  `gorm:"-"`
+	GiveupAt       *time.Time
+	UserResults    []*GameUserResult `gorm:"-"`
+	Users          []*RoomUser       `gorm:"-"`
+	GiveupGame     GiveUpGameResult  `gorm:"-"`
 }
 
 type GiveUpGameResult struct {
@@ -75,6 +76,7 @@ type RoomResults struct {
 	GameType    int32
 	CreatedAt   *time.Time
 	List        []*GameUserResult
+	GameParam   string
 }
 
 type PlayerRoom struct {
@@ -89,6 +91,14 @@ type PlayerRoom struct {
 
 type RoomResultList struct {
 	List []*RoomResults
+}
+
+type CheckRoomExist struct {
+	Result       int32
+	Status       int32
+	Room         Room
+	GiveupResult GiveUpGameResult
+	GameResult   RoomResults
 }
 
 func (r *Room) String() string {
@@ -123,11 +133,13 @@ func (r *Room) ToProto() *pbr.Room {
 		Password:    r.Password,
 		MaxNumber:   r.MaxNumber,
 		Status:      r.Status,
+		Giveup:      r.Giveup,
 		GameType:    r.GameType,
 		RoundNumber: r.RoundNumber,
 		RoundNow:    r.RoundNow,
 		CreatedAt:   mdtime.TimeToProto(r.CreatedAt),
 		UpdatedAt:   mdtime.TimeToProto(r.UpdatedAt),
+		GameParam:   r.GameParam,
 	}
 	utilproto.ProtoSlice(r.Users, &out.UserList)
 	return out
@@ -168,6 +180,16 @@ func (ur *GameUserResult) ToProto() *pbr.GameUserResult {
 		Tie:           ur.Tie,
 		Score:         ur.Score,
 		GameCardCount: ur.GameCardCount,
+	}
+}
+
+func (cre *CheckRoomExist) ToProto() *pbr.CheckRoomExistReply {
+	return &pbr.CheckRoomExistReply{
+		Result:       cre.Result,
+		Status:       cre.Status,
+		Room:         cre.Room.ToProto(),
+		GiveupResult: cre.GiveupResult.ToProto(),
+		GameResult:   cre.GameResult.ToProto(),
 	}
 }
 
@@ -225,7 +247,6 @@ func (r *Room) UnmarshalUsers() error {
 func (r *Room) MarshalGameUserResult() error {
 	data, _ := json.Marshal(&r.UserResults)
 	r.GameUserResult = string(data)
-
 	return nil
 }
 

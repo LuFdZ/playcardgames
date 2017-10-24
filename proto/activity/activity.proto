@@ -1,7 +1,5 @@
 syntax = "proto3";
 
-import "playcards/proto/user/user.proto";
-
 package activity;
 
 message ActivityConfig {
@@ -33,8 +31,8 @@ message InviteReply{
     int64 Diamond = 3;
 }
 
-message InviteUserList{
-    repeated user.UserInfo List = 1;    
+message InviteUserInfoReply{
+    int32 Count = 1;
 }
 
 service ActicitySrv {
@@ -44,5 +42,5 @@ service ActicitySrv {
     rpc UpdateConfig(ActivityConfig) returns (ActivityConfig) {}
     rpc Share(ShareRequest) returns (ShareReply) {}
     rpc Invite(InviteRequest) returns (InviteReply) {}
-    rpc InviteUserListRequest(InviteRequest) returns (InviteUserList) {}
+    rpc InviteUserInfo(InviteRequest) returns (InviteUserInfoReply) {}
 }

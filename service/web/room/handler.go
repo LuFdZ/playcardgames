@@ -4,11 +4,14 @@ import (
 	"encoding/json"
 	cacheroom "playcards/model/room/cache"
 	"playcards/model/room/errors"
+	pbroom "playcards/proto/room"
 	srvroom "playcards/service/room/handler"
 	"playcards/service/web/clients"
 	enum "playcards/service/web/enum"
 	"playcards/service/web/request"
 	"playcards/utils/auth"
+	gctx "playcards/utils/context"
+	"playcards/utils/log"
 )
 
 var RoomEvent = []string{
@@ -52,9 +55,25 @@ func UnsubscribeRoomMessage(c *clients.Client, req *request.Request) error {
 	return nil
 }
 
+func ClinetHearbeatMessage(c *clients.Client,req *request.Request)error{
+	var msg byte
+	msg=1
+	c.SendMessage(enum.MsgHearbeat,enum.MsgHearbeat,msg)
+	return nil
+}
+
+func HeartbeatCallback(c *clients.Client) {
+	log.Debug("room heartbeat %v", c)
+	ctx := gctx.NewContext(c.Token())
+	rpc.Heartbeat(ctx, &pbroom.HeartbeatRequest{})
+}
+
 func init() {
 	request.RegisterHandler("SubscribeRoomMessage", auth.RightsPlayer,
 		SubscribeRoomMessage)
 	request.RegisterHandler("UnSubscribeRoomMessage", auth.RightsPlayer,
 		UnsubscribeRoomMessage)
+	request.RegisterHandler("ClinetHearbeat", auth.RightsPlayer,
+		ClinetHearbeatMessage)
+	request.RegisterHeartbeatHandler(HeartbeatCallback)
 }

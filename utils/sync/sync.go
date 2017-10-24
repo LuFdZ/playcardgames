@@ -1,9 +1,10 @@
 package sync
 
 import (
-	"playcards/utils/log"
 	"sync"
 	"time"
+
+	"playcards/utils/log"
 
 	gsync "github.com/micro/go-os/sync"
 	"github.com/micro/go-plugins/sync/consul"
@@ -55,6 +56,7 @@ func Init() {
 }
 
 func GlobalTransaction(lock string, f func() error) error {
+	log.Info("global transcation: %v start", lock)
 	l, err := global.Lock(lock)
 	if err != nil {
 		return err
@@ -64,8 +66,12 @@ func GlobalTransaction(lock string, f func() error) error {
 		return err
 	}
 
-	defer l.Release()
+	defer func() {
+		l.Release()
+		log.Info("global transcation: %v unlocked", lock)
+	}()
 
+	log.Info("global transcation: %v locked", lock)
 	return f()
 }
 

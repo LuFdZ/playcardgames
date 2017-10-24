@@ -24,6 +24,7 @@ type Niuniu struct {
 	BankerID      int32
 	GetBankerList []*GetBanker `gorm:"-"`
 	BroStatus     int32        `gorm:"-"`
+	SubDateAt      *time.Time   `gorm:"-"`
 }
 
 type GetBanker struct {
@@ -50,12 +51,6 @@ type NiuniuUserResult struct {
 	Score  int32
 }
 
-type NiuniuRoomParam struct {
-	Times       int32
-	BankerType  int32
-	PreBankerID int32
-}
-
 type NiuniuRoomResult struct {
 	RoomID int32
 	List   []*NiuniuUserResult
@@ -63,6 +58,12 @@ type NiuniuRoomResult struct {
 
 type NiuniuRoomResultList struct {
 	List []*NiuniuRoomResult
+}
+
+type NiuniuRoomParam struct {
+	Times       int32
+	BankerType  int32
+	PreBankerID int32
 }
 
 func (bab *BankerAndBet) ToProto() *pbniu.BankerAndBet {

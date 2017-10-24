@@ -20,6 +20,6 @@ function CardGroup:new(cards, t, key)
 
     self._cards = cards
     self._type = t
-    self._keyValue = key
+    self._keyCard = key
     return self
 end

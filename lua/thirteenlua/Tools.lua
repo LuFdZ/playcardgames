@@ -2,7 +2,7 @@
 -- Author: KGD
 -- Date: 2017-08-13 23:36:02
 --
-require("lua/thirteenlua/functions")
+require("lua/niuniulua/functions")
 
 function CreateEnumTable(tbl, index)
     local enumtbl = {}
@@ -143,4 +143,26 @@ function dump(value, desciption, nesting)
     for i, line in ipairs(result) do
         print(line)
     end
+end
+
+
+--把table2的内容加到table1里面
+function TableInsert2Table(table1, table2)
+    if table2 == nil then
+        return table1
+    end
+
+    for k, v in pairs(table2) do
+        table.insert(table1, v)
+    end
+    return table1
+end
+
+--获取无序table的长度
+function GetTableLen(tb)
+    local count = 0
+    for k, v in pairs(tb) do
+        count = count + 1
+    end
+    return count
 end

@@ -40,3 +40,7 @@ const (
 const (
 	MsgBillChange = "BillChange"
 )
+
+const (
+	MsgHearbeat = "Hearbeat"
+)

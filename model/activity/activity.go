@@ -1,6 +1,7 @@
 package activity
 
 import (
+	"fmt"
 	dba "playcards/model/activity/db"
 	enum "playcards/model/activity/enum"
 	"playcards/model/activity/errors"
@@ -43,8 +44,9 @@ func Invite(u *mdu.User, inviterID int32) (int32, []*mbill.UserBalance, error) {
 	var (
 		isBalance = true
 		balances  []*mbill.UserBalance
+		err       error
 	)
-
+	err = nil
 	checktd, err := dbu.GetUser(db.DB(), &mdu.User{UserID: u.UserID})
 	if err != nil {
 		return 0, nil, err
@@ -62,10 +64,23 @@ func Invite(u *mdu.User, inviterID int32) (int32, []*mbill.UserBalance, error) {
 		return 0, nil, errors.ErrInviterNoExist
 	}
 
+	list, err := dbu.GetInvitedUserCount(db.DB(), u.UserID)
+	//fmt.Printf("Invite List:%v", list)
+	if err != nil {
+		return 0, nil, err
+	}
+
+	for _, inviter := range list {
+		if inviter.UserID == inviterID {
+			return 0, nil, errors.ErrInviterConflict
+		}
+	}
+
 	u.InviteUserID = inviterID
 	var result int32
 	result = 1
 
+	fmt.Printf("Invite date Count:%d|%d|%v\n", date.TimeSubDays(time.Now(), *u.CreatedAt), u.UserID,u.CreatedAt)
 	if date.TimeSubDays(time.Now(), *u.CreatedAt) > enum.InviteCreateDaysLimit {
 		isBalance = false
 		result = 2
@@ -141,8 +156,8 @@ func Share(uid int32) (*mbill.UserBalance, error) { //*mda.PlayerShare,
 		ps.ShareTimes = 0
 	}
 
-	if ps.ShareTimes == 3 || ps.TotalDiamonds == enum.ShareLimitDiamond {
-		return nil, errors.ErrShareNoDiamonds
+	if ps.ShareTimes >= enum.ShareLimitTimes || ps.TotalDiamonds >= enum.ShareLimitDiamond {
+		return nil, nil //errors.ErrShareNoDiamonds
 	}
 
 	ub, err := bill.GainBalanceType(uid, time.Now().Unix(),
@@ -163,6 +178,14 @@ func Share(uid int32) (*mbill.UserBalance, error) { //*mda.PlayerShare,
 		return nil, err
 	}
 	return ub, nil
+}
+
+func InviteUserInfo(uid int32) (int32, error) {
+	list, err := dbu.GetInvitedUserCount(db.DB(), uid)
+	if err != nil {
+		return 0, nil
+	}
+	return int32(len(list)), nil
 }
 
 // message InviteReply{

@@ -18,4 +18,5 @@ var (
 	ErrNotInSameRoon     = errors.Forbidden(40013, "已请求对象不在同一房间内！")
 	ErrRenewalRoon       = errors.Forbidden(40014, "房间游戏未结束或非正常结束，不能续费！")
 	ErrAlreadyReady      = errors.Forbidden(40015, "您已经准备过了！")
+	ErrNotInGiveUp       = errors.Forbidden(40016, "游戏不在放弃投票状态！")
 )

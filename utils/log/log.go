@@ -45,7 +45,7 @@ func NewLogger(path string, level string) (*Logger, error) {
 
 	tlog := new(Logger)
 
-	l := log.New(f, "", log.LstdFlags)
+	l := log.New(f, "", log.LstdFlags|log.LstdFlags)
 
 	tlog.log = l
 	tlog.level = LEVELS[level]

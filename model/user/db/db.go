@@ -29,7 +29,7 @@ func GetUser(tx *gorm.DB, u *mdu.User) (*mdu.User, error) {
 
 	if err := tx.Select(selsql).Table(enumu.UserTableName).
 		Where(u).Find(qr).Error; err != nil {
-		return nil, errors.Internal("get user failedyong", err)
+		return nil, errors.Internal("get user failed", err)
 	}
 	return &qr.User, nil
 }

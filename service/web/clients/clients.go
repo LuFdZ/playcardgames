@@ -2,6 +2,7 @@ package clients
 
 import (
 	"errors"
+	"fmt"
 	"playcards/utils/log"
 	"sync"
 )
@@ -78,7 +79,7 @@ func SendTo(uid int32, topic, typ string, msg interface{}) error {
 
 func SendRoomUsers(rid int32, topic, typ string, msg interface{}) error {
 	return SendWhere(topic, typ, msg, func(c *Client) bool {
-		//fmt.Printf("SendRoomUsers:%d|%d|%d|%s \n", rid, c.UserID(), c.RoomID(), topic)
+
 		return c.RoomID() == rid
 	})
 }
@@ -89,13 +90,15 @@ func SendWhere(topic, typ string, msg interface{},
 	defer Done()
 
 	for c, _ := range cs {
+
 		if f != nil && !f(c) {
+			fmt.Printf("\n@@@\n SendRoomUsersNoIN:%d|%d|%s \n@@@\n", c.UserID(), c.RoomID(),
+				topic)
 			continue
 		}
-		// if topic == "playcards.room.Ready" {
-		// 	fmt.Printf(" SendWhereRoom:%d|%d|%s /n", c.UserID(), c.RoomID(), topic)
-		// }
-		//fmt.Printf("SendWhere:%d|%d|%+v", c.UserID(), c.RoomID(), msg)
+		fmt.Printf("SendRoomUsers:%d|%d|%s \n####\n%+v\n####\n", c.UserID(), c.RoomID(),
+			topic, msg)
+
 		c.SendMessage(topic, typ, msg)
 	}
 

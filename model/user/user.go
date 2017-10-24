@@ -56,7 +56,7 @@ func Register(u *mdu.User) (int32, error) {
 
 		b := &mdbill.Balance{
 			Gold:    0,
-			Diamond: 30,
+			Diamond: 100,
 			Amount:  enum.RegisterBalance,
 		}
 		err = dbbill.CreateBalance(tx, uid, b)
@@ -71,7 +71,7 @@ func Register(u *mdu.User) (int32, error) {
 	return uid, err
 }
 
-func Login(u *mdu.User) (*mdu.User, error) {
+func Login(u *mdu.User, address string) (*mdu.User, error) {
 	var nu *mdu.User
 	var err error
 
@@ -97,6 +97,12 @@ func Login(u *mdu.User) (*mdu.User, error) {
 		if err != nil {
 			return errors.Internal("login failed", err)
 		}
+
+		err = tx.Model(nu).UpdateColumn("last_login_ip", address).Error
+		if err != nil {
+			return errors.Internal("login failed", err)
+		}
+
 		balance, _ := dbbill.GetUserBalance(tx, nu.UserID)
 		nu.Diamond = balance.Diamond
 
@@ -240,6 +246,7 @@ func GetWXUserInfo(token string, openID string) (*mdu.UserInfoResponse, error) {
 		//return nil, errors.BadRequest(1009, msg)
 		return nil, erru.ErrWXLoginParam
 	}
+	fmt.Printf("get userinfo form wx:%+v", user)
 	return user, nil
 }
 
@@ -260,12 +267,13 @@ func GetAndCheckWXToken(openid string) (*mdu.AccessTokenResponse, error) {
 }
 
 //GetRefreshToken
-func WXLogin(u *mdu.User, code string) (int32, *mdu.User, error) {
+func WXLogin(u *mdu.User, code string, address string) (int32, *mdu.User, error) {
 
 	if u.OpenID == "" && code == "" {
 		return enum.ResultStatusFail, nil, erru.ErrWXLoginParam
 	}
 	atr := &mdu.AccessTokenResponse{}
+
 	if u.OpenID == "" {
 		checkatr, err := GetWXToken(code)
 
@@ -299,6 +307,7 @@ func WXLogin(u *mdu.User, code string) (int32, *mdu.User, error) {
 
 	if u == nil {
 		u = &mdu.User{}
+		u.LastLoginIP = address
 		u, err = CreateUserByWX(u, atr)
 		if err != nil {
 			return enum.ResultStatusFail, nil, err
@@ -310,21 +319,14 @@ func WXLogin(u *mdu.User, code string) (int32, *mdu.User, error) {
 		}
 	}
 
-	f := func(tx *gorm.DB) error {
-		err = tx.Model(u).UpdateColumn("last_login_at", gorm.NowFunc()).Error
-		if err != nil {
-			return errors.Internal("login failed", err)
-		}
-		balance, _ := dbbill.GetUserBalance(tx, u.UserID)
-		u.Diamond = balance.Diamond
-
-		return nil
-	}
-
-	err = db.Transaction(f)
+	now := gorm.NowFunc()
+	u.LastLoginAt = &now
+	u, err = UpdateUser(u)
 	if err != nil {
 		return enum.ResultStatusFail, nil, err
 	}
+	balance, _ := dbbill.GetUserBalance(db.DB(), u.UserID)
+	u.Diamond = balance.Diamond
 
 	return enum.ResultStatusSuccess, u, err
 }
@@ -337,7 +339,6 @@ func CreateUserByWX(u *mdu.User, atr *mdu.AccessTokenResponse) (*mdu.User, error
 	u.Rights = auth.RightsPlayer
 	f := func(tx *gorm.DB) error {
 		fmt.Printf("AAA Create User ByWX:%v", u)
-
 		uid, err := dbu.AddUser(tx, u)
 		if err != nil {
 			return err
@@ -345,7 +346,7 @@ func CreateUserByWX(u *mdu.User, atr *mdu.AccessTokenResponse) (*mdu.User, error
 		fmt.Printf("BBB Create User ByWX:%v", u)
 		b := &mdbill.Balance{
 			Gold:    0,
-			Diamond: 30,
+			Diamond: 100,
 			Amount:  enum.RegisterBalance,
 		}
 		err = dbbill.CreateBalance(tx, uid, b)

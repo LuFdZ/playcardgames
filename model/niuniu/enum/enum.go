@@ -1,11 +1,11 @@
 package enum
 
 const (
-	LoopTime       = 1
+	LoopTime       = 500
 	MaxRecordCount = 50
-	GetBankerTime  = 500.0
-	SetBetTime     = 500.0
-	SubmitCardTime = 500.0
+	GetBankerTime  = 10.0
+	SetBetTime     = 15.0
+	SubmitCardTime = 10.0
 	MinSetBet      = 5
 )
 
@@ -43,11 +43,6 @@ const (
 )
 
 const (
-	UserReady   = 1
-	UserUnready = 2
-)
-
-const (
 	Success = 1
 	Fail    = 2
 )
@@ -65,17 +60,25 @@ const (
 	BankerDefault = 4 //固定庄家
 )
 
-var (
-	BankerScoreMap map[int32]int32
-	BetScoreMap    map[int32]int32
+// var (
+// 	BankerScoreMap map[int32]int32
+// 	BetScoreMap    map[int32]int32
 
-	ToBankerScoreMap map[int32]int32
-	ToBetScoreMap    map[int32]int32
+// 	ToBankerScoreMap map[int32]int32
+// 	ToBetScoreMap    map[int32]int32
 
-	GameStatusMap map[int32]int32
+// 	GameStatusMap map[int32]int32
 
-	RoomParamMap map[string]int32
-)
+// 	RoomParamMap map[string]int32
+// )
 
 var NiuniuCardType = [...]string{"0", "1", "2", "3", "4", "5", "6", "7", "8",
-	"9", "10", "11", "12", "13", "14"}
+	"9", "10", "11", "12", "13"}
+
+var BankerScoreMap = map[int32]int32{1: 0, 2: 1, 3: 2, 4: 3, 5: 4}
+
+var BetScoreMap = map[int32]int32{1: 5, 2: 10, 3: 15, 4: 20, 5: 25}
+
+var ToBankerScoreMap = map[int32]int32{0: 1, 1: 2, 2: 3, 3: 4, 4: 5}
+
+var ToBetScoreMap = map[int32]int32{1: 1, 2: 2, 3: 2, 4: 3, 5: 3, 6: 4, 7: 4, 8: 4}

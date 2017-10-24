@@ -24,7 +24,7 @@ CardGroup = {
     --  赢的倍数
     _winN = 1,
     --  0,1,2,...10,11,12,13对应：无牛，牛1，牛2...牛牛，四炸，五花，五小
-     _type = 0,
+    _type = 0,
     --组成牛的三张牌
     _niuCards = {},
 }
@@ -55,7 +55,7 @@ function CardGroup:CalculateType()
     elseif(self:IsSiZha())then
         res = 11
     else
-         res = self:IsNiu()
+        res = self:IsNiu()
     end
 
     self._type = res
@@ -96,7 +96,7 @@ function CardGroup:IsSiZha()
     end)
 
     if #tempList <= 0 then
-        print("sb了，数据有错:")
+        MyLog("sb了，数据有错:")
         dump(cards)
     end
 
@@ -118,11 +118,14 @@ end
 function CardGroup:IsWuXiao()
     local sum = 0
     for i, v in pairs(self._cards) do
+        if v._value >= 5 then
+            return false
+        end
         sum = sum + v._value
     end
-    if (sum < 10) then
+    if (sum <= 10) then
         --把组成牛的三张牌记录起来
-        for i = 1, 3 do
+        for i = 1, 5 do
             table.insert(self._niuCards, self._cards[i])
         end
         return true
@@ -158,7 +161,7 @@ function CardGroup:IsNiu()
             for idx = 1, 5 do   --  排除掉组成牛的牌，取最后两张算牛几
                 if (not self:CardEqual(self._cards[idx], cards[1]) and not self:CardEqual(self._cards[idx], cards[2]) and not self:CardEqual(self._cards[idx], cards[3]))then
                     if (self._cards[idx]._value < 10) then
-                         num = num + self._cards[idx]._value
+                        num = num + self._cards[idx]._value
                     end
                 end
             end

@@ -44,6 +44,7 @@ func NewClient(token string, u *mdu.User, ws *websocket.Conn) *Client {
 		cs = make(map[*Client]bool)
 		clients[u.UserID] = cs
 	}
+	fmt.Printf("New Client:%s\n", token)
 	log.Debug("add connection: %v", c)
 	cs[c] = true
 	return c
@@ -76,7 +77,7 @@ func (c *Client) Auth(sright int32) error {
 func (c *Client) Close() {
 	log.Info("server close ws connection: %v", c)
 	c.ws.Close()
-	//fmt.Printf("websocket close:%d", c.user.UserID)
+	fmt.Printf("websocket close:%d \n", c.user.UserID)
 	//断线后更新用户缓存连接状态
 	cacheroom.UpdateRoomUserSocektStatus(c.User().UserID, enum.SocketClose, 0)
 }
@@ -84,12 +85,13 @@ func (c *Client) Close() {
 func (c *Client) Subscribe(tpc []string) {
 	Lock()
 	defer Unlock()
+	fmt.Printf("Subscribe:%d\n", c.UserID())
 	for _, t := range tpc {
 		cs, ok := topics[t]
 		if !ok {
 			continue
 		}
-
+		//fmt.Printf("%v subscribe topic  [%v]\n", c, t)
 		c.topics[t] = true
 		cs[c] = true
 

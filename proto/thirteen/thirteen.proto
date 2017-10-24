@@ -6,6 +6,7 @@ message GroupCard {
     int32 UserID = 1;
     repeated string CardList = 2;
     int32 RoomStatus = 3;
+    int32 BankerID = 4;
 }
 
 message GameReady {
@@ -44,15 +45,15 @@ message ThirteenSettle {
 message ThirteenResult {
     ThirteenGroupResult Result = 1;
     ThirteenSettle Settle =2;
-    repeated int32 Shoot = 3;
-    int32 UserID = 4;
-    int32 Role = 5;
+    int32 UserID = 3;
+    int32 Role = 4;
 }
 
 message ThirteenGroupResult {
     ResGroup Head = 1;
     ResGroup Middle = 2;
     ResGroup Tail = 3;
+    repeated int32 Shoot = 4;
 }
 
 message ResGroup {
@@ -66,14 +67,19 @@ message ThirteenRequest {
 
 message ThirteenReply {
     int32 Result = 1;
+}
+
+message ThirteenRecoveryReply {
+    int32 Result = 1;
     int32 Status =2;
     GameResultList GameResult = 3;
     GroupCard Cards = 4;
     repeated int32 ReadyUser = 5;
+    int32 BankerID = 6;
 }
 
 service ThirteenSrv {
     rpc Submit(SubmitCard) returns (ThirteenReply) {}
     rpc GameResultList(GameResultListRequest) returns (GameResultListReply) {}
-    rpc ThirteenRecovery(ThirteenRequest) returns (ThirteenReply) {}
+    rpc ThirteenRecovery(ThirteenRequest) returns (ThirteenRecoveryReply) {}
 }

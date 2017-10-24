@@ -81,7 +81,6 @@ func GetLastThirteenByRoomID(tx *gorm.DB, rid int32) (*mdt.Thirteen, error) {
 		Order("index").Last(&out).Error; err != nil {
 		return nil, errors.Internal("get last thirteen by room_id failed", err)
 	}
-
 	return out, nil
 }
 

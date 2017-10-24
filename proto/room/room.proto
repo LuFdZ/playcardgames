@@ -12,12 +12,12 @@ message Room {
     int32 RoundNow  =6;
     int32 Status    =7;
     int32 GameType  =8;
-        
     string GameParam = 9;
     int64 CreatedAt =10;
     int64 UpdatedAt =11;
     int32 RoomType   = 12;
     int32 PayerID = 13;
+    int32 Giveup = 14;
 }
 
 message RoomUser{
@@ -56,10 +56,14 @@ message RoomResults {
     int32 Status = 4;
     string Password = 5;
     repeated GameUserResult List = 6;
-    int64 CreatedAt = 7; 
+    int64 CreatedAt = 7;
 }
 
 message GiveUpGameRequest {
+    string Password = 1;
+}
+
+message GiveUpVoteRequest{
     string Password = 1;
     int32 AgreeOrNot = 2;
 }
@@ -91,10 +95,6 @@ message UserConnection {
     int32 RoomID = 1;
     int32 UserID = 2;
     int32 Status = 3;//1 重连 2掉线
-}
-
-message HeartbeatRequest {
-    
 }
 
 message Renewal {
@@ -135,9 +135,12 @@ message CheckRoomExistRequest{
 }
 
 message CheckRoomExistReply{
-    Room Room = 1;
-    GiveUpGameResult GiveupResult = 2;
-    RoomResults GameResult = 3;
+    int32 Result = 1;
+    int32 Status = 2;
+    int32 Giveup = 3;
+    Room Room = 4;
+    GiveUpGameResult GiveupResult = 5;
+    RoomResults GameResult = 6;
 }
 
 message VoiceChat{
@@ -150,7 +153,8 @@ message VoiceChatRequest{
     string  FileCode      =3;
 }
 
-
+message HeartbeatRequest{}
+message HeartbeatReply{}
 
 service RoomSrv {
     rpc CreateRoom(Room) returns (Room) {}
@@ -158,9 +162,9 @@ service RoomSrv {
     rpc LeaveRoom(Room) returns (RoomUser) {}
     rpc SetReady(Room) returns (RoomUser) {}
     rpc OutReady(Room) returns (RoomUser) {}
-    rpc Heartbeat(Room) returns (Room) {}
     rpc TestClean(Room) returns (Room) {}
     rpc GiveUpGame(GiveUpGameRequest) returns (GiveUpGameResult) {}
+    rpc GiveUpVote(GiveUpVoteRequest) returns (GiveUpVoteRequest) {}
     rpc Shock(RoomUser) returns (RoomUser) {}
     rpc Renewal(Room) returns (Room) {}
     rpc CreateFeedback(Feedback) returns (Feedback) {}
@@ -168,6 +172,7 @@ service RoomSrv {
     rpc RoomResultList(Room) returns (RoomResultListReply) {}
     rpc CheckRoomExist(Room) returns (CheckRoomExistReply) {}
     rpc VoiceChat(VoiceChatRequest) returns (RoomUser) {}
+    rpc Heartbeat(HeartbeatRequest) returns (HeartbeatReply) {}
 }
 
 
