@@ -10,14 +10,15 @@ message GroupCard {
 }
 
 message GameReady {
-    int32 RoomID = 1;
+    //int32 RoomID = 1;
     int32 UserID = 2;
+    repeated int32 Ids = 3;
 }
 
 message GameResultList {
-    int32 RoomID = 1;
+    //int32 RoomID = 1;
     repeated ThirteenResult Result= 2;
-     
+    repeated int32 Ids = 3;
 }
 
 message SubmitCard {

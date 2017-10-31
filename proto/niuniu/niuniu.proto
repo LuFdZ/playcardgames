@@ -49,6 +49,7 @@ message NiuniuRoomResult {
     int32 RoomID = 1;
     int32 Status = 2;
     repeated NiuniuUserResult List= 3;
+    repeated int32 Ids = 4;
 }
 
 message GameResultListReply {
@@ -82,8 +83,8 @@ message NiuniuGameStart {
 message BeBanker{
     int32 BankerID = 1;
     int32 GameStatus = 2;
-    int32 RoomID = 3;
-    repeated GetBanker List = 4;
+    repeated GetBanker List = 3;
+    repeated int32 Ids = 4;
 }
 
 message AllBet{
@@ -95,18 +96,18 @@ message AllBet{
 message SetBet{
     int32 UserID = 1;
     int32 Key = 2;
-    int32 RoomID = 3;
+    repeated int32 Ids = 3;
 }
 
 message GameReady{
     int32 UserID = 1;
-    int32 RoomID = 2;
+    repeated int32 Ids = 2;
 }
 
 message CountDown{
     int32 Time = 1;
     int32 Status = 2;
-    int32 RoomID = 3;
+    repeated int32 Ids = 3;
 }
 
 service NiuniuSrv {

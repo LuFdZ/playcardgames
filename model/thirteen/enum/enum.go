@@ -1,7 +1,7 @@
 package enum
 
 const (
-	LoopTime       = 3
+	LoopTime       = 500
 	MaxRecordCount = 50
 )
 

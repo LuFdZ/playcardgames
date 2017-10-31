@@ -67,7 +67,7 @@ function Logic:CalculateRes(playerTbl, roomData)
     playerTbl = json.decode(playerTbl)
     roomData = json.decode(roomData)
 
-    dump(playerTbl, "playerTbl", 100)
+    --dump(playerTbl, "playerTbl", 100)
     local banker = {}
     local bankerGroup = {}
 
@@ -110,7 +110,7 @@ function Logic:CalculateRes(playerTbl, roomData)
 
     local str = json.encode(playerTbl)
 
-    dump(playerTbl, "playerTbl", 100)
+    --dump(playerTbl, "playerTbl", 100)
     return str
 end
 

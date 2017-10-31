@@ -7,9 +7,8 @@ const (
 )
 
 const (
-	MsgRoomStatusChange   = "RoomStatusChange"
+	MsgRoomCreate         = "RoomCreate"
 	MsgRoomReady          = "RoomReady"
-	MsgRoomUnReady        = "RoomUnReady"
 	MsgRoomJoin           = "RoomJoin"
 	MsgRoomUnJoin         = "RoomUnJoin"
 	MsgRoomResult         = "RoomResult"
@@ -18,6 +17,7 @@ const (
 	MsgRoomUserConnection = "UserConnection"
 	MsgRoomRenewal        = "RoomRenewal"
 	MsgRoomVoiceChat      = "RoomVoiceChat"
+	MsgRoomExist         = "RoomExist"
 )
 
 const (

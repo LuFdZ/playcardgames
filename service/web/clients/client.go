@@ -44,9 +44,15 @@ func NewClient(token string, u *mdu.User, ws *websocket.Conn) *Client {
 		cs = make(map[*Client]bool)
 		clients[u.UserID] = cs
 	}
-	fmt.Printf("New Client:%s\n", token)
 	log.Debug("add connection: %v", c)
 	cs[c] = true
+	//str := ""
+	//for k, v := range clients {
+	//	str = fmt.Sprintf("userid:%s |", k)
+	//	for k2, v2 := range v {
+	//		str += fmt.Sprintf("Token:%s|Topics:%#v|Ws:%#v|V:%t", k2.token, k2.topics, k2.ws, v2)
+	//	}
+	//}
 	return c
 }
 
@@ -62,10 +68,6 @@ func (c *Client) UserID() int32 {
 	return c.user.UserID
 }
 
-func (c *Client) RoomID() int32 {
-	return c.user.RoomID
-}
-
 func (c *Client) Token() string {
 	return c.token
 }
@@ -77,7 +79,6 @@ func (c *Client) Auth(sright int32) error {
 func (c *Client) Close() {
 	log.Info("server close ws connection: %v", c)
 	c.ws.Close()
-	fmt.Printf("websocket close:%d \n", c.user.UserID)
 	//断线后更新用户缓存连接状态
 	cacheroom.UpdateRoomUserSocektStatus(c.User().UserID, enum.SocketClose, 0)
 }
@@ -85,7 +86,7 @@ func (c *Client) Close() {
 func (c *Client) Subscribe(tpc []string) {
 	Lock()
 	defer Unlock()
-	fmt.Printf("Subscribe:%d\n", c.UserID())
+	str := fmt.Sprintf("UserSubscribeTopic:%d  :",c.UserID())
 	for _, t := range tpc {
 		cs, ok := topics[t]
 		if !ok {
@@ -94,9 +95,10 @@ func (c *Client) Subscribe(tpc []string) {
 		//fmt.Printf("%v subscribe topic  [%v]\n", c, t)
 		c.topics[t] = true
 		cs[c] = true
-
-		log.Debug("%v subscribe topic [%v]", c, t)
+		str += t+"|"
 	}
+	//fmt.Printf(str+"\n")
+	log.Debug(str+"\n")
 }
 
 func (c *Client) Unsubscribe(tpc []string) {
@@ -135,6 +137,24 @@ func (c *Client) SendMessage(topic, typ string, msg interface{}) {
 	}
 }
 
+func (c *Client) SendNewClientBackMessage() {
+	m := &Message{Type: "SubscribeSuccess"}
+	select {
+	case c.channel <- m:
+	default:
+		log.Warn("drop message: %v, %v", c, m)
+	}
+}
+
+func (c *Client) SendHearbeatMessage() {
+	//m := &Message{"h"}
+	select {
+	case c.channel <- 1:
+	default:
+		log.Warn("drop hearbeat message: %v", c)
+	}
+}
+
 func (c *Client) ReadLoop(f func([]byte) error, onclose func(c *Client)) {
 	waitGroup.Add(1)
 	defer func() {
@@ -149,7 +169,8 @@ func (c *Client) ReadLoop(f func([]byte) error, onclose func(c *Client)) {
 	for {
 		var msg []byte
 		if err := websocket.Message.Receive(c.ws, &msg); err != nil {
-			log.Debug("websocket recv error: %v, %v", c, err)
+			log.Debug("websocket recv failed c: %v msg: %v err: %v",
+				c, msg, err)
 			return
 		}
 
@@ -178,7 +199,7 @@ func (c *Client) Loop(heartbeat func(c *Client)) {
 	for {
 		select {
 		case msg := <-c.channel:
-			log.Debug("websocket send: %v, %v", msg, c)
+			//log.Debug("websocket send: %v, %v", msg, c)
 			if err := websocket.JSON.Send(c.ws, msg); err != nil {
 				log.Err("websocket send error: %v, %v", msg, err)
 				return

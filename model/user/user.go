@@ -172,7 +172,6 @@ func GetWXToken(code string) (*mdu.AccessTokenResponse, error) {
 		if err != nil {
 			return nil, erru.ErrWXResponseJson
 		}
-		fmt.Printf("Refresh WX Token :%v \n", ater)
 		log.Err("Refresh WX Token :%v \n", ater)
 		return nil, erru.ErrWXParam
 	}
@@ -207,7 +206,6 @@ func RefreshWXToken(refreshtoken string) (*mdu.AccessTokenResponse, error) {
 		if err != nil {
 			return nil, erru.ErrWXResponseJson
 		}
-		fmt.Printf("Refresh WX Token :%v \n", ater)
 		log.Err("Refresh WX Token :%v \n", ater)
 		return nil, erru.ErrWXParam
 	}
@@ -246,7 +244,6 @@ func GetWXUserInfo(token string, openID string) (*mdu.UserInfoResponse, error) {
 		//return nil, errors.BadRequest(1009, msg)
 		return nil, erru.ErrWXLoginParam
 	}
-	fmt.Printf("get userinfo form wx:%+v", user)
 	return user, nil
 }
 
@@ -338,12 +335,10 @@ func CreateUserByWX(u *mdu.User, atr *mdu.AccessTokenResponse) (*mdu.User, error
 	}
 	u.Rights = auth.RightsPlayer
 	f := func(tx *gorm.DB) error {
-		fmt.Printf("AAA Create User ByWX:%v", u)
 		uid, err := dbu.AddUser(tx, u)
 		if err != nil {
 			return err
 		}
-		fmt.Printf("BBB Create User ByWX:%v", u)
 		b := &mdbill.Balance{
 			Gold:    0,
 			Diamond: 100,

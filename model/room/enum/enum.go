@@ -4,11 +4,12 @@ package enum
 const (
 	ErrUID           = -1
 	ThirteenGameCost = 1.0
+	NiuniuGameCost = 1.0
 )
 
 //globle config
 const (
-	LoopTime               = 3
+	LoopTime               = 500
 	MaxRecordCount         = 50
 	RoomDelayMinutes       = 15.0
 	RoomCodeMax            = 999999

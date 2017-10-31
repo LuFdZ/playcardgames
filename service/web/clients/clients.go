@@ -2,9 +2,9 @@ package clients
 
 import (
 	"errors"
-	"fmt"
 	"playcards/utils/log"
 	"sync"
+	"fmt"
 )
 
 var waitGroup = new(sync.WaitGroup)
@@ -73,14 +73,8 @@ func Send(topic, typ string, msg interface{}) error {
 
 func SendTo(uid int32, topic, typ string, msg interface{}) error {
 	return SendWhere(topic, typ, msg, func(c *Client) bool {
+		//fmt.Printf("AAAAAAAAAA:%d|%d|%t\n",uid,c.UserID(),c.UserID() == uid)
 		return c.UserID() == uid
-	})
-}
-
-func SendRoomUsers(rid int32, topic, typ string, msg interface{}) error {
-	return SendWhere(topic, typ, msg, func(c *Client) bool {
-
-		return c.RoomID() == rid
 	})
 }
 
@@ -88,36 +82,25 @@ func SendWhere(topic, typ string, msg interface{},
 	f func(*Client) bool) error {
 	cs := GetLockClients(topic)
 	defer Done()
-
+	str := fmt.Sprintf("SendWhere:%s,",topic)
 	for c, _ := range cs {
-
 		if f != nil && !f(c) {
-			fmt.Printf("\n@@@\n SendRoomUsersNoIN:%d|%d|%s \n@@@\n", c.UserID(), c.RoomID(),
-				topic)
+			str+=fmt.Sprintf("@@@ %d @@@",c.UserID())
 			continue
 		}
-		fmt.Printf("SendRoomUsers:%d|%d|%s \n####\n%+v\n####\n", c.UserID(), c.RoomID(),
-			topic, msg)
-
+		str+=fmt.Sprintf("### %d ###",c.UserID())
 		c.SendMessage(topic, typ, msg)
 	}
-
+	//fmt.Printf(str)
+	log.Debug(str)
 	return nil
 }
 
-func SendWhereRoomUsers(rid int32, topic, typ string, msg interface{},
-	f func(*Client) bool) error {
-	cs := GetLockClients(topic)
-	defer Done()
-
-	for c, _ := range cs {
-		if f != nil && !f(c) && c.RoomID() == rid {
-			continue
-		}
-		//fmt.Printf(" SendWhereRoom:%d|%d|%s /n", c.UserID(), c.RoomID(), topic)
-		c.SendMessage(topic, typ, msg)
+func SendRoomUsers(ids []int32, topic, typ string, msg interface{}) error {
+	for _,id := range ids{
+		SendTo(id,topic,typ,msg)
 	}
-
+	log.Debug("SendRoomUsers SentTo:%v,Typ:%s,Msg:%v",ids,typ,msg)
 	return nil
 }
 
@@ -154,24 +137,3 @@ func CloseAll() {
 	waitGroup.Wait()
 }
 
-func AutoSubscribe(uid int32, tpc []string) {
-	for _, cs := range clients {
-		for c, _ := range cs {
-			if uid == c.UserID() {
-				c.Subscribe(tpc)
-				return
-			}
-		}
-	}
-}
-
-func AutoUnSubscribe(uid int32, tpc []string) {
-	for _, cs := range clients {
-		for c, _ := range cs {
-			if uid == c.UserID() {
-				c.Unsubscribe(tpc)
-				return
-			}
-		}
-	}
-}

@@ -16,6 +16,11 @@ var FuncRights = map[string]int32{
 	"ConfigSrv.UpdateConfig":  auth.RightsConfigEdit,
 	"ConfigSrv.ConfigList":    auth.RightsConfigEdit,
 	"ConfigSrv.GetConfigByID": auth.RightsConfigEdit,
+	"ConfigSrv.UpdateConfigOpen": auth.RightsConfigEdit,
+	"ConfigSrv.CreateConfigOpen": auth.RightsConfigEdit,
+	"ConfigSrv.GetConfigOpens": auth.RightsPlayer,
+	"ConfigSrv.PageConfigOpens": auth.RightsConfigEdit,
+	"ConfigSrv.RefreshAllConfigOpensFromDB": auth.RightsConfigEdit,
 }
 
 func main() {

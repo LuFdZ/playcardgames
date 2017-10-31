@@ -1,7 +1,7 @@
 package handler
 
 import (
-	"fmt"
+	//"fmt"
 	mdpage "playcards/model/page"
 	"playcards/model/room"
 	enumr "playcards/model/room/enum"
@@ -18,6 +18,7 @@ import (
 	"github.com/micro/go-micro/server"
 
 	"golang.org/x/net/context"
+	//"fmt"
 )
 
 type RoomSrv struct {
@@ -37,15 +38,11 @@ func NewHandler(s server.Server, gt *gsync.GlobalTimer) *RoomSrv {
 func (rs *RoomSrv) update(gt *gsync.GlobalTimer) {
 	lock := "playcards.room.update.lock"
 	f := func() error {
-		s := time.Now()
+		//s := time.Now()
 		log.Debug("room update loop... and has %d rooms")
-		//now := time.Now()
-
 		rooms := room.ReInit()
-		//fmt.Printf("rooms update :%d", len(rooms))
 		for _, room := range rooms {
 			roomResults := mdr.RoomResults{
-				RoomID:      room.RoomID,
 				RoundNumber: room.RoundNumber,
 				RoundNow:    room.RoundNow,
 				Status:      room.Status,
@@ -58,34 +55,33 @@ func (rs *RoomSrv) update(gt *gsync.GlobalTimer) {
 			}
 
 			msg := roomResults.ToProto()
-			//fmt.Printf("UpdateRoomSrv:%v", room.UserResults)
+			msg.Ids = room.Ids
 			topic.Publish(rs.broker, msg, TopicRoomResult)
 		}
 
 		giveups := room.GiveUpRoomDestroy()
 		for _, giveup := range giveups {
 			msg := giveup.GiveupGame.ToProto()
+			msg.Ids = giveup.Ids
 			topic.Publish(rs.broker, msg, TopicRoomGiveup)
 		}
 
-		err := room.RoomDestroy()
-		if err != nil {
-			log.Err("room destroy loop:%v", err)
-		}
+		room.DelayRoomDestroy()
+		room.DeadRoomDestroy()
 		RoomUserSocket := room.RoomUserStatusCheck()
 		for _, msg := range RoomUserSocket {
 			topic.Publish(rs.broker, msg, TopicRoomUserConnection)
 		}
-		e := time.Now().Sub(s).Nanoseconds()
-		fmt.Printf("Update times :%d", e)
+		//e := time.Now().Sub(s).Nanoseconds()
+		//fmt.Printf("Update times :%d\n", e)
 		return nil
 
 	}
-	gt.Register(lock, time.Second*enumr.LoopTime, f)
+	gt.Register(lock, time.Millisecond*enumr.LoopTime, f)
 }
 
 func (rs *RoomSrv) CreateRoom(ctx context.Context, req *pbr.Room,
-	rsp *pbr.Room) error {
+	rsp *pbr.RoomReply) error {
 	u, err := auth.GetUser(ctx)
 	if err != nil {
 		return err
@@ -96,36 +92,46 @@ func (rs *RoomSrv) CreateRoom(ctx context.Context, req *pbr.Room,
 	if err != nil {
 		return err
 	}
-	//webroom.AutoSubscribe(u.UserID)
-	*rsp = *r.ToProto()
+	*rsp = pbr.RoomReply{
+		Result: 1,
+	}
+	msg := r.ToProto()
+	msg.UserID = u.UserID
+	topic.Publish(rs.broker,msg , TopicRoomCreate)
 	return nil
 }
 
 func (rs *RoomSrv) Renewal(ctx context.Context, req *pbr.Room,
-	rsp *pbr.Room) error {
+	rsp *pbr.RoomReply) error {
 	u, err := auth.GetUser(ctx)
 	if err != nil {
 		return err
 	}
-	oldid, r, err := room.RenewalRoom(req.Password, u)
+	ids,r, err := room.RenewalRoom(req.Password, u)
 	if err != nil {
 		return err
 	}
 
-	//webroom.AutoSubscribe(u.UserID)
-	*rsp = *r.ToProto()
-	msg := &pbr.RenewalRoomReady{
-		RoomID:   oldid,
+	*rsp = pbr.RoomReply{
+		Result: 1,
+	}
+	msgBack := r.ToProto()
+	msgBack.UserID = r.Users[0].UserID
+	topic.Publish(rs.broker, msgBack, TopicRoomCreate)
+
+	msgAll := &pbr.RenewalRoomReady{
+		//RoomID:   oldid,
 		Password: r.Password,
 		Status:   r.Status,
+		Ids:      ids,
 	}
 
-	topic.Publish(rs.broker, msg, TopicRoomRenewal)
+	topic.Publish(rs.broker, msgAll, TopicRoomRenewal)
 	return nil
 }
 
 func (rs *RoomSrv) EnterRoom(ctx context.Context, req *pbr.Room,
-	rsp *pbr.Room) error {
+	rsp *pbr.RoomReply) error {
 	u, err := auth.GetUser(ctx)
 	if err != nil {
 		return err
@@ -134,11 +140,16 @@ func (rs *RoomSrv) EnterRoom(ctx context.Context, req *pbr.Room,
 	if err != nil {
 		return err
 	}
-	*rsp = *r.ToProto()
-	msg := ru.ToProto()
-	msg.RoomID = r.RoomID
-	topic.Publish(rs.broker, msg, TopicRoomJoin)
-	//webroom.AutoSubscribe(u.UserID)
+	*rsp = pbr.RoomReply{
+		Result: 1,
+	}
+	msgBack := r.ToProto()
+	msgBack.UserID = u.UserID
+	topic.Publish(rs.broker, msgBack, TopicRoomCreate)
+
+	msgAll := ru.ToProto()
+	msgAll.Ids = r.Ids
+	topic.Publish(rs.broker, msgAll, TopicRoomJoin)
 	return nil
 }
 
@@ -155,7 +166,8 @@ func (rs *RoomSrv) LeaveRoom(ctx context.Context, req *pbr.Room,
 	//webroom.AutoUnSubscribe(u.UserID)
 	//*rsp = *r.ToProto()
 	msg := r.ToProto()
-	msg.RoomID = room.RoomID
+	msg.Ids = room.Ids
+	//msg.RoomID = room.RoomID
 
 	if room.Status == enumr.RoomStatusDestroy {
 		msg.Destroy = 1
@@ -171,13 +183,14 @@ func (rs *RoomSrv) SetReady(ctx context.Context, req *pbr.Room,
 		return err
 	}
 
-	r, rid, err := room.GetReady(req.Password, u.UserID)
+	r, ids, err := room.GetReady(req.Password, u.UserID)
 	if err != nil {
 		return err
 	}
 	*rsp = *r.ToProto()
 	msg := rsp
-	msg.RoomID = rid
+	msg.Ids = ids
+	//msg.RoomID = rid
 	topic.Publish(rs.broker, msg, TopicRoomReady)
 	return nil
 }
@@ -188,13 +201,13 @@ func (rs *RoomSrv) GiveUpGame(ctx context.Context, req *pbr.GiveUpGameRequest,
 	if err != nil {
 		return err
 	}
-	result, err := room.GiveUpGame(req.Password, u.UserID)
+	ids, result, err := room.GiveUpGame(req.Password, u.UserID)
 	if err != nil {
 		return err
 	}
 	//	*rsp = *result.ToProto()
 	msg := result.ToProto()
-
+	msg.Ids = ids
 	topic.Publish(rs.broker, msg, TopicRoomGiveup)
 	return nil
 }
@@ -205,13 +218,13 @@ func (rs *RoomSrv) GiveUpVote(ctx context.Context, req *pbr.GiveUpVoteRequest,
 	if err != nil {
 		return err
 	}
-	result, err := room.GiveUpVote(req.Password, req.AgreeOrNot, u.UserID)
+	ids, result, err := room.GiveUpVote(req.Password, req.AgreeOrNot, u.UserID)
 	if err != nil {
 		return err
 	}
 	//	*rsp = *result.ToProto()
 	msg := result.ToProto()
-
+	msg.Ids = ids
 	topic.Publish(rs.broker, msg, TopicRoomGiveup)
 
 	if result.Status == enumr.RoomStatusStarted {
@@ -230,12 +243,11 @@ func (rs *RoomSrv) Shock(ctx context.Context, req *pbr.RoomUser,
 		return err
 	}
 
-	rid, err := room.Shock(u.UserID, req.UserID)
+	err = room.Shock(u.UserID, req.UserID)
 	if err != nil {
 		return err
 	}
 	msg := &pbr.Shock{
-		RoomID:     rid,
 		UserIDFrom: u.UserID,
 		UserIDTo:   req.UserID,
 	}
@@ -303,11 +315,18 @@ func (rs *RoomSrv) CheckRoomExist(ctx context.Context, req *pbr.Room,
 	}
 
 	if result == 1 {
-		*rsp = *roomResults.ToProto()
+		rsp.Result = 1
+		msg := roomResults.ToProto()
+		msg.UserID = u.UserID
+		topic.Publish(rs.broker, msg, TopicRoomExist)
 	} else {
 		rsp.Result = 2
+		msg:=&pbr.CheckRoomExistReply{
+			Result:2,
+		}
+		topic.Publish(rs.broker, msg, TopicRoomExist)
 	}
-	fmt.Printf("Check Room Exist:%d|%+v", u.UserID, roomResults)
+
 	return nil
 }
 
@@ -316,15 +335,15 @@ func (rs *RoomSrv) VoiceChat(ctx context.Context, req *pbr.VoiceChatRequest) err
 	if err != nil {
 		return err
 	}
-
-	rid, err := room.VoiceChat(u.UserID)
+	r, err := room.VoiceChat(u.UserID)
 	if err != nil {
 		return err
 	}
 	msg := &pbr.VoiceChat{
-		RoomID:   rid,
+		RoomID:   r.RoomID,
 		UserID:   u.UserID,
 		FileCode: req.FileCode,
+		Ids:      r.Ids,
 	}
 	topic.Publish(rs.broker, msg, TopicRoomVoiceChat)
 	return nil

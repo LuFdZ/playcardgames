@@ -12,13 +12,11 @@ func Open(debug bool, dialect string, args ...interface{}) error {
 	if err != nil {
 		return err
 	}
-
 	if debug {
 		db.LogMode(true)
 	}
-
+	db.DB().SetMaxOpenConns(100)
 	defaultDB = db
-
 	return nil
 }
 

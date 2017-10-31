@@ -29,7 +29,7 @@ func UpdateRoom(tx *gorm.DB, r *mdr.Room) (*mdr.Room, error) {
 		Giveup:    r.Giveup,
 		RoundNow:  r.RoundNow,
 		UpdatedAt: &now,
-		CreatedAt: &now,
+		//CreatedAt: &now,
 		GiveupAt:  r.GiveupAt,
 		GameParam: r.GameParam,
 	}
@@ -214,7 +214,7 @@ func CleanDeadRoomByUpdateAt(tx *gorm.DB) error {
 	if err := tx.Model(&mdr.Room{}).
 		Where("status < ? and updated_at <  date_sub(curdate(),interval 1 day)",
 			enumr.RoomStatusDone).
-		UpdateColumn("status", enumr.RoomStatusOverTimeClean).
+		UpdateColumn("status", gorm.Expr("status*? + ?",10,enumr.RoomStatusOverTimeClean)).
 		Error; err != nil {
 		return errors.Internal("update player room play times failed", err)
 	}

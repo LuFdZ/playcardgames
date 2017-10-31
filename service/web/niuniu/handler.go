@@ -1,7 +1,6 @@
 package niuniu
 
 import (
-	"fmt"
 	pbniu "playcards/proto/niuniu"
 	srvniu "playcards/service/niuniu/handler"
 	"playcards/service/web/clients"
@@ -65,7 +64,6 @@ func NiuniuGameStartHandler(p broker.Publication) error {
 	if err != nil {
 		return err
 	}
-	fmt.Printf("Niuniu Game Start:%v \n", rs)
 	err = clients.SendTo(rs.UserID, t, enum.MsgNiuniuGameStart, rs)
 	if err != nil {
 		return err
@@ -81,8 +79,9 @@ func NiuniuBeBankerHandler(p broker.Publication) error {
 	if err != nil {
 		return err
 	}
-	fmt.Printf("Niuniu Be Banker:%v \n", rs)
-	err = clients.SendRoomUsers(rs.RoomID, t, enum.MsgNiuniuBeBanker, rs)
+	ids := rs.Ids
+	rs.Ids = nil
+	err = clients.SendRoomUsers(ids, t, enum.MsgNiuniuBeBanker, rs)
 	if err != nil {
 		return err
 	}
@@ -97,8 +96,9 @@ func NiuniuSetBetHandler(p broker.Publication) error {
 	if err != nil {
 		return err
 	}
-	fmt.Printf("Niuniu Set Bet:%v \n", rs)
-	err = clients.SendRoomUsers(rs.RoomID, t, enum.MsgNiuniuSetBet, rs)
+	ids := rs.Ids
+	rs.Ids = nil
+	err = clients.SendRoomUsers(ids, t, enum.MsgNiuniuSetBet, rs)
 	if err != nil {
 		return err
 	}
@@ -113,7 +113,6 @@ func NiuniuAllBetHandler(p broker.Publication) error {
 	if err != nil {
 		return err
 	}
-	fmt.Printf("Niuniu Set All Bet:%v \n", rs)
 	err = clients.SendTo(rs.UserID, t, enum.MsgNiuniuAllBet, rs)
 	if err != nil {
 		return err
@@ -129,8 +128,9 @@ func NiuniuGameReadyHandler(p broker.Publication) error {
 	if err != nil {
 		return err
 	}
-	fmt.Printf("Niuniu Game Ready:%v \n", rs)
-	err = clients.SendRoomUsers(rs.RoomID, t, enum.MsgNiuniuGameReady, rs)
+	ids := rs.Ids
+	rs.Ids = nil
+	err = clients.SendRoomUsers(ids, t, enum.MsgNiuniuGameReady, rs)
 	if err != nil {
 		return err
 	}
@@ -145,8 +145,9 @@ func NiuniuGameResultHandler(p broker.Publication) error {
 	if err != nil {
 		return err
 	}
-	fmt.Printf("Niuniu Game Result:%v \n", rs)
-	err = clients.SendRoomUsers(rs.RoomID, t, enum.MsgNiuniuGameResult, rs)
+	ids := rs.Ids
+	rs.Ids = nil
+	err = clients.SendRoomUsers(ids, t, enum.MsgNiuniuGameResult, rs)
 	if err != nil {
 		return err
 	}
@@ -161,7 +162,9 @@ func NiuniuCountDownHandler(p broker.Publication) error {
 	if err != nil {
 		return err
 	}
-	err = clients.SendRoomUsers(rs.RoomID, t, enum.MsgNiuniuCountDown, rs)
+	ids := rs.Ids
+	rs.Ids = nil
+	err = clients.SendRoomUsers(ids, t, enum.MsgNiuniuCountDown, rs)
 	if err != nil {
 		return err
 	}

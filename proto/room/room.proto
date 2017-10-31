@@ -18,6 +18,7 @@ message Room {
     int32 RoomType   = 12;
     int32 PayerID = 13;
     int32 Giveup = 14;
+    int32 UserID = 15;
 }
 
 message RoomUser{
@@ -28,12 +29,13 @@ message RoomUser{
     int32 Sex =5;
     int32 Role =6;
     string Nickname = 7;
-    int32 RoomID = 8;
+    //int32 RoomID = 8;
     int32 Destroy = 9;
+    repeated int32 Ids = 10;
 }
 
 message Position {
-    int32 RoomID = 1;
+    //int32 RoomID = 1;
     int32 UserID = 2;
     int32 Index = 3;
     bool Ready = 4;
@@ -50,13 +52,15 @@ message GameUserResult {
 }
 
 message RoomResults {
-    int32 RoomID = 1;
+    //int32 RoomID = 1;
     int32 RoundNumber = 2;
     int32 RoundNow = 3;
     int32 Status = 4;
     string Password = 5;
     repeated GameUserResult List = 6;
     int64 CreatedAt = 7;
+    int32 GameType = 8;
+    repeated int32 Ids = 9;
 }
 
 message GiveUpGameRequest {
@@ -69,9 +73,10 @@ message GiveUpVoteRequest{
 }
 
 message GiveUpGameResult {
-    int32 RoomID =1; 
+    //int32 RoomID =1;
     int32 Status =2; 
     repeated UserState UserStateList = 3;
+    repeated int32 Ids = 4;
 }
 
 message UserState {
@@ -80,21 +85,23 @@ message UserState {
 }
 
 message RenewalRoomReady {
-    int32 RoomID = 1;
+    //int32 RoomID = 1;
     string Password = 2;
     int32 Status    =3;
+    repeated int32 Ids = 4;
 }
 
 message Shock {
-    int32 RoomID = 1;
+    //int32 RoomID = 1;
     int32 UserIDFrom = 2;
     int32 UserIDTo = 3;
 }
 
 message UserConnection {
-    int32 RoomID = 1;
+    //int32 RoomID = 1;
     int32 UserID = 2;
     int32 Status = 3;//1 重连 2掉线
+    repeated int32 Ids = 4;
 }
 
 message Renewal {
@@ -141,37 +148,43 @@ message CheckRoomExistReply{
     Room Room = 4;
     GiveUpGameResult GiveupResult = 5;
     RoomResults GameResult = 6;
+    int32 UserID = 7;
 }
 
 message VoiceChat{
     int32   UserID        =1;
     int32   RoomID        =2;
     string  FileCode      =3;
+    repeated int32 Ids = 4;
 }
 
 message VoiceChatRequest{
-    string  FileCode      =3;
+    string  FileCode      =1;
+    repeated int32 Ids = 2;
+}
+
+message RoomReply{
+    int32 Result = 1;
 }
 
 message HeartbeatRequest{}
 message HeartbeatReply{}
 
 service RoomSrv {
-    rpc CreateRoom(Room) returns (Room) {}
-    rpc EnterRoom(Room) returns (Room) {}
-    rpc LeaveRoom(Room) returns (RoomUser) {}
-    rpc SetReady(Room) returns (RoomUser) {}
-    rpc OutReady(Room) returns (RoomUser) {}
+    rpc CreateRoom(Room) returns (RoomReply) {}
+    rpc EnterRoom(Room) returns (RoomReply) {}
+    rpc LeaveRoom(Room) returns (RoomReply) {}
+    rpc SetReady(Room) returns (RoomReply) {}
     rpc TestClean(Room) returns (Room) {}
     rpc GiveUpGame(GiveUpGameRequest) returns (GiveUpGameResult) {}
     rpc GiveUpVote(GiveUpVoteRequest) returns (GiveUpVoteRequest) {}
-    rpc Shock(RoomUser) returns (RoomUser) {}
-    rpc Renewal(Room) returns (Room) {}
+    rpc Shock(RoomUser) returns (RoomReply) {}
+    rpc Renewal(Room) returns (RoomReply) {}
     rpc CreateFeedback(Feedback) returns (Feedback) {}
     rpc PageFeedbackList(PageFeedbackListRequest) returns (PageFeedbackListReply) {}
     rpc RoomResultList(Room) returns (RoomResultListReply) {}
     rpc CheckRoomExist(Room) returns (CheckRoomExistReply) {}
-    rpc VoiceChat(VoiceChatRequest) returns (RoomUser) {}
+    rpc VoiceChat(VoiceChatRequest) returns (RoomReply) {}
     rpc Heartbeat(HeartbeatRequest) returns (HeartbeatReply) {}
 }
 

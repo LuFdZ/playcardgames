@@ -23,8 +23,8 @@ func LogLevel() string {
 
 func DBURL() string {
 	return ConfigDefault.Get("db_url").
-		String("root:@tcp(127.0.0.1:3306)/playcards?parseTime=true&loc=Asia%2FChongqing")
-		//String("root:Playcards#18@tcp(127.0.0.1:3306)/playcards?parseTime=true&loc=Asia%2FChongqing")
+		//String("root:@tcp(127.0.0.1:3306)/playcards?parseTime=true&loc=Asia%2FChongqing")
+		String("root:Playcards#18@tcp(127.0.0.1:3306)/playcards?parseTime=true&loc=Asia%2FChongqing")
 		//String("root:Playcards#18@tcp(172.19.90.246:3306)/playcards?parseTime=true&loc=Asia%2FChongqing")
 }
 

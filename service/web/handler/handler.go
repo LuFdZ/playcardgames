@@ -56,8 +56,11 @@ func (w *Web) Subscribe(ws *websocket.Conn) {
 	}
 
 	c := clients.NewClient(token, u, ws)
+	webroom.SubscribeRoomMessage(c,nil)
+	webbill.SubscribeBillMessage(c,nil)
+	webthirteen.SubscribeThirteenMessage(c,nil)
+	webniu.SubscribeNiuniuMessage(c,nil)
 	log.Debug("new client: %v", c)
-
 	f := func(msg []byte) error {
 		req := &request.Request{}
 		err := json.Unmarshal(msg, &req)

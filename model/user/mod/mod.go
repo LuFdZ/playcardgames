@@ -32,7 +32,7 @@ type User struct {
 	RegIP         string
 	OpenID        string
 	UnionID       string
-	RoomID        int32  `gorm:"-"` // Ignore this field
+	//RoomID        int32  `gorm:"-"` // Ignore this field
 	Diamond       int64  `gorm:"-"`
 	AccessToken   string `gorm:"-"`
 }

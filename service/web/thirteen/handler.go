@@ -64,28 +64,14 @@ func ThirteenGameResultHandler(p broker.Publication) error {
 	if err != nil {
 		return err
 	}
-	//fmt.Printf("ThirteenResultHandler:%+v", rs)
-	err = clients.SendRoomUsers(rs.RoomID, t, enum.MsgThireteenGameResult, rs)
+	ids := rs.Ids
+	rs.Ids = nil
+	err = clients.SendRoomUsers(ids, t, enum.MsgThireteenGameResult, rs)
 	if err != nil {
 		return err
 	}
 	return nil
 }
-
-// func ThirteenSurrenderHandler(p broker.Publication) error {
-// 	t := p.Topic()
-// 	msg := p.Message()
-// 	rs := &pbthirteen.SurrenderMessage{}
-// 	err := proto.Unmarshal(msg.Body, rs)
-// 	if err != nil {
-// 		return err
-// 	}
-// 	err = clients.SendRoomUsers(rs.RoomID, t, enum.MsgThireteenGameResult, rs)
-// 	if err != nil {
-// 		return err
-// 	}
-// 	return nil
-// }
 
 func ThirteenReadyHandler(p broker.Publication) error {
 	t := p.Topic()
@@ -95,8 +81,9 @@ func ThirteenReadyHandler(p broker.Publication) error {
 	if err != nil {
 		return err
 	}
-	//fmt.Printf("ThirteenReadyHandler:%+v", rs)
-	err = clients.SendRoomUsers(rs.RoomID, t, enum.MsgThireteenGameReady, rs)
+	ids := rs.Ids
+	rs.Ids = nil
+	err = clients.SendRoomUsers(ids, t, enum.MsgThireteenGameReady, rs)
 	if err != nil {
 		return err
 	}

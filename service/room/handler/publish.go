@@ -1,9 +1,8 @@
 package handler
 
 const (
-	TopicRoomStatusChange   = "playcards.room.StatusChange"
+	TopicRoomCreate         = "playcards.room.Create"
 	TopicRoomReady          = "playcards.room.Ready"
-	TopicRoomUnReady        = "playcards.room.UnReady"
 	TopicRoomJoin           = "playcards.room.Join"
 	TopicRoomUnJoin         = "playcards.room.UnJoin"
 	TopicRoomResult         = "playcards.room.Result"
@@ -12,4 +11,5 @@ const (
 	TopicRoomUserConnection = "playcards.room.UserConnection"
 	TopicRoomRenewal        = "playcards.room.Renewal"
 	TopicRoomVoiceChat      = "playcards.room.VoiceChat"
+	TopicRoomExist          = "playcards.room.Exist"
 )

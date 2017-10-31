@@ -2,7 +2,6 @@ package handler
 
 import (
 	"context"
-	"fmt"
 	"playcards/model/thirteen"
 	"playcards/model/thirteen/enum"
 	mdt "playcards/model/thirteen/mod"
@@ -15,6 +14,8 @@ import (
 
 	"github.com/micro/go-micro/broker"
 	"github.com/micro/go-micro/server"
+	//"fmt"
+	"fmt"
 )
 
 type ThirteenSrv struct {
@@ -34,7 +35,7 @@ func NewHandler(s server.Server, gt *gsync.GlobalTimer) *ThirteenSrv {
 func (ts *ThirteenSrv) update(gt *gsync.GlobalTimer) {
 	lock := "playcards.thirteen.update.lock"
 	f := func() error {
-		s := time.Now()
+		//s := time.Now()
 		log.Debug("thirteen update loop... and has %d thirteens")
 		newGames := thirteen.CreateThirteen()
 		if newGames != nil {
@@ -47,23 +48,24 @@ func (ts *ThirteenSrv) update(gt *gsync.GlobalTimer) {
 			}
 		}
 
-		cleanGames := thirteen.CleanGame()
-		if cleanGames != nil {
-			for _, game := range cleanGames {
-				msg := game.ToProto()
+		games := thirteen.UpdateGame()
+		if games != nil {
+			for _, game := range games {
+				msg := game.Result.ToProto()
+				msg.Ids = game.Ids
 				topic.Publish(ts.broker, msg, TopicThirteenGameResult)
 			}
 		}
 
-		err := thirteen.CleanGiveUpGame()
+		err := thirteen.CleanGame()
 		if err != nil {
-			log.Err("clean give up game loop err:%v", err)
+			log.Err("clean game loop err:%v", err)
 		}
-		e := time.Now().Sub(s).Nanoseconds()
-		fmt.Printf("Update times :%d", e)
+		//e := time.Now().Sub(s).Nanoseconds()
+		//fmt.Printf("Update times :%d", e)
 		return nil
 	}
-	gt.Register(lock, time.Second*enum.LoopTime, f)
+	gt.Register(lock, time.Millisecond*enum.LoopTime, f)
 }
 
 func (ts *ThirteenSrv) SubmitCard(ctx context.Context, req *pbt.SubmitCard,
@@ -72,7 +74,7 @@ func (ts *ThirteenSrv) SubmitCard(ctx context.Context, req *pbt.SubmitCard,
 	if err != nil {
 		return err
 	}
-	rid, err := thirteen.SubmitCard(u.UserID, mdt.SubmitCardFromProto(req, u.UserID))
+	ids, err := thirteen.SubmitCard(u.UserID, mdt.SubmitCardFromProto(req, u.UserID))
 	if err != nil {
 		return err
 	}
@@ -80,9 +82,9 @@ func (ts *ThirteenSrv) SubmitCard(ctx context.Context, req *pbt.SubmitCard,
 		Result: 1,
 	}
 	*rsp = *reply
-	//fmt.Printf("SubmitCardSrv:%v \n", rid)
+
 	msg := &pbt.GameReady{
-		RoomID: rid,
+		Ids:ids,
 		UserID: u.UserID,
 	}
 	topic.Publish(ts.broker, msg, TopicThirteenGameReady)
@@ -110,8 +112,9 @@ func (rs *ThirteenSrv) ThirteenRecovery(ctx context.Context, req *pbt.ThirteenRe
 		return err
 	}
 	res := &pbt.ThirteenRecoveryReply{}
+	fmt.Printf("AAADSADASDASD")
 	recovery, err := thirteen.ThirteenRecovery(req.RoomID, u.UserID)
-	//fmt.Printf("get thirteen recovery:%v", recovery)
+
 	if err != nil {
 		return err
 	}

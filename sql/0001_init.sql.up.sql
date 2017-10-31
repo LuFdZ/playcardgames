@@ -243,7 +243,6 @@ CREATE TABLE `player_shares` (
   AUTO_INCREMENT = 1
   DEFAULT CHARSET = utf8;
 
-
 CREATE TABLE `niunius` (
   `game_id`           INT           NOT NULL AUTO_INCREMENT,
   `room_id`           INT           NOT NULL DEFAULT '0',
@@ -261,3 +260,28 @@ CREATE TABLE `niunius` (
   KEY `idx_room` (`room_id`),
   KEY `idx_created`(`created_at`)
 )
+  ENGINE = InnoDB
+  AUTO_INCREMENT = 1
+  DEFAULT CHARSET = utf8;
+
+CREATE TABLE `config_open` (
+  `open_id`           INT           NOT NULL AUTO_INCREMENT,
+  `channel`           VARCHAR(20)   DEFAULT NULL,
+  `version`           VARCHAR(20)   DEFAULT NULL,
+  `mobile_os`         VARCHAR(20)   DEFAULT NULL,
+  `item_id`           INT           DEFAULT NULL,
+  `item_value`        VARCHAR(20)   DEFAULT NULL,
+  `status`            INT           NOT NULL DEFAULT '0',
+  `description`       VARCHAR(200)  DEFAULT NULL,
+  `created_at`        DATETIME      NOT NULL,
+  `updated_at`        DATETIME      NOT NULL,
+  PRIMARY KEY (`open_id`),
+  KEY `idx_channel` (`channel`),
+  KEY `idx_version` (`version`),
+  KEY `idx_os` (`mobile_os`),
+  KEY `idx_created`(`created_at`),
+  UNIQUE KEY `config_open_unique` (`channel`,`version`,`mobile_os`,`item_id`)
+)
+  ENGINE = InnoDB
+  AUTO_INCREMENT = 1
+  DEFAULT CHARSET = utf8;

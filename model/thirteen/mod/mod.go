@@ -25,6 +25,7 @@ type Thirteen struct {
 	Cards           []*GroupCard    `gorm:"-"`
 	GameLua         *lua.LState     `gorm:"-"`
 	Result          *GameResultList `gorm:"-"`
+	Ids             []int32         `gorm:"-"`
 }
 
 type Card struct {
@@ -81,7 +82,6 @@ type SubmitCard struct {
 }
 
 type GameResultList struct {
-	RoomID int32
 	Result []*ThirteenResult
 }
 
@@ -160,7 +160,6 @@ func (grl *GameResultList) ToProto() *pbt.GameResultList {
 	}
 
 	out := &pbt.GameResultList{
-		RoomID: grl.RoomID,
 		Result: results,
 	}
 	return out

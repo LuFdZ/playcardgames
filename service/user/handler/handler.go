@@ -158,7 +158,6 @@ func (us *UserSrv) CheckUser(ctx context.Context, req *pbu.CheckUserRequest,
 func (us *UserSrv) WXLogin(ctx context.Context, req *pbu.WXLoginRequest,
 	rsp *pbu.WXLoginRsply) error {
 	address, _ := ctx.Value("X-Real-Ip").(string)
-	fmt.Printf("CCCCCCC:%s", address)
 	_, u, err := user.WXLogin(mdu.UserFromWXLoginRequestProto(req), req.Code, address)
 	if err != nil {
 		fmt.Printf("BBB WXLoginErr:%v", err)
@@ -177,9 +176,8 @@ func (us *UserSrv) WXLogin(ctx context.Context, req *pbu.WXLoginRequest,
 	//fmt.Printf("DDD Create User ByWX:%v", u)
 	rsp.Token = token
 	//*rsp.UserInfo = *u.ToProto()
-	log.Debug("login: %v", u)
+	log.Debug("login: %v|%s", u,address)
 	// room.AutoSubscribe(u.UserID)
 	rsp.User = u.ToProto()
-	fmt.Printf("login: %v", u)
 	return nil
 }

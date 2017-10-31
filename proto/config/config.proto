@@ -1,4 +1,5 @@
 syntax = "proto3";
+import "playcards/proto/page/page.proto";
 
 package config;
 
@@ -11,7 +12,23 @@ message Config {
     int64 UpdatedAt = 11;
 }
 
-message ConfigListRequest {}
+
+message ConfigOpen {
+    int32 OpenID = 1;
+    string Channel = 2;
+    string Version = 3;
+    string MobileOs = 4;
+    int32 ItemID = 5;
+    string ItemValue = 6;
+    string Value = 7;
+    int32 Status = 8;
+    string Description = 9;
+    int64 CreatedAt = 10;
+    int64 UpdatedAt = 11;
+}
+
+message ConfigListRequest {
+}
 
 message ConfigListReply {
     repeated Config List = 1;
@@ -21,8 +38,38 @@ message GetConfigByIDRequest {
     int32 ID = 1;
 }
 
+message GetConfigOpensRequest{
+    string Version = 1;
+}
+
+message ConfigReply{
+    int32 result = 1;
+}
+
+message GetConfigOpensReply{
+    repeated ConfigOpen List = 1;
+}
+
+message PageConfigOpensRequest{
+    page.PageOption Page = 1;
+    ConfigOpen ConfigOpen = 2;
+    int64 Count = 3;
+}
+
+message PageNoticeListReply {
+    int32 Result = 1;
+    repeated ConfigOpen List = 2;
+    int64 Count = 3;
+}
+
+
 service ConfigSrv {
-    rpc UpdateConfig(Config) returns (Config) {}
-    rpc ConfigList(ConfigListRequest) returns (ConfigListReply) {}
-    rpc GetConfigByID(GetConfigByIDRequest) returns (Config) {}
+    rpc UpdateConfig (Config) returns (Config) {}
+    rpc ConfigList (ConfigListRequest) returns (ConfigListReply){} 
+    rpc GetConfigByID (GetConfigByIDRequest) returns (Config) {}
+    rpc CreateConfigOpen (ConfigOpen) returns (ConfigReply) {}
+    rpc UpdateConfigOpen (ConfigOpen) returns (ConfigReply) {}
+    rpc GetConfigOpens (ConfigOpen) returns (GetConfigOpensReply) {}
+    rpc PageConfigOpens (PageConfigOpensRequest) returns (PageNoticeListReply) {}
+    rpc RefreshAllConfigOpensFromDB (ConfigOpen) returns (ConfigReply) {}
 }

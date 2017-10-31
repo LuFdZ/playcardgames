@@ -3,8 +3,6 @@ require "lua/thirteenlua/Card"
 require "lua/thirteenlua/Tools"
 require "../../lua/thirteenlua/json"
 
-
-
 Logic = {cards = {}, cardNum = 52, existKing = false}
 Logic.__index = Logic
 GroupType = {}
@@ -47,21 +45,26 @@ function Logic:GetCards()
     local cardvec = {}
 
     if #self.cards < 13 then
-        MyLog("没有那么多牌了")
+        --MyLog("没有那么多牌了")
+        print("没有那么多牌了")
         return cardvec
     end
 
     for i = 1, 13 do
+
         local rn = 1
         if self.cardNum ~= 1 then
             rn = math.random(self.cardNum)
         end
+
         table.insert(cardvec, i, self.cards[rn])
         self.cards[rn], self.cards[self.cardNum] = self.cards[self.cardNum], self.cards[rn]
         self.cardNum = self.cardNum - 1
 
     end
 
+    --print("当前总牌数: " .. #self.cards .. " 当前剩余牌数: " .. self.cardNum)
+    --dump(cardvec)
     return cardvec
 end
 
@@ -230,9 +233,9 @@ function Logic:GetResult( data, roomData )
                 Settle.Middle = Settle.Middle * temp
 
                 local resTail = self:CompareGroup(value.Result.Tail, value1.Result.Tail)
-                print("resTail:" .. resTail)
+                --print("resTail:" .. resTail)
 
-                print("GroupType.Four + 1:" .. (GroupType.Four + 1))
+                --print("GroupType.Four + 1:" .. (GroupType.Four + 1))
                 temp = 1
                 if resTail < 0 then
                     temp = -1
@@ -359,20 +362,26 @@ function Logic:GetResult( data, roomData )
             if value1.Score > 0 then
                 --如果是赢的
                 --查打是否有打他的枪
+                local beShoot = false;--add by zbh
                 for i, shootid in pairs(value.Result.Shoot)do
                     if shootid == value1.ID then
                         --打枪
+                        beShoot = true;
+                        --print("gun")
                         times = 2
                         break
                     end
                 end
 
                 --查看是否3翻模式
-                if roomData.Times == 3 then
-                    --3翻模式-没有全垒打
-                    times = math.pow(2,#value.Result.Shoot)
-                elseif #value.Result.Shoot == (#ThirteenResultList - 1)  and #ThirteenResultList ~= 2 then
-                    times = 4
+                if beShoot then  --add by zbh
+                    if roomData.Times == 3 then
+                        --3翻模式-没有全垒打
+                        times = math.pow(2,#value.Result.Shoot)
+                        --print("gun:"..tostring(#value.Result.Shoot))
+                    elseif #value.Result.Shoot == (#ThirteenResultList - 1)  and #ThirteenResultList ~= 2 then
+                        times = 4
+                    end
                 end
                 --计算分数
                 value.Settle.TotalScore = value.Settle.TotalScore + times * value1.Score
@@ -380,11 +389,14 @@ function Logic:GetResult( data, roomData )
                 --输给他
                 --查看是否被他打枪
                 --dump(value.Result.BeShoot)
+                local beShoot  =false;--add by zbh
                 for i, shootid in pairs(value.Result.BeShoot)do
                     -- MyLog("all be shoot: " .. shootid)
+
                     if shootid == value1.ID then
                         --打枪
                         -- MyLog("be shoot: " .. shootid .. "shoot ->" .. value.UserID)
+                        beShoot = true;
                         times = 2
                         break
                     end
@@ -392,22 +404,25 @@ function Logic:GetResult( data, roomData )
 
                 --根据value1的id找到value对应的值
                 local tempValue = self:GetUserResult(value1.ID, ThirteenResultList)
-                --查看是否3翻模式
-                if roomData.Times == 3 then
-                    --3翻模式-没有全垒打
-                    times = math.pow(2,#tempValue.Result.Shoot)
-                elseif #tempValue.Result.Shoot == (#ThirteenResultList-1) and #ThirteenResultList ~= 2 then
-                    times = 4
+                if beShoot then--add by zbh
+                    --查看是否3翻模式
+                    if roomData.Times == 3 then
+                        --3翻模式-没有全垒打
+                        times = math.pow(2,#tempValue.Result.Shoot)
+                    elseif #tempValue.Result.Shoot == (#ThirteenResultList-1) and #ThirteenResultList ~= 2 then
+                        times = 4
+                    end
                 end
-
                 --MyLog("times: " .. times .. " win score: " .. value1.Score)
                 --计算分数
                 value.Settle.TotalScore = value.Settle.TotalScore + times * value1.Score
-            end
 
+            end
+            -- print("times:"..times)
             --如果一方是庄家，则+庄家分
             if roomData.BankerAddScore ~= 0 then
                 --取到跟value对比的玩家结果信息
+                local last = value.Settle.TotalScore
                 local winUser = self:GetUserResult(value1.ID, ThirteenResultList)
                 if value.Banker or winUser.Banker then
                     --当前比牌有一个是庄家
@@ -417,8 +432,10 @@ function Logic:GetResult( data, roomData )
                     elseif value1.Score < 0 then
                         bankerAddScore = roomData.BankerAddScore * -1
                     end
-                    value.AddScore = bankerAddScore
+                    value.Settle.AddScore = bankerAddScore + value.Settle.AddScore
                     value.Settle.TotalScore = value.Settle.TotalScore + bankerAddScore
+
+                    --print("id:" .. value.UserID .. " score:" .. value1.Score .. " addscore: " .. bankerAddScore .. " lasttotal: " .. last .. " totalscore:" .. value.Settle.TotalScore)
                 end
             end
         end
@@ -445,13 +462,18 @@ function Logic:GetResult( data, roomData )
         settle.AddScore = tostring(value.Settle.AddScore)
         settle.TotalScore = tostring(value.Settle.TotalScore)
 
-        local result = {Result = res, Settle = settle, UserID = value.UserID}
+        local role = 2
+        if value.Banker then
+        role = 1
+        end
+
+        local result = {Result = res, Settle = settle, UserID = value.UserID, Role = role }
         table.insert(results, result)
     end
-    dump(results, "results", 100)
+    --dump(results, "results", 100)
     local str = json.encode(results)
-    -- print(str)
-   -- dump(ThirteenResultList, "ThirteenResultList", 100)
+    --print(str)
+    -- dump(ThirteenResultList, "ThirteenResultList", 100)
     return str
 end
 
@@ -462,7 +484,7 @@ function Logic:GetUserResult(id, list)
             return v
         end
     end
-    MyLog("找不到玩家结果")
+    print("找不到玩家结果")
     return nil
 end
 
@@ -589,8 +611,8 @@ function Logic:GetGroup( cards )
                     end
                 end
                 --如果运行到此，说明代码sb了，请检查代码
-                MyLog("明代码sb了，请检查代码 a")
-                dump(cards)
+                --MyLog("明代码sb了，请检查代码 a")
+                --dump(cards)
             end
         end
 
@@ -645,8 +667,8 @@ function Logic:GetGroup( cards )
         end
     else
         --不符合配牌牌型
-        MyLog("出错了，请检查传过来的牌是否正常:")
-        dump(cards)
+        --MyLog("出错了，请检查传过来的牌是否正常:")
+       --dump(cards)
     end
 
     --运行到此处，只可能是乌龙
@@ -894,8 +916,8 @@ function Logic:EqualsNumber(cards)
     end)
 
     if #tempList <= 0 then
-        MyLog("sb了，数据有错:")
-        dump(cards)
+        print("sb了，数据有错:")
+        --dump(cards)
     end
 
     return tempList[1]

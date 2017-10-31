@@ -1,7 +1,6 @@
 package room
 
 import (
-	"fmt"
 	apienum "gdc/service/api/enum"
 	pbroom "playcards/proto/room"
 	srvroom "playcards/service/room/handler"
@@ -13,6 +12,7 @@ import (
 	"github.com/micro/go-micro/broker"
 	"github.com/micro/go-micro/client"
 	"github.com/micro/protobuf/proto"
+	//"fmt"
 )
 
 var rpc pbroom.RoomSrvClient
@@ -35,14 +35,11 @@ func Init(brk broker.Broker) error {
 }
 
 func SubscribeAllRoomMessage(brk broker.Broker) error {
-	subscribe.SrvSubscribe(brk, topic.Topic(srvroom.TopicRoomStatusChange),
-		RoomStatusChangeHandler,
+	subscribe.SrvSubscribe(brk, topic.Topic(srvroom.TopicRoomCreate),
+		RoomCreateHandler,
 	)
 	subscribe.SrvSubscribe(brk, topic.Topic(srvroom.TopicRoomReady),
 		RoomReadyHandler,
-	)
-	subscribe.SrvSubscribe(brk, topic.Topic(srvroom.TopicRoomUnReady),
-		RoomUnReadyHandler,
 	)
 	subscribe.SrvSubscribe(brk, topic.Topic(srvroom.TopicRoomJoin),
 		RoomJoinHandler,
@@ -68,11 +65,13 @@ func SubscribeAllRoomMessage(brk broker.Broker) error {
 	subscribe.SrvSubscribe(brk, topic.Topic(srvroom.TopicRoomVoiceChat),
 		RoomVoiceChatHandler,
 	)
-
+	subscribe.SrvSubscribe(brk, topic.Topic(srvroom.TopicRoomExist),
+		RoomExistHandler,
+	)
 	return nil
 }
 
-func RoomStatusChangeHandler(p broker.Publication) error {
+func RoomCreateHandler(p broker.Publication) error {
 	t := p.Topic()
 	msg := p.Message()
 	rs := &pbroom.Room{}
@@ -80,8 +79,8 @@ func RoomStatusChangeHandler(p broker.Publication) error {
 	if err != nil {
 		return err
 	}
-
-	err = clients.SendRoomUsers(rs.RoomID, t, enum.MsgRoomStatusChange, rs)
+	//fmt.Printf("AAAAAAAAA:%d",rs.UserID)
+	err = clients.SendTo(rs.UserID, t, enum.MsgRoomCreate, rs)
 	if err != nil {
 		return err
 	}
@@ -96,8 +95,10 @@ func RoomJoinHandler(p broker.Publication) error {
 	if err != nil {
 		return err
 	}
-	fmt.Printf("AAAA RoomJoin:%d|%d\n", rs.RoomID, rs.UserID)
-	err = clients.SendRoomUsers(rs.RoomID, t, enum.MsgRoomJoin, rs)
+	ids := rs.Ids
+	rs.Ids = nil
+	//fmt.Printf("RoomJoinHandler:%v",ids)
+	err = clients.SendRoomUsers(ids, t, enum.MsgRoomJoin, rs)
 	if err != nil {
 		return err
 	}
@@ -112,8 +113,10 @@ func RoomUnJoinHandler(p broker.Publication) error {
 	if err != nil {
 		return err
 	}
-
-	err = clients.SendRoomUsers(rs.RoomID, t, enum.MsgRoomUnJoin, rs)
+	ids := rs.Ids
+	rs.Ids = nil
+	//fmt.Printf("RoomUnJoinHandler:%v",ids)
+	err = clients.SendRoomUsers(ids, t, enum.MsgRoomUnJoin, rs)
 	if err != nil {
 		return err
 	}
@@ -128,24 +131,10 @@ func RoomReadyHandler(p broker.Publication) error {
 	if err != nil {
 		return err
 	}
-
-	err = clients.SendRoomUsers(rs.RoomID, t, enum.MsgRoomReady, rs)
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
-func RoomUnReadyHandler(p broker.Publication) error {
-	t := p.Topic()
-	msg := p.Message()
-	rs := &pbroom.RoomUser{}
-	err := proto.Unmarshal(msg.Body, rs)
-	if err != nil {
-		return err
-	}
-
-	err = clients.SendRoomUsers(rs.RoomID, t, enum.MsgRoomUnReady, rs)
+	ids := rs.Ids
+	rs.Ids = nil
+	//fmt.Printf("RoomReadyHandler:%v\n",ids)
+	err = clients.SendRoomUsers(ids, t, enum.MsgRoomReady, rs)
 	if err != nil {
 		return err
 	}
@@ -160,8 +149,9 @@ func RoomResultHandler(p broker.Publication) error {
 	if err != nil {
 		return err
 	}
-	//fmt.Printf("RoomResult:%+v", rs)
-	err = clients.SendRoomUsers(rs.RoomID, t, enum.MsgRoomResult, rs)
+	ids := rs.Ids
+	rs.Ids = nil
+	err = clients.SendRoomUsers(ids, t, enum.MsgRoomResult, rs)
 	if err != nil {
 		return err
 	}
@@ -176,7 +166,9 @@ func RoomGiveupHandler(p broker.Publication) error {
 	if err != nil {
 		return err
 	}
-	err = clients.SendRoomUsers(rs.RoomID, t, enum.MsgRoomGiveup, rs)
+	ids := rs.Ids
+	rs.Ids = nil
+	err = clients.SendRoomUsers(ids, t, enum.MsgRoomGiveup, rs)
 	if err != nil {
 		return err
 	}
@@ -191,7 +183,6 @@ func RoomShockHandler(p broker.Publication) error {
 	if err != nil {
 		return err
 	}
-	//fmt.Printf("RoomGiveup:%+v", rs)
 	err = clients.SendTo(rs.UserIDTo, t, enum.MsgRoomShock, rs)
 	if err != nil {
 		return err
@@ -207,8 +198,9 @@ func RoomRenewalHandler(p broker.Publication) error {
 	if err != nil {
 		return err
 	}
-	//fmt.Printf("RoomRenewal:%+v", rs)
-	err = clients.SendRoomUsers(rs.RoomID, t, enum.MsgRoomRenewal, rs)
+	ids := rs.Ids
+	rs.Ids = nil
+	err = clients.SendRoomUsers(ids, t, enum.MsgRoomRenewal, rs)
 	if err != nil {
 		return err
 	}
@@ -223,7 +215,9 @@ func UserConnectionHandler(p broker.Publication) error {
 	if err != nil {
 		return err
 	}
-	err = clients.SendRoomUsers(rs.RoomID, t, enum.MsgRoomUserConnection, rs)
+	ids := rs.Ids
+	rs.Ids = nil
+	err = clients.SendRoomUsers(ids, t, enum.MsgRoomUserConnection, rs)
 	if err != nil {
 		return err
 	}
@@ -239,18 +233,28 @@ func RoomVoiceChatHandler(p broker.Publication) error {
 	if err != nil {
 		return err
 	}
-	//fmt.Printf("RoomRenewal:%+v", rs)
-	err = clients.SendRoomUsers(rs.RoomID, t, enum.MsgRoomVoiceChat, rs)
+	ids := rs.Ids
+	rs.Ids = nil
+	err = clients.SendRoomUsers(ids, t, enum.MsgRoomVoiceChat, rs)
 	if err != nil {
 		return err
 	}
 	return nil
 }
 
-// func AutoSubscribe(uid int32) {
-// 	clients.AutoSubscribe(uid, RoomEvent)
-// }
+func RoomExistHandler(p broker.Publication) error {
+	t := p.Topic()
+	msg := p.Message()
+	rs := &pbroom.CheckRoomExistReply{}
+	err := proto.Unmarshal(msg.Body, rs)
+	if err != nil {
+		return err
+	}
+	//fmt.Printf("AAAAAAA:%d",rs.UserID)
+	err = clients.SendTo(rs.UserID, t, enum.MsgRoomExist, rs)
+	if err != nil {
+		return err
+	}
+	return nil
+}
 
-// func AutoUnSubscribe(uid int32) {
-// 	clients.AutoUnSubscribe(uid, RoomEvent)
-// }

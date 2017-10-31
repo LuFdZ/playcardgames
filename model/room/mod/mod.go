@@ -31,10 +31,10 @@ type Room struct {
 	UserResults    []*GameUserResult `gorm:"-"`
 	Users          []*RoomUser       `gorm:"-"`
 	GiveupGame     GiveUpGameResult  `gorm:"-"`
+	Ids            []int32 `gorm:"-"`
 }
 
 type GiveUpGameResult struct {
-	RoomID        int32
 	Status        int32
 	UserStateList []*UserState
 }
@@ -53,7 +53,6 @@ type RoomUser struct {
 	Sex       int32
 	Role      int32
 	UpdatedAt *time.Time
-	RoomID    int32
 }
 
 type GameUserResult struct {
@@ -68,7 +67,6 @@ type GameUserResult struct {
 }
 
 type RoomResults struct {
-	RoomID      int32
 	RoundNumber int32
 	RoundNow    int32
 	Status      int32
@@ -120,7 +118,7 @@ func (gur *GiveUpGameResult) ToProto() *pbr.GiveUpGameResult {
 		uss = append(uss, us.ToProto())
 	}
 	out := &pbr.GiveUpGameResult{
-		RoomID:        gur.RoomID,
+		//RoomID:        gur.RoomID,
 		Status:        gur.Status,
 		UserStateList: uss,
 	}
@@ -154,18 +152,17 @@ func (r *RoomUser) ToProto() *pbr.RoomUser {
 		Icon:     r.Icon,
 		Sex:      r.Sex,
 		Role:     r.Role,
-		RoomID:   r.RoomID,
 	}
 }
 
 func (r *RoomResults) ToProto() *pbr.RoomResults {
 	out := &pbr.RoomResults{
-		RoomID:      r.RoomID,
 		Password:    r.Password,
 		RoundNumber: r.RoundNumber,
 		RoundNow:    r.RoundNow,
 		CreatedAt:   mdtime.TimeToProto(r.CreatedAt),
 		Status:      r.Status,
+		GameType:    r.GameType,
 	}
 	utilproto.ProtoSlice(r.List, &out.List)
 	return out
@@ -184,22 +181,33 @@ func (ur *GameUserResult) ToProto() *pbr.GameUserResult {
 }
 
 func (cre *CheckRoomExist) ToProto() *pbr.CheckRoomExistReply {
-	return &pbr.CheckRoomExistReply{
-		Result:       cre.Result,
-		Status:       cre.Status,
-		Room:         cre.Room.ToProto(),
-		GiveupResult: cre.GiveupResult.ToProto(),
-		GameResult:   cre.GameResult.ToProto(),
+	out := &pbr.CheckRoomExistReply{}
+	out.Result = cre.Result
+	out.Status = cre.Status
+	if &cre.Room == nil{
+		out.Room = nil
+	}else{
+		out.Room = cre.Room.ToProto()
 	}
+	if &cre.GiveupResult == nil{
+		out.GiveupResult = nil
+	}else{
+		out.GiveupResult = cre.GiveupResult.ToProto()
+	}
+	if &cre.GameResult == nil{
+		out.GameResult = nil
+	}else{
+		out.GameResult = cre.GameResult.ToProto()
+	}
+	return out
+	//return &pbr.CheckRoomExistReply{
+	//	Result:       cre.Result,
+	//	Status:       cre.Status,
+	//	Room:         cre.Room.ToProto(),
+	//	GiveupResult: cre.GiveupResult.ToProto(),
+	//	GameResult:   cre.GameResult.ToProto(),
+	//}
 }
-
-// func (rs *RoomResultList) ToProto() *pbr.RoomResultListReply {
-// 	out := &pbr.RoomResultListReply{
-// 		List: nil,
-// 	}
-// 	utilproto.ProtoSlice(r.List, &out.List)
-// 	return out
-// }
 
 func (r *Room) BeforeUpdate(scope *gorm.Scope) error {
 	r.MarshalUsers()

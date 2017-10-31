@@ -1,9 +1,7 @@
 package room
 
 import (
-	"encoding/json"
 	cacheroom "playcards/model/room/cache"
-	"playcards/model/room/errors"
 	pbroom "playcards/proto/room"
 	srvroom "playcards/service/room/handler"
 	"playcards/service/web/clients"
@@ -11,13 +9,13 @@ import (
 	"playcards/service/web/request"
 	"playcards/utils/auth"
 	gctx "playcards/utils/context"
+	//"playcards/utils/log"
 	"playcards/utils/log"
 )
 
 var RoomEvent = []string{
-	srvroom.TopicRoomStatusChange,
+	srvroom.TopicRoomCreate,
 	srvroom.TopicRoomReady,
-	srvroom.TopicRoomUnReady,
 	srvroom.TopicRoomJoin,
 	srvroom.TopicRoomUnJoin,
 	srvroom.TopicRoomResult,
@@ -26,27 +24,30 @@ var RoomEvent = []string{
 	srvroom.TopicRoomUserConnection,
 	srvroom.TopicRoomRenewal,
 	srvroom.TopicRoomVoiceChat,
+	srvroom.TopicRoomExist,
 }
 
 func SubscribeRoomMessage(c *clients.Client, req *request.Request) error {
-	var pwd string
-	err := json.Unmarshal(req.Args, &pwd)
+	//var pwd string
+	//err := json.Unmarshal(req.Args, &pwd)
+	//if err != nil {
+	//	return err
+	//}
+	//room, err := cacheroom.GetRoom(pwd)
+	//if err != nil {
+	//	return err
+	//}
+	//if room == nil {
+	//	return errors.ErrRoomNotExisted
+	//}
+	err := cacheroom.UpdateRoomUserSocektStatus(c.User().UserID, enum.SocketAline, 0)
 	if err != nil {
+		log.Err("redis set user socket status aline err! userid:%d\n",c.User().UserID)
 		return err
 	}
-	room, err := cacheroom.GetRoom(pwd)
-	if err != nil {
-		return err
-	}
-	if room == nil {
-		return errors.ErrRoomNotExisted
-	}
-	err = cacheroom.UpdateRoomUserSocektStatus(c.User().UserID, enum.SocketAline, 0)
-	if err != nil {
-		return err
-	}
-	c.User().RoomID = room.RoomID
+	//c.User().RoomID = room.RoomID
 	c.Subscribe(RoomEvent)
+	c.SendNewClientBackMessage()
 	return nil
 }
 
@@ -56,14 +57,12 @@ func UnsubscribeRoomMessage(c *clients.Client, req *request.Request) error {
 }
 
 func ClinetHearbeatMessage(c *clients.Client,req *request.Request)error{
-	var msg byte
-	msg=1
-	c.SendMessage(enum.MsgHearbeat,enum.MsgHearbeat,msg)
+	c.SendHearbeatMessage()
 	return nil
 }
 
 func HeartbeatCallback(c *clients.Client) {
-	log.Debug("room heartbeat %v", c)
+	//log.Debug("room heartbeat %v", c)
 	ctx := gctx.NewContext(c.Token())
 	rpc.Heartbeat(ctx, &pbroom.HeartbeatRequest{})
 }
