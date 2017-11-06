@@ -218,6 +218,9 @@ func GetAllThirteen(f func(*mdt.Thirteen) bool) []*mdt.Thirteen {
 		if err != nil {
 			log.Err("redis get thirteen err: %v", err)
 		}
+		if thirteen == nil{
+			continue
+		}
 		if f != nil && !f(thirteen) {
 			continue
 		}

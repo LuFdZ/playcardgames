@@ -152,7 +152,7 @@ func GetRoomResultByUserIdAndGameType(tx *gorm.DB, uid int32, gtype int32) ([]*m
 
 	sqlstr := " game_type =? and room_id in (select room_id from player_rooms where user_id = ?)"
 	if err := tx.Where(sqlstr, gtype, uid).
-		Order("created_at").Find(&out).Error; err != nil {
+		Order("created_at desc").Find(&out).Error; err != nil {
 		return nil, errr.ErrRoomNotExisted
 	}
 	return out, nil

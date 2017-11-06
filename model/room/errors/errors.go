@@ -19,4 +19,5 @@ var (
 	ErrRenewalRoon       = errors.Forbidden(40014, "房间游戏未结束或非正常结束，不能续费！")
 	ErrAlreadyReady      = errors.Forbidden(40015, "您已经准备过了！")
 	ErrNotInGiveUp       = errors.Forbidden(40016, "游戏不在放弃投票状态！")
+	ErrRoomBusy          = errors.Forbidden(40017, "房间繁忙，请稍后再试！")
 )

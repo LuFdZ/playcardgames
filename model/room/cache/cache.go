@@ -44,6 +44,7 @@ func SetRoom(r *mdr.Room) error {
 			tx.HSet(key, "password", r.Password)
 			tx.HSet(key, "roomid", r.RoomID)
 			tx.HSet(key, "room", string(b))
+			tx.HSet(key, "lock", 0)
 			return nil
 		})
 
@@ -105,7 +106,7 @@ func GetRoom(pwd string) (*mdr.Room, error) {
 	key := RoomHKey(pwd)
 	val, err := cache.KV().HGet(key, "room").Bytes()
 	if err == redis.Nil {
-		return nil, nil
+		return nil, errors.Internal("room not find", err)
 	}
 
 	if err != nil && err != redis.Nil {
@@ -231,6 +232,7 @@ func DeleteAllRoomUser(password string, callFrom string) error {
 
 func GetRoomPasswordByUserID(uid int32) string {
 	key := UserHKey(uid)
+	//fmt.Printf("GetRoomPasswordByUserID:%d|%s\n",uid,key)
 	pwd := cache.KV().HGet(key, "password").Val()
 	return pwd
 }
@@ -254,6 +256,32 @@ func GetUserSocketNotice(uid int32) int32 {
 		return int32(result)
 	}
 	return 0
+}
+
+
+func GetRoomLock(pwd string) string {
+	key := RoomHKey(pwd)
+	lock := cache.KV().HGet(key, "lock").Val()
+	return lock
+}
+
+func SetRoomLock(password string,value string) error {
+	key :=""
+	f := func(tx *redis.Tx) error {
+		key := RoomHKey(password)
+		tx.Pipelined(func(p *redis.Pipeline) error {
+			tx.HSet(key, "lock", value)
+			return nil
+		})
+
+		return nil
+	}
+
+	if err := cache.KV().Watch(f, key); err != nil {
+		return errors.Internal("set room failed", err)
+	}
+	fmt.Printf("SetRoomLock:%s|%s\n",password,value)
+	return nil
 }
 
 func SetRoomDelete(gametype int32, rid int32) error {

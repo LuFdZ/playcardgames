@@ -7,6 +7,7 @@ var (
 	ErrDayStartGreaterDayEnd          = errors.Conflict(91002, "活动的开始时间不能大于结束时间！")
 	ErrDurationTooLarge               = errors.Forbidden(91003, "持续时间过长！")
 	ErrTimeStartDayNotEqualTimeEndDay = errors.Conflict(91004, "开始时间不能等于结束时间！")
+	ErrIDNotFIND                      = errors.NotFound(90005, "未找到数据ID！")
 )
 
 var (

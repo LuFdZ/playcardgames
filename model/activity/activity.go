@@ -25,6 +25,9 @@ func AddActivityConfig(ac *mda.ActivityConfig) error {
 }
 
 func UpdateActivityConfig(ac *mda.ActivityConfig) error {
+	if ac.ConfigID <1{
+		return errors.ErrIDNotFIND
+	}
 	return db.Transaction(func(tx *gorm.DB) error {
 		return dba.UpdateActivityConfig(tx, ac)
 	})
@@ -161,7 +164,7 @@ func Share(uid int32) (*mbill.UserBalance, error) { //*mda.PlayerShare,
 	}
 
 	ub, err := bill.GainBalanceType(uid, time.Now().Unix(),
-		&mbill.Balance{Diamond: enum.ShareDiamond}, enumbill.JournalTypeShate)
+		&mbill.Balance{Diamond: enum.ShareDiamond}, enumbill.JournalTypeShare)
 	if err != nil {
 		return nil, err
 	}

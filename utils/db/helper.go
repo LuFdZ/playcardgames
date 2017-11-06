@@ -2,7 +2,7 @@ package db
 
 import (
 	"playcards/utils/log"
-
+	"runtime/debug"
 	"github.com/jinzhu/gorm"
 )
 
@@ -11,20 +11,20 @@ func Transaction(f func(*gorm.DB) error) error {
 
 	defer func() {
 		if err := recover(); err != nil {
-			log.Crit("critical error in db transaction: %v", err)
+			log.Crit("critical error in db transaction: %v\nerr:\n", err,string(debug.Stack()))
 		}
 	}()
 
 	err := f(gdb)
 	if err != nil {
 		gdb.Rollback()
-		log.Err("db transaction failed: %v", err)
+		log.Err("db transaction failed: %v\nerr:\n", err,string(debug.Stack()))
 		return err
 	}
 
 	err = gdb.Commit().Error
 	if err != nil {
-		log.Crit("db transaction commit failed: %v", err)
+		log.Crit("db transaction commit failed: %v\nerr:\n", err,string(debug.Stack()))
 		return err
 	}
 

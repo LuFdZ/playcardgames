@@ -44,15 +44,24 @@ func NewClient(token string, u *mdu.User, ws *websocket.Conn) *Client {
 		cs = make(map[*Client]bool)
 		clients[u.UserID] = cs
 	}
+	//else{
+	//	for k,_ := range cs{
+	//		k.ws.Close()
+	//	}
+	//	cs = make(map[*Client]bool)
+	//	clients[u.UserID] = cs
+	//	log.Debug("NewClientCoverOld:%d\n",u.UserID)
+	//}
 	log.Debug("add connection: %v", c)
 	cs[c] = true
-	//str := ""
-	//for k, v := range clients {
-	//	str = fmt.Sprintf("userid:%s |", k)
-	//	for k2, v2 := range v {
-	//		str += fmt.Sprintf("Token:%s|Topics:%#v|Ws:%#v|V:%t", k2.token, k2.topics, k2.ws, v2)
-	//	}
-	//}
+	str := ""
+	for k, v := range clients {
+		str = fmt.Sprintf("--userid:%s |\n", k)
+		for k2, v2 := range v {
+			str += fmt.Sprintf("----Token:%s|Topics:%#v|Ws|V:%t\n", k2.token, k2.topics,  v2)
+		}
+	}
+	fmt.Printf("NewClient %s",str)
 	return c
 }
 
@@ -92,12 +101,18 @@ func (c *Client) Subscribe(tpc []string) {
 		if !ok {
 			continue
 		}
-		//fmt.Printf("%v subscribe topic  [%v]\n", c, t)
+		//若订阅时发现有相同userid的连接对象，则新连接覆盖老连接
+		//for cli,_ :=range cs{
+		//	if cli.UserID() == c.UserID(){
+		//		delete(cli.topics, t)
+		//		delete(cs, cli)
+		//		log.Debug(str+"NewSubscribeAnddeleteOld user:%v,tpc:%+v \n",cli.user,t)
+		//	}
+		//}
 		c.topics[t] = true
 		cs[c] = true
 		str += t+"|"
 	}
-	//fmt.Printf(str+"\n")
 	log.Debug(str+"\n")
 }
 

@@ -4,9 +4,10 @@ import (
 	dbbill "playcards/model/bill/db"
 	enumbill "playcards/model/bill/enum"
 	mdbill "playcards/model/bill/mod"
+	config "playcards/model/config"
 	"playcards/utils/db"
 	"strconv"
-
+	enumconf "playcards/model/config/enum"
 	"github.com/jinzhu/gorm"
 )
 
@@ -82,4 +83,38 @@ func GainBalanceType(uid int32, aid int64, balance *mdbill.Balance, balanceType 
 		return nil, err
 	}
 	return b, nil
+}
+
+func GainBalanceCondition(uid int32, channel string, version string, mobileOs string, aid string, balance *mdbill.Balance, balanceType int32) (
+	*mdbill.UserBalance, error) {
+	rate := CheckConfigCondition(channel, version, mobileOs)
+	balance.Diamond = int64(rate * float64(balance.Diamond))
+	f := func(tx *gorm.DB) error {
+		err := dbbill.GainBalance(tx, uid, balance, balanceType,
+			aid, enumbill.SystemOpUserID, enumbill.DefaultChannel)
+		if err != nil {
+			return err
+		}
+		return nil
+	}
+	if err := db.Transaction(f); err != nil {
+		return nil, err
+	}
+	b, err := dbbill.GetUserBalance(db.DB(), uid)
+	if err != nil {
+		return nil, err
+	}
+	return b, nil
+}
+
+func CheckConfigCondition(channel string, version string, mobileOs string) float64 {
+	rate := 1.00
+	cm :=config.GetConfigs(channel, version, mobileOs)
+	for itemID,co :=range cm{
+		if itemID == enumconf.ConsumeOpen{
+			value, _ := strconv.Atoi(co.ItemValue)
+			rate = float64(value) / 100
+		}
+	}
+	return rate
 }

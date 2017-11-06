@@ -2,12 +2,13 @@ CREATE TABLE `users` (
   `user_id`         INT          NOT NULL AUTO_INCREMENT,
   `username`        VARCHAR(64)  NOT NULL,
   `password`        VARCHAR(64)  NOT NULL,
-  `nickname`        VARCHAR(64)           DEFAULT NULL,
+  `nickname`        VARCHAR(64)  NOT NULL,
   `mobile`          VARCHAR(16)           DEFAULT NULL,
   `email`           VARCHAR(128) NOT NULL,
   `avatar`          VARCHAR(128)          DEFAULT NULL,
   `status`          INT          NOT NULL DEFAULT '0',
   `channel`         VARCHAR(64)           DEFAULT NULL,
+  `version`         VARCHAR(64)           DEFAULT NULL,
   `login_type`      INT                   DEFAULT NULL,
   `created_at`      DATETIME     NOT NULL,
   `updated_at`      DATETIME     NOT NULL,
@@ -33,6 +34,8 @@ CREATE TABLE `users` (
   ENGINE = InnoDB
   AUTO_INCREMENT = 100000
   DEFAULT CHARSET = utf8;
+
+insert into users values(0,"admin@xnhd","67bad3e758b4d324381586f209fee08bca0701396a606f12029425f31cd29ce8","YWRtaW5AeG5oZA==","","","",0,"","",0,now(),now(),now(),131071,1,"",0,"","","","","","","","");
 
 CREATE TABLE `balances` (
   `user_id`                INT      NOT NULL,
@@ -80,23 +83,6 @@ CREATE TABLE `deposits` (
   `created_at` DATETIME NOT NULL,
   `type`       INT      NOT NULL,
   PRIMARY KEY (`id`),
-  KEY `created_at_index` (`created_at`)
-)
-  ENGINE = InnoDB
-  DEFAULT CHARSET = utf8;
-
-
-CREATE TABLE `configs` (
-  `id`          INT          NOT NULL,
-  `name`        VARCHAR(64)  NOT NULL,
-  `description` VARCHAR(128) NOT NULL,
-  `value`       VARCHAR(512) NOT NULL,
-  `status`      INT          NOT NULL,
-  `system`      VARCHAR(20)  NOT NULL,
-  `created_at`  DATETIME     NOT NULL,
-  `updated_at`  DATETIME     NOT NULL,
-  PRIMARY KEY (`id`),
-  UNIQUE KEY `name_unique` (`name`),
   KEY `created_at_index` (`created_at`)
 )
   ENGINE = InnoDB
@@ -264,18 +250,18 @@ CREATE TABLE `niunius` (
   AUTO_INCREMENT = 1
   DEFAULT CHARSET = utf8;
 
-CREATE TABLE `config_open` (
-  `open_id`           INT           NOT NULL AUTO_INCREMENT,
+CREATE TABLE `configs` (
+  `config_id`         INT           NOT NULL AUTO_INCREMENT,
   `channel`           VARCHAR(20)   DEFAULT NULL,
   `version`           VARCHAR(20)   DEFAULT NULL,
   `mobile_os`         VARCHAR(20)   DEFAULT NULL,
   `item_id`           INT           DEFAULT NULL,
   `item_value`        VARCHAR(20)   DEFAULT NULL,
-  `status`            INT           NOT NULL DEFAULT '0',
+  `status`            INT           NOT NULL DEFAULT '1',
   `description`       VARCHAR(200)  DEFAULT NULL,
   `created_at`        DATETIME      NOT NULL,
   `updated_at`        DATETIME      NOT NULL,
-  PRIMARY KEY (`open_id`),
+  PRIMARY KEY (`config_id`),
   KEY `idx_channel` (`channel`),
   KEY `idx_version` (`version`),
   KEY `idx_os` (`mobile_os`),
@@ -285,3 +271,6 @@ CREATE TABLE `config_open` (
   ENGINE = InnoDB
   AUTO_INCREMENT = 1
   DEFAULT CHARSET = utf8;
+
+insert into configs values(0,"","","",100001,"1",1,"全局默认充值开关",now(),now());
+insert into configs values(0,"","","",110001,"100",1,"全局默认消费开关",now(),now());

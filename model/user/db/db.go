@@ -49,6 +49,8 @@ func UpdateUser(tx *gorm.DB, u *mdu.User) (*mdu.User, error) {
 		Nickname:     u.Nickname,
 		Email:        u.Email,
 		Rights:       u.Rights,
+		MobileOs:     u.MobileOs,
+		Version:      u.Version,
 		Mobile:       u.Mobile,
 		Icon:         u.Icon,
 		InviteUserID: u.InviteUserID,
@@ -145,7 +147,7 @@ func GetInvitedUserCount(tx *gorm.DB, uid int32) ([]mdu.User, error) {
 }
 
 func FindAndGetUser(tx *gorm.DB, u *mdu.User) (*mdu.User, error) {
-	fmt.Printf("WXLogin:%v", u)
+	//fmt.Printf("WXLogin:%v", u)
 	found, err := db.FoundRecord(tx.Where("open_id = ?", u.OpenID).Find(&u).Error)
 	if err != nil {
 		return nil, errors.Internal("get user failed ", err)
@@ -153,5 +155,6 @@ func FindAndGetUser(tx *gorm.DB, u *mdu.User) (*mdu.User, error) {
 	if !found {
 		return nil, nil
 	}
+	fmt.Printf("FindAndGetUser UserInfo:%s|%s|%s\n",u.MobileOs,u.Version,u.Channel)
 	return u, nil
 }

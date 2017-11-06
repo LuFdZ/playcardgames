@@ -32,6 +32,7 @@ message User {
     string UnionID = 25;
     int64  Diamond = 26;
     int64  InviteNumber = 27;
+    string Version = 28;
 }
 
 message RegisterReply {
@@ -102,6 +103,7 @@ message WXLoginRequest{
     string MobileOs     = 5;
     string OpenID = 7;
     string Mobile = 8;
+    string Version = 9;
 }
 
 message WXLoginRsply{

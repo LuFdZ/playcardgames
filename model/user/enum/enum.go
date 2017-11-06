@@ -4,6 +4,7 @@ const (
 	ErrUID          = -1
 	Salt            = "mChkzskxqc7biVQtLvPjyQkha4c"
 	RegisterBalance = 1000
+	NewUserDiamond  = 5000 //100
 )
 
 const (

@@ -6,52 +6,44 @@ import (
 	cachec "playcards/model/config/cache"
 	enumc "playcards/model/config/enum"
 	mdpage "playcards/model/page"
+	"playcards/utils/errors"
 	"playcards/utils/db"
 	"github.com/jinzhu/gorm"
 )
 
-func UpdateConfig(c *mdconf.Config) error {
-	return dbconf.UpdateConfig(db.DB(), c)
-}
-
-func ConfigList() ([]*mdconf.Config, error) {
-	return dbconf.ConfigList(db.DB())
-}
-
-func GetConfigByID(cid int32) (*mdconf.Config, error) {
-	return dbconf.GetConfigByID(db.DB(), cid)
-}
-
-func UpdateConfigOpen(co *mdconf.ConfigOpen) error {
+func UpdateConfig(co *mdconf.Config) error {
+	if co.ConfigID <1{
+		return errors.Conflict(70001, "未找到数据ID！")
+	}
 	return db.Transaction(func(tx *gorm.DB) error {
-		co, err := dbconf.UpdateConfigOpen(db.DB(), co)
+		_, err := dbconf.UpdateConfig(db.DB(), co)
 		if err != nil {
 			return err
 		}
-		err = cachec.SetConfigOpen(co)
-		if err != nil {
-			return err
-		}
+		//err = cachec.SetConfig(co)
+		//if err != nil {
+		//	return err
+		//}
 		return nil
 	})
 }
 
-func CreateConfigOpen(co *mdconf.ConfigOpen) error {
+func CreateConfig(co *mdconf.Config) error {
 	return db.Transaction(func(tx *gorm.DB) error {
-		co, err := dbconf.CreateConfigOpen(tx, co)
+		_, err := dbconf.CreateConfig(tx, co)
 		if err != nil {
 			return err
 		}
-		err = cachec.SetConfigOpen(co)
-		if err != nil {
-			return err
-		}
+		//err = cachec.SetConfig(co)
+		//if err != nil {
+		//	return err
+		//}
 		return nil
 	})
 }
 
-func GetConfigOpens(channel string,version string,mobileOs string) ([]*mdconf.ConfigOpen){
-	f := func(co *mdconf.ConfigOpen) bool {
+func GetConfigs(channel string,version string,mobileOs string) map[int32]*mdconf.Config{
+	f := func(co *mdconf.Config) bool {
 		if co.Status == enumc.ConfigOpenStatusAble &&
 			(co.Channel == channel || len(co.Channel) == 0) &&
 			(co.Version == version || len(co.Version) == 0) &&
@@ -60,18 +52,28 @@ func GetConfigOpens(channel string,version string,mobileOs string) ([]*mdconf.Co
 		}
 		return false
 	}
-	return cachec.GetAllConfigOpen(f)
+	return cachec.GetAllConfig(f)
 }
 
-func RefreshAllConfigOpensFromDB() error{
-	cos,err :=dbconf.GetConfigOpens(db.DB())
+func GetUniqueConfigByItemID(channel string,version string,mobileOs string) []*mdconf.Config {
+	cm := GetConfigs(channel,version,mobileOs)
+	var cos []*mdconf.Config
+	for _,co :=range cm{
+		cos = append(cos,co)
+	}
+	return cos
+}
+
+func RefreshAllConfigsFromDB() error{
+	cos,err :=dbconf.GetConfigs(db.DB())
 	if err != nil {
 		return err
 	}
-	return cachec.SetConfigOpens(cos)
+	return cachec.SetConfigs(cos)
 }
 
-func PageConfigOpens(page *mdpage.PageOption, n *mdconf.ConfigOpen) (
-	[]*mdconf.ConfigOpen, int64, error) {
-	return dbconf.PageConfigOpens(db.DB(), page, n)
+func PageConfigs(page *mdpage.PageOption, c *mdconf.Config) (
+	[]*mdconf.Config, int64, error) {
+	return dbconf.PageConfigs(db.DB(), page, c)
 }
+

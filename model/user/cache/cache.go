@@ -97,7 +97,7 @@ func GetUser(token string) (*mdu.User, error) {
 	if err := json.Unmarshal(val, user); err != nil {
 		return nil, errors.Internal("get user failed", err)
 	}
-
+	//user.EncodNickName()
 	return user, nil
 }
 
@@ -108,7 +108,7 @@ func SetUser(u *mdu.User) (string, error) {
 
 func UpdateUser(token string, u *mdu.User) error {
 	key := UserHKey(u.UserID)
-
+	//u.EncodNickName()
 	f := func(tx *redis.Tx) error {
 		orig, _ := tx.HGet(key, "token").Bytes()
 		tx.Pipelined(func(p *redis.Pipeline) error {

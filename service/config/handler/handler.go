@@ -12,106 +12,75 @@ import (
 )
 
 type ConfigSrv struct {
+
 }
 
-func (cs *ConfigSrv) UpdateConfig(ctx context.Context,
-	req *pbconf.Config, rsp *pbconf.Config) error {
-
-	conf := mdconf.ConfigFromProto(req)
-	err := config.UpdateConfig(conf)
-	if err != nil {
-		return err
-	}
-
-	*rsp = *conf.ToProto()
-
-	return nil
+func NewHandler() *ConfigSrv {
+	cs := &ConfigSrv{}
+	cs.Init()
+	return cs
 }
-
-func (cs *ConfigSrv) ConfigList(ctx context.Context,
-	req *pbconf.ConfigListRequest, rsp *pbconf.ConfigListReply) error {
-
-	rs, err := config.ConfigList()
-	if err != nil {
-		return err
-	}
-
-	err = utilproto.ProtoSlice(rs, &rsp.List)
-	if err != nil {
-		return err
-	}
-
-	return nil
+func (cs *ConfigSrv) Init() {
+	config.RefreshAllConfigsFromDB()
 }
+func (cs *ConfigSrv) CreateConfig(ctx context.Context,
+	req *pbconf.Config, rsp *pbconf.ConfigReply) error {
 
-func (cs *ConfigSrv) GetConfigByID(ctx context.Context,
-	req *pbconf.GetConfigByIDRequest, rsp *pbconf.Config) error {
-	rs, err := config.GetConfigByID(req.ID)
-	if err != nil {
-		return err
-	}
-	*rsp = *rs.ToProto()
-	return nil
-}
-
-func (cs *ConfigSrv) CreateConfigOpen(ctx context.Context,
-	req *pbconf.ConfigOpen, rsp *pbconf.ConfigReply) error {
-
-	co := mdconf.ConfigOpenFromProto(req)
-	err := config.CreateConfigOpen(co)
+	co := mdconf.ConfigFromProto(req)
+	err := config.CreateConfig(co)
 	if err != nil {
 		return err
 	}
 
-	rsp = &pbconf.ConfigReply{
-		Result: co.OpenID,
-	}
-	return nil
-}
-
-func (cs *ConfigSrv) UpdateConfigOpen(ctx context.Context,
-	req *pbconf.ConfigOpen, rsp *pbconf.ConfigReply) error {
-
-	co := mdconf.ConfigOpenFromProto(req)
-	err := config.UpdateConfigOpen(co)
-	if err != nil {
-		return err
-	}
-
-	rsp = &pbconf.ConfigReply{
+	*rsp = pbconf.ConfigReply{
 		Result: 1,
 	}
 	return nil
 }
 
-func (cs *ConfigSrv) GetConfigOpens(ctx context.Context,
-	req *pbconf.GetConfigOpensRequest, rsp *pbconf.GetConfigOpensReply) error {
+func (cs *ConfigSrv) UpdateConfig(ctx context.Context,
+	req *pbconf.Config, rsp *pbconf.ConfigReply) error {
+
+	co := mdconf.ConfigFromProto(req)
+	err := config.UpdateConfig(co)
+	if err != nil {
+		return err
+	}
+
+	*rsp = pbconf.ConfigReply{
+		Result: 1,
+	}
+	return nil
+}
+
+func (cs *ConfigSrv) GetConfigs(ctx context.Context,
+	req *pbconf.Config, rsp *pbconf.GetConfigsReply) error {
 	u := gctx.GetUser(ctx)
-	cos := config.GetConfigOpens(u.Channel,req.Version,u.MobileOs)
-	reply := &pbconf.GetConfigOpensReply{}
+	cos := config.GetUniqueConfigByItemID(u.Channel,u.Version,u.MobileOs)
+	reply := &pbconf.GetConfigsReply{}
 	utilproto.ProtoSlice(reply.List, &cos)
 	*rsp = *reply
 	return nil
 }
 
-func (cs *ConfigSrv) RefreshAllConfigOpensFromDB(ctx context.Context,
-	req *pbconf.ConfigOpen, rsp *pbconf.ConfigReply) error {
-	err := config.RefreshAllConfigOpensFromDB()
+func (cs *ConfigSrv) RefreshAllConfigsFromDB(ctx context.Context,
+	req *pbconf.Config, rsp *pbconf.ConfigReply) error {
+	err := config.RefreshAllConfigsFromDB()
 	if err != nil {
 		return err
 	}
-	rsp = &pbconf.ConfigReply{
+	*rsp = pbconf.ConfigReply{
 		Result: 1,
 	}
 	return nil
 }
 
-func (rs *ConfigSrv) PageConfigOpens(ctx context.Context,
-	req *pbconf.PageConfigOpensRequest, rsp *pbconf.PageNoticeListReply) error {
+func (rs *ConfigSrv) PageConfigs(ctx context.Context,
+	req *pbconf.PageConfigsRequest, rsp *pbconf.PageConfigListReply) error {
 	page := mdpage.PageOptionFromProto(req.Page)
 	rsp.Result = 2
-	l, rows, err := config.PageConfigOpens(page,
-		mdconf.ConfigOpenFromProto(req.ConfigOpen))
+	l, rows, err := config.PageConfigs(page,
+		mdconf.ConfigFromProto(req.Config))
 	if err != nil {
 		return err
 	}

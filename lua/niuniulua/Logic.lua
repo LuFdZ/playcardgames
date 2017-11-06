@@ -11,9 +11,9 @@ local global_win5 = {1, 1, 1,  1,  1,  1,  1,  2,  3,  4,  5,  5,     5,   5}
 local global_win10= {1, 1, 2,  3,  4,  5,  6,  7,  8,  9, 10, 10,     10, 10}
 
 
-function Logic:new()
+function Logic:new(s)
     self = {}
-    math.randomseed(os.time())
+    math.randomseed(s)
     setmetatable(self, Logic)
 
     self:ReSet()

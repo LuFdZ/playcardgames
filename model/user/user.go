@@ -19,7 +19,7 @@ import (
 	mdu "playcards/model/user/mod"
 	"playcards/utils/auth"
 	"playcards/utils/db"
-	"playcards/utils/errors"
+	//"playcards/utils/errors"
 	"playcards/utils/log"
 
 	"github.com/asaskevich/govalidator"
@@ -56,7 +56,7 @@ func Register(u *mdu.User) (int32, error) {
 
 		b := &mdbill.Balance{
 			Gold:    0,
-			Diamond: 100,
+			Diamond: enum.NewUserDiamond,
 			Amount:  enum.RegisterBalance,
 		}
 		err = dbbill.CreateBalance(tx, uid, b)
@@ -93,16 +93,22 @@ func Login(u *mdu.User, address string) (*mdu.User, error) {
 			return err
 		}
 
-		err = tx.Model(nu).UpdateColumn("last_login_at", gorm.NowFunc()).Error
+		//err = tx.Model(nu).UpdateColumn("last_login_at", gorm.NowFunc()).Error
+		//if err != nil {
+		//	return errors.Internal("login failed", err)
+		//}
+		//
+		//err = tx.Model(nu).UpdateColumn("last_login_ip", address).Error
+		//if err != nil {
+		//	return errors.Internal("login failed", err)
+		//}
+		now :=gorm.NowFunc()
+		nu.LastLoginAt = &now
+		nu.LastLoginIP = address
+		_,err :=UpdateUser(nu);
 		if err != nil {
-			return errors.Internal("login failed", err)
+			return err
 		}
-
-		err = tx.Model(nu).UpdateColumn("last_login_ip", address).Error
-		if err != nil {
-			return errors.Internal("login failed", err)
-		}
-
 		balance, _ := dbbill.GetUserBalance(tx, nu.UserID)
 		nu.Diamond = balance.Diamond
 
@@ -244,6 +250,7 @@ func GetWXUserInfo(token string, openID string) (*mdu.UserInfoResponse, error) {
 		//return nil, errors.BadRequest(1009, msg)
 		return nil, erru.ErrWXLoginParam
 	}
+	user.Nickname = mdu.EncodNickName(user.Nickname)
 	return user, nil
 }
 
@@ -265,7 +272,7 @@ func GetAndCheckWXToken(openid string) (*mdu.AccessTokenResponse, error) {
 
 //GetRefreshToken
 func WXLogin(u *mdu.User, code string, address string) (int32, *mdu.User, error) {
-
+	fmt.Printf("AAAAWXLogin UserInfo:%s|%s|%s\n",u.MobileOs,u.Version,u.Channel)
 	if u.OpenID == "" && code == "" {
 		return enum.ResultStatusFail, nil, erru.ErrWXLoginParam
 	}
@@ -295,27 +302,34 @@ func WXLogin(u *mdu.User, code string, address string) (int32, *mdu.User, error)
 	if err != nil {
 		return enum.ResultStatusSuccess, nil, err
 	}
-
-	u, err = dbu.FindAndGetUser(db.DB(), u)
+	newUser, err := dbu.FindAndGetUser(db.DB(), u)
 
 	if err != nil {
 		return enum.ResultStatusFail, nil, err
 	}
 
-	if u == nil {
-		u = &mdu.User{}
-		u.LastLoginIP = address
-		u, err = CreateUserByWX(u, atr)
+	if newUser == nil {
+		newUser = &mdu.User{}
+		newUser.LastLoginIP = address
+		newUser.Channel = u.Channel
+		newUser.Version = u.Version
+		newUser.MobileOs = u.MobileOs
+		newUser.RegIP = address
+		newUser.OpenID = u.OpenID
+		newUser.UnionID = u.UnionID
+		u, err = CreateUserByWX(newUser, atr)
 		if err != nil {
 			return enum.ResultStatusFail, nil, err
 		}
 	} else {
-		u, err = UpdateUserFromWX(u, atr)
+		newUser.MobileOs = u.MobileOs
+		newUser.Version = u.Version
+		newUser.LastLoginIP = address
+		u, err = UpdateUserFromWX(newUser, atr)
 		if err != nil {
 			return enum.ResultStatusFail, nil, err
 		}
 	}
-
 	now := gorm.NowFunc()
 	u.LastLoginAt = &now
 	u, err = UpdateUser(u)
@@ -341,7 +355,7 @@ func CreateUserByWX(u *mdu.User, atr *mdu.AccessTokenResponse) (*mdu.User, error
 		}
 		b := &mdbill.Balance{
 			Gold:    0,
-			Diamond: 100,
+			Diamond: enum.NewUserDiamond,
 			Amount:  enum.RegisterBalance,
 		}
 		err = dbbill.CreateBalance(tx, uid, b)
@@ -355,6 +369,7 @@ func CreateUserByWX(u *mdu.User, atr *mdu.AccessTokenResponse) (*mdu.User, error
 	if err != nil {
 		return nil, err
 	}
+	//u.EncodNickName()
 	return u, nil
 }
 

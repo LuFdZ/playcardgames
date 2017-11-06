@@ -11,14 +11,13 @@ CardValueData = {"2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K", "A
 --牌的值
 CardValue = {}
 
-function Logic:new()
+function Logic:new(s)
     self = {}
-    math.randomseed(os.time())
+    math.randomseed(s)
     setmetatable(self, Logic)
     --创建牌组型枚举
     GroupType = CreateEnumTable(GroupTypeName, -1)
     --dump(GroupType)
-
     --创建牌型枚举
     CardValue = CreateEnumTable(CardValueData, 1)
     self:ReSet()

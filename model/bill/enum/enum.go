@@ -4,12 +4,14 @@ const (
 	JournalTypeInitBalance = iota + 1
 	JournalTypeDeposito
 	JournalTypeDash
-	JournalTypeRoom
 	JournalTypeGive
 	JournalTypeRecharge
 	JournalTypeInvite
 	JournalTypeInvited
-	JournalTypeShate
+	JournalTypeShare
+	JournalTypeRoom
+	JournalTypeThirteen
+	JournalTypeNiuniu
 )
 
 const (

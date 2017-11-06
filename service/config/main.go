@@ -13,14 +13,11 @@ import (
 )
 
 var FuncRights = map[string]int32{
-	"ConfigSrv.UpdateConfig":  auth.RightsConfigEdit,
-	"ConfigSrv.ConfigList":    auth.RightsConfigEdit,
-	"ConfigSrv.GetConfigByID": auth.RightsConfigEdit,
-	"ConfigSrv.UpdateConfigOpen": auth.RightsConfigEdit,
-	"ConfigSrv.CreateConfigOpen": auth.RightsConfigEdit,
-	"ConfigSrv.GetConfigOpens": auth.RightsPlayer,
-	"ConfigSrv.PageConfigOpens": auth.RightsConfigEdit,
-	"ConfigSrv.RefreshAllConfigOpensFromDB": auth.RightsConfigEdit,
+	"ConfigSrv.UpdateConfig": auth.RightsConfigEdit,
+	"ConfigSrv.CreateConfig": auth.RightsConfigEdit,
+	"ConfigSrv.GetConfigs": auth.RightsPlayer,
+	"ConfigSrv.PageConfigs": auth.RightsConfigEdit,
+	"ConfigSrv.RefreshAllConfigsFromDB": auth.RightsConfigEdit,
 }
 
 func main() {
@@ -39,7 +36,8 @@ func main() {
 	service.Init()
 
 	server := service.Server()
-	server.Handle(server.NewHandler(&handler.ConfigSrv{}))
+	h := handler.NewHandler()
+	server.Handle(server.NewHandler(h))
 
 	err := service.Run()
 	env.ErrExit(err)

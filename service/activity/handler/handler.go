@@ -90,6 +90,7 @@ func (*ActivitySrv) Share(ctx context.Context, req *pba.ShareRequest,
 		Result:  1,
 		Diamond: diamond,
 	}
+	fmt.Printf("AAAAAAAShare:%v",rsp)
 	return nil
 }
 

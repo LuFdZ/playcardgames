@@ -85,7 +85,7 @@ message UserState {
 }
 
 message RenewalRoomReady {
-    //int32 RoomID = 1;
+    int32 RoomID = 1;
     string Password = 2;
     int32 Status    =3;
     repeated int32 Ids = 4;

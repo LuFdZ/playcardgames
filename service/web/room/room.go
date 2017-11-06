@@ -12,7 +12,6 @@ import (
 	"github.com/micro/go-micro/broker"
 	"github.com/micro/go-micro/client"
 	"github.com/micro/protobuf/proto"
-	//"fmt"
 )
 
 var rpc pbroom.RoomSrvClient
@@ -250,7 +249,6 @@ func RoomExistHandler(p broker.Publication) error {
 	if err != nil {
 		return err
 	}
-	//fmt.Printf("AAAAAAA:%d",rs.UserID)
 	err = clients.SendTo(rs.UserID, t, enum.MsgRoomExist, rs)
 	if err != nil {
 		return err

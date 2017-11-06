@@ -36,7 +36,7 @@ func (gt *GlobalTimer) Register(lock string, timeout time.Duration,
 				log.Info("%s loop stopped", lock)
 				return
 			case <-time.After(timeout):
-				err := GlobalTransaction(lock, f)
+				err := GlobalTransactionNoLog(lock, f)
 				if err != nil {
 					log.Err("%s failed: %v", lock, err)
 				}
@@ -53,6 +53,22 @@ func (gt *GlobalTimer) Stop() {
 
 func Init() {
 	global = consul.NewSync()
+}
+
+func GlobalTransactionNoLog(lock string, f func() error) error {
+	l, err := global.Lock(lock)
+	if err != nil {
+		return err
+	}
+
+	if err := l.Acquire(); err != nil {
+		return err
+	}
+
+	defer func() {
+		l.Release()
+	}()
+	return f()
 }
 
 func GlobalTransaction(lock string, f func() error) error {

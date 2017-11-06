@@ -5,12 +5,16 @@ import (
 	mdn "playcards/model/notice/mod"
 	mdpage "playcards/model/page"
 	"playcards/utils/db"
+	"playcards/utils/errors"
 )
 
 func CreateNotice(n *mdn.Notice) (*mdn.Notice, error) {
 	return dbn.CreateNotice(db.DB(), n)
 }
 func UpdateNotice(n *mdn.Notice) (*mdn.Notice, error) {
+	if n.NoticeID <1{
+		return nil,errors.Conflict(80001, "未找到数据ID！")
+	}
 	return dbn.UpdateNotice(db.DB(), n)
 }
 

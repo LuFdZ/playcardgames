@@ -4,72 +4,43 @@ import "playcards/proto/page/page.proto";
 package config;
 
 message Config {
-    int32 ID = 1;
-    string Name = 2;
-    string Description = 3;
-    string Value = 4;
-    int64 CreatedAt = 10;
-    int64 UpdatedAt = 11;
-}
-
-
-message ConfigOpen {
-    int32 OpenID = 1;
+    int32 ConfigID = 1;
     string Channel = 2;
     string Version = 3;
     string MobileOs = 4;
     int32 ItemID = 5;
     string ItemValue = 6;
-    string Value = 7;
-    int32 Status = 8;
-    string Description = 9;
-    int64 CreatedAt = 10;
-    int64 UpdatedAt = 11;
+    int32 Status = 7;
+    string Description = 8;
+    int64 CreatedAt = 9;
+    int64 UpdatedAt = 10;
 }
 
-message ConfigListRequest {
+
+message ConfigReply{
+    int32 Result = 1;
 }
 
-message ConfigListReply {
+message GetConfigsReply{
     repeated Config List = 1;
 }
 
-message GetConfigByIDRequest {
-    int32 ID = 1;
-}
-
-message GetConfigOpensRequest{
-    string Version = 1;
-}
-
-message ConfigReply{
-    int32 result = 1;
-}
-
-message GetConfigOpensReply{
-    repeated ConfigOpen List = 1;
-}
-
-message PageConfigOpensRequest{
+message PageConfigsRequest{
     page.PageOption Page = 1;
-    ConfigOpen ConfigOpen = 2;
-    int64 Count = 3;
+    Config Config = 2;
 }
 
-message PageNoticeListReply {
+message PageConfigListReply {
     int32 Result = 1;
-    repeated ConfigOpen List = 2;
+    repeated Config List = 2;
     int64 Count = 3;
 }
 
 
 service ConfigSrv {
-    rpc UpdateConfig (Config) returns (Config) {}
-    rpc ConfigList (ConfigListRequest) returns (ConfigListReply){} 
-    rpc GetConfigByID (GetConfigByIDRequest) returns (Config) {}
-    rpc CreateConfigOpen (ConfigOpen) returns (ConfigReply) {}
-    rpc UpdateConfigOpen (ConfigOpen) returns (ConfigReply) {}
-    rpc GetConfigOpens (ConfigOpen) returns (GetConfigOpensReply) {}
-    rpc PageConfigOpens (PageConfigOpensRequest) returns (PageNoticeListReply) {}
-    rpc RefreshAllConfigOpensFromDB (ConfigOpen) returns (ConfigReply) {}
+    rpc CreateConfig (Config) returns (ConfigReply) {}
+    rpc UpdateConfig (Config) returns (ConfigReply) {}
+    rpc GetConfigs (Config) returns (GetConfigsReply) {}
+    rpc PageConfigs (PageConfigsRequest) returns (PageConfigListReply) {}
+    rpc RefreshAllConfigsFromDB (Config) returns (ConfigReply) {}
 }

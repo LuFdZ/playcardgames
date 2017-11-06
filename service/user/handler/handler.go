@@ -1,7 +1,7 @@
 package handler
 
 import (
-	"fmt"
+	//"fmt"
 	mdpage "playcards/model/page"
 	"playcards/model/user"
 	cacheuser "playcards/model/user/cache"
@@ -10,8 +10,10 @@ import (
 	"playcards/utils/auth"
 	"playcards/utils/log"
 	utilpb "playcards/utils/proto"
-
 	"golang.org/x/net/context"
+	//"fmt"
+	"strings"
+	"fmt"
 )
 
 type UserSrv struct {
@@ -157,27 +159,25 @@ func (us *UserSrv) CheckUser(ctx context.Context, req *pbu.CheckUserRequest,
 
 func (us *UserSrv) WXLogin(ctx context.Context, req *pbu.WXLoginRequest,
 	rsp *pbu.WXLoginRsply) error {
-	address, _ := ctx.Value("X-Real-Ip").(string)
+	forwarded :=ctx.Value("X-Forwarded-For")
+	address := ""
+	if  forwarded !=nil{
+		addresslist, _ := forwarded.(string)//ctx.Value("X-Real-Ip").(string)
+		list := strings.Split(addresslist, ",")
+		address = list[0]
+	}
 	_, u, err := user.WXLogin(mdu.UserFromWXLoginRequestProto(req), req.Code, address)
 	if err != nil {
-		fmt.Printf("BBB WXLoginErr:%v", err)
 		return err
 	}
-	// resply := &pbu.WXLoginRsply{
-	// 	Result:   result,
-	// 	UserInfo: u.ToProto(),
-	// }
-	//*rsp = *resply
 	token, err := cacheuser.SetUser(u)
 	if err != nil {
 		log.Err("user login set session failed, %v", err)
 		return err
 	}
-	//fmt.Printf("DDD Create User ByWX:%v", u)
 	rsp.Token = token
-	//*rsp.UserInfo = *u.ToProto()
 	log.Debug("login: %v|%s", u,address)
-	// room.AutoSubscribe(u.UserID)
 	rsp.User = u.ToProto()
+	fmt.Printf("WXLogin:%v\n",rsp.User)
 	return nil
 }

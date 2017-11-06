@@ -54,7 +54,10 @@ func (w *Web) Subscribe(ws *websocket.Conn) {
 		log.Err("websocket login failed: %v token: %v", err, token)
 		return
 	}
-
+	if u == nil{
+		log.Err("websocket get user null: %v", string(msg))
+		return
+	}
 	c := clients.NewClient(token, u, ws)
 	webroom.SubscribeRoomMessage(c,nil)
 	webbill.SubscribeBillMessage(c,nil)

@@ -7,7 +7,8 @@ import (
 	pbr "playcards/proto/room"
 	utilproto "playcards/utils/proto"
 	"time"
-
+	"encoding/base64"
+	"playcards/utils/log"
 	"github.com/jinzhu/gorm"
 )
 
@@ -146,7 +147,7 @@ func (r *Room) ToProto() *pbr.Room {
 func (r *RoomUser) ToProto() *pbr.RoomUser {
 	return &pbr.RoomUser{
 		UserID:   r.UserID,
-		Nickname: r.Nickname,
+		Nickname: r.Nickname,//DecodNickName(r.Nickname),
 		Ready:    r.Ready,
 		Position: r.Position,
 		Icon:     r.Icon,
@@ -171,7 +172,7 @@ func (r *RoomResults) ToProto() *pbr.RoomResults {
 func (ur *GameUserResult) ToProto() *pbr.GameUserResult {
 	return &pbr.GameUserResult{
 		UserID:        ur.UserID,
-		Nickname:      ur.Nickname,
+		Nickname:      ur.Nickname,//DecodNickName(ur.Nickname),
 		Win:           ur.Win,
 		Lost:          ur.Lost,
 		Tie:           ur.Tie,
@@ -314,4 +315,14 @@ func FeedbackFromProto(fb *pbr.Feedback) *Feedback {
 		CreatedAt:     mdtime.TimeFromProto(fb.CreatedAt),
 		UpdatedAt:     mdtime.TimeFromProto(fb.UpdatedAt),
 	}
+}
+
+
+func DecodNickName(nikename string) string {
+	uDec, err := base64.StdEncoding.DecodeString(nikename)
+	if err != nil {
+		log.Err("EncodNickName nickname:%s,err:%v",nikename,err)
+	}
+	//nikename = string(uDec)
+	return string(uDec)
 }

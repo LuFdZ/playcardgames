@@ -14,7 +14,7 @@ const (
 	RoomDelayMinutes       = 15.0
 	RoomCodeMax            = 999999
 	RoomCodeMin            = 100000
-	RoomGiveupCleanMinutes = 10.0
+	RoomGiveupCleanMinutes = 5.0
 )
 
 //db config

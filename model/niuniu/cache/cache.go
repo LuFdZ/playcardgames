@@ -151,6 +151,9 @@ func GetAllNiu(f func(*mdniu.Niuniu) bool) []*mdniu.Niuniu {
 		if err != nil {
 			log.Err("redis get niuniu err: %v", err)
 		}
+		if niuniu == nil{
+			continue
+		}
 		if f != nil && !f(niuniu) {
 			continue
 		}

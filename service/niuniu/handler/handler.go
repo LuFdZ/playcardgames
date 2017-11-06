@@ -11,9 +11,10 @@ import (
 	"playcards/utils/log"
 	utilproto "playcards/utils/proto"
 	gsync "playcards/utils/sync"
+	"playcards/model/room"
 	"playcards/utils/topic"
 	"time"
-
+	"fmt"
 	"github.com/jinzhu/gorm"
 	"github.com/micro/go-micro/broker"
 	"github.com/micro/go-micro/server"
@@ -23,6 +24,11 @@ type NiuniuSrv struct {
 	server server.Server
 	broker broker.Broker
 }
+
+func RoomLockKey(pwd string) string {
+	return fmt.Sprintf("playcards.room.op.lock:%s", pwd)
+}
+
 
 func NewHandler(s server.Server, gt *gsync.GlobalTimer) *NiuniuSrv {
 	n := &NiuniuSrv{
@@ -38,8 +44,7 @@ func (ns *NiuniuSrv) Update(gt *gsync.GlobalTimer) {
 
 	f := func() error {
 		//s := time.Now()
-		log.Debug("niuniu update loop... and has %d niunius")
-
+		//log.Debug("niuniu update loop... and has %d niunius")
 		newGames := niuniu.CreateNiuniu()
 		if newGames != nil {
 			for _, game := range newGames {
@@ -150,11 +155,21 @@ func (ns *NiuniuSrv) GetBanker(ctx context.Context, req *pbniu.GetBankerRequest,
 	reply := &pbniu.DefaultReply{
 		Result: enumniu.Success,
 	}
-	_, err = niuniu.GetBanker(u.UserID, req.Key)
+	r,err :=room.GetRoomByUserID(u.UserID)
+	f := func() error {
+		err = niuniu.GetBanker(u.UserID, req.Key,r)
+		if err != nil {
+			return err
+		}
+		*rsp = *reply
+		return nil
+	}
+	lock := RoomLockKey(r.Password)
+	err = gsync.GlobalTransaction(lock, f)
 	if err != nil {
+		log.Err("%s get banker failed: %v", lock, err)
 		return err
 	}
-	*rsp = *reply
 	return nil
 }
 
@@ -168,18 +183,27 @@ func (ns *NiuniuSrv) SetBet(ctx context.Context, req *pbniu.SetBetRequest,
 	reply := &pbniu.DefaultReply{
 		Result: enumniu.Success,
 	}
-	ids, err := niuniu.SetBet(u.UserID, req.Key)
+	r,err :=room.GetRoomByUserID(u.UserID)
+	f := func()error {
+		ids, err := niuniu.SetBet(u.UserID, req.Key,r)
+		if err != nil {
+			return err
+		}
+		*rsp = *reply
+		msg := &pbniu.SetBet{
+			UserID: u.UserID,
+			Key:    req.Key,
+			Ids:ids,
+		}
+		topic.Publish(ns.broker, msg, TopicNiuniuSetBet)
+		return nil
+	}
+	lock := RoomLockKey(r.Password)
+	err = gsync.GlobalTransaction(lock, f)
 	if err != nil {
+		log.Err("%s set banker failed: %v", lock, err)
 		return err
 	}
-
-	*rsp = *reply
-	msg := &pbniu.SetBet{
-		UserID: u.UserID,
-		Key:    req.Key,
-		Ids:ids,
-	}
-	topic.Publish(ns.broker, msg, TopicNiuniuSetBet)
 	return nil
 }
 
@@ -193,16 +217,26 @@ func (ns *NiuniuSrv) SubmitCard(ctx context.Context, req *pbniu.SubmitCardReques
 	reply := &pbniu.DefaultReply{
 		Result: enumniu.Success,
 	}
-	ids, err := niuniu.SubmitCard(u.UserID)
+	r,err :=room.GetRoomByUserID(u.UserID)
+	f := func()error {
+		ids, err := niuniu.SubmitCard(u.UserID,r)
+		if err != nil {
+			return err
+		}
+		*rsp = *reply
+		msg := &pbniu.GameReady{
+			UserID: u.UserID,
+			Ids:    ids,
+		}
+		topic.Publish(ns.broker, msg, TopicNiuniuGameReady)
+		return nil
+	}
+	lock := RoomLockKey(r.Password)
+	err = gsync.GlobalTransaction(lock, f)
 	if err != nil {
+		log.Err("%s set banker failed: %v", lock, err)
 		return err
 	}
-	*rsp = *reply
-	msg := &pbniu.GameReady{
-		UserID: u.UserID,
-		Ids: ids,
-	}
-	topic.Publish(ns.broker, msg, TopicNiuniuGameReady)
 	return nil
 }
 
