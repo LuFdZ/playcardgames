@@ -22,14 +22,14 @@ func ConfigHSubKey(itemid int32, channel string, version string, mobileos string
 func UserHKeySearchList(hSubKey string) map[string]string{
 	conditionMap := make(map[string]string)
 	hSubKeys := strings.Split(hSubKey,":")
-	if len(hSubKeys[2])>0{
-		conditionMap["channel"] = hSubKeys[2]
-	}
 	if len(hSubKeys[3])>0{
-		conditionMap["version"] = hSubKeys[3]
+		conditionMap["channel"] = hSubKeys[3]
 	}
 	if len(hSubKeys[4])>0{
-		conditionMap["mobileos"] = hSubKeys[4]
+		conditionMap["version"] = hSubKeys[4]
+	}
+	if len(hSubKeys[5])>0{
+		conditionMap["mobileos"] = hSubKeys[5]
 	}
 	return conditionMap
 }
@@ -44,8 +44,9 @@ func SetConfigs(cos []*mdc.Config) error {
 		key = ConfigHKey()
 		tx.Pipelined(func(p *redis.Pipeline) error {
 			for _, co := range cos {
-				c, _ := json.Marshal(co)
 				subkey := ConfigHSubKey(co.ItemID, co.Channel, co.Version, co.MobileOs)
+				co.Hkey = subkey
+				c, _ := json.Marshal(co)
 				tx.HSet(key, subkey, string(c))
 			}
 			return nil
@@ -164,7 +165,7 @@ func GetAllConfig(f func(*mdc.Config) bool) map[int32]*mdc.Config {
 	if err != nil {
 		log.Err("redis get all room err: %v", err)
 	}
-	lastKey := ""
+
 	for _, k := range keys {
 		co, err := GetConfigByKey(k)
 		if err != nil {
@@ -177,33 +178,25 @@ func GetAllConfig(f func(*mdc.Config) bool) map[int32]*mdc.Config {
 			continue
 		}
 		if _, ok := cm[co.ItemID]; ok {
-			if len(lastKey)>0{
-				lastConditionMap := UserHKeySearchList(lastKey)
-				conditionMap := UserHKeySearchList(k)
-				if len(conditionMap) > len(lastConditionMap){
-					lastKey = k
-					cm[co.ItemID] = co
-				}else if len(conditionMap) == len(lastConditionMap){
-					if _, ok := conditionMap["channel"]; ok {
-						lastKey = k
-						cm[co.ItemID] = co
-					}else if _, ok := conditionMap["version"]; ok {
-						lastKey = k
-						cm[co.ItemID] = co
-					}else if _, ok := conditionMap["mobileos"]; ok {
-						lastKey = k
-						cm[co.ItemID] = co
-					}
-				}
-			}else{
-				lastKey = k
+			conditionNowMap := UserHKeySearchList(cm[co.ItemID].Hkey)
+			conditionCompareMap := UserHKeySearchList(co.Hkey)
+			NowMapLen := len(conditionNowMap)
+			CompareMapLen := len(conditionCompareMap)
+			if _,ok := conditionCompareMap["channel"];
+				ok && (len(cm[co.ItemID].Channel) == 0 || CompareMapLen >= NowMapLen){
+				cm[co.ItemID] = co
+			}else if _, ok := conditionCompareMap["version"];
+				ok && len(cm[co.ItemID].Channel) == 0 && (len(cm[co.ItemID].Version) == 0 ||
+					CompareMapLen >= NowMapLen){
+				cm[co.ItemID] = co
+			}else if _, ok := conditionCompareMap["mobileos"];
+				ok && len(cm[co.ItemID].Channel) == 0 && (len(cm[co.ItemID].Version) == 0 &&
+					len(cm[co.ItemID].MobileOs) == 0 || CompareMapLen >= NowMapLen){
 				cm[co.ItemID] = co
 			}
-		} else {
-			lastKey = k
+		}else{
 			cm[co.ItemID] = co
 		}
 	}
-	//fmt.Printf("GetAllConfig CONFIGS %+v",cm)
 	return cm
 }

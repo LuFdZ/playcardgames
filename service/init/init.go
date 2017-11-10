@@ -63,7 +63,7 @@ func InitPProfServices() {
 		http.Serve(ln, nil)
 	}()
 
-	opts := &agent.Options{}
+	opts := agent.Options{}
 	if err := agent.Listen(opts); err != nil {
 		log.Println("start gops agent failed", err)
 	}

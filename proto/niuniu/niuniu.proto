@@ -2,29 +2,6 @@ syntax = "proto3";
 
 package niuniu;
 
-
-//请求
-message GetBankerRequest{
-    int32 Key = 1;
-}
-
-message SetBetRequest{
-    int32 Key = 1;
-}
-
-message SubmitCardRequest {
-    
-}
-
-message GameResultListRequest {
-    int32 RoomID = 1;
-} 
-
-//回应
-message DefaultReply{
-    int32 Result = 1;
-}
-
 //结构体
 message BankerAndBet {
     string BankerScore = 1;
@@ -57,7 +34,7 @@ message GameResultListReply {
 }
 
 message NiuniuRequest{
-    int32 RoomID = 1;    
+    int32 RoomID = 1;
 }
 
 message NiuniuReply {
@@ -69,6 +46,29 @@ message GetBanker{
     int32 UserID = 1;
     int32 Key = 2;
 }
+
+//请求
+message GetBankerRequest{
+    int32 Key = 1;
+}
+
+message SetBetRequest{
+    int32 Key = 1;
+}
+
+message SubmitCardRequest {
+    
+}
+
+message GameResultListRequest {
+    int32 RoomID = 1;
+} 
+
+//回应
+message DefaultReply{
+    int32 Result = 1;
+}
+
 
 //广播
 message NiuniuGameStart {

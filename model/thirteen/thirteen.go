@@ -4,16 +4,17 @@ import (
 	"encoding/json"
 	"fmt"
 	bill "playcards/model/bill"
+	muser "playcards/model/user"
 	enumbill "playcards/model/bill/enum"
 	mdbill "playcards/model/bill/mod"
 	cacher "playcards/model/room/cache"
 	cacheuser "playcards/model/user/cache"
+	cachet "playcards/model/thirteen/cache"
 	dbr "playcards/model/room/db"
+	dbt "playcards/model/thirteen/db"
 	enumr "playcards/model/room/enum"
 	"playcards/model/room/errors"
 	mdr "playcards/model/room/mod"
-	cachet "playcards/model/thirteen/cache"
-	dbt "playcards/model/thirteen/db"
 	enumt "playcards/model/thirteen/enum"
 	errorst "playcards/model/thirteen/errors"
 	mdt "playcards/model/thirteen/mod"
@@ -143,18 +144,19 @@ func CreateThirteen() []*mdt.Thirteen {
 		f := func(tx *gorm.DB) error {
 			_, err := dbr.UpdateRoom(tx, room)
 			if err != nil {
-				log.Err("room update set session failed, %+v", err)
+				log.Err("thirten room update set session failed, roomid:%d,err:%+v",room.RoomID, err)
 				return err
 			}
 
 			err = dbt.CreateThirteen(tx, thirteen)
 			if err != nil {
+				log.Err("thirteen create set session failed,roomid:%d, err:%+v", room.RoomID,err)
 				return err
 			}
 
 			err = cacher.UpdateRoom(room)
 			if err != nil {
-				log.Err("room update set session failed, %+v", err)
+				log.Err("room update set session failed,roomid:%d,err: %+v", room.RoomID,err)
 				return err
 			}
 
@@ -177,11 +179,13 @@ func CreateThirteen() []*mdt.Thirteen {
 				diamond := -int64(room.MaxNumber * room.RoundNumber * enumr.ThirteenGameCost)
 
 				_,u :=cacheuser.GetUserByID(room.PayerID)
-				_,err := bill.GainBalanceCondition(room.PayerID,u.Channel,u.Version,u.MobileOs,billForeignKey,
-					&mdbill.Balance{0, 0, diamond},enumbill.JournalTypeThirteen)
+				err = muser.SetUserLockBalance(room.PayerID,enumbill.TypeDiamond,-diamond,room.RoomID)
 				if err != nil {
+					log.Err("room create set lock balance redis failed,%v | %v\n", room, err)
 					return err
 				}
+				_,err := bill.GainBalanceCondition(room.PayerID,u.Channel,u.Version,u.MobileOs,billForeignKey,
+					&mdbill.Balance{0, 0, diamond},enumbill.JournalTypeThirteen)
 				if err != nil {
 					return err
 				}
@@ -530,8 +534,22 @@ func CleanGame() error {
 		if game != nil {
 			gids = append(gids, game.GameID)
 			err = cachet.DeleteGame(rid)
+			//log.Debug("clean thirteen game:%d|%d|%+v\n",game.GameID,game.RoomID,game.Ids)
 			if err != nil {
 				log.Err(" delete thirteen set session failed, %v", err)
+				continue
+			}
+			err = cacher.CleanDeleteRoom(enumt.GameID,game.RoomID)
+			if err != nil {
+				log.Err(" delete thirteen delete room session failed,roomid:%d,err: %v",game.RoomID,
+					err)
+				continue
+			}
+		}else{
+			err = cacher.CleanDeleteRoom(enumt.GameID,rid)
+			if err != nil {
+				log.Err(" delete null game thirteen delete room session failed,roomid:%d,err: %v",rid,
+					err)
 				continue
 			}
 		}

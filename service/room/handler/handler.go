@@ -102,7 +102,7 @@ func (rs *RoomSrv) CreateRoom(ctx context.Context, req *pbr.Room,
 	return nil
 }
 
-func (rs *RoomSrv) Renewal(ctx context.Context, req *pbr.Room,
+func (rs *RoomSrv) Renewal(ctx context.Context, req *pbr.RenewalRequest,
 	rsp *pbr.RoomReply) error {
 	u, err := auth.GetUser(ctx)
 	if err != nil {
@@ -158,13 +158,13 @@ func (rs *RoomSrv) EnterRoom(ctx context.Context, req *pbr.Room,
 		msgBack.UserID = u.UserID
 		topic.Publish(rs.broker, msgBack, TopicRoomCreate)
 		msgAll := ru.ToProto()
-		var ids []int32
-		for _, uid := range r.Ids {
-			if uid != u.UserID {
-				ids = append(ids, uid)
-			}
-		}
-		msgAll.Ids = ids
+		//var ids []int32
+		//for _, uid := range r.Ids {
+		//	if uid != u.UserID {
+		//		ids = append(ids, uid)
+		//	}
+		//}
+		msgAll.Ids = r.Ids
 		topic.Publish(rs.broker, msgAll, TopicRoomJoin)
 		return nil
 	}
@@ -185,16 +185,16 @@ func (rs *RoomSrv) LeaveRoom(ctx context.Context, req *pbr.Room,
 	}
 
 	f := func() error {
-		r, room, err := room.LeaveRoom(u)
+		ru, r, err := room.LeaveRoom(u)
 		if err != nil {
 			return err
 		}
 		//*rsp = *r.ToProto()
-		msg := r.ToProto()
-		msg.Ids = room.Ids
+		msg := ru.ToProto()
+		msg.Ids = r.Ids
 		//msg.RoomID = room.RoomID
 
-		if room.Status == enumr.RoomStatusDestroy {
+		if r.Status == enumr.RoomStatusDestroy {
 			msg.Destroy = 1
 		}
 		topic.Publish(rs.broker, msg, TopicRoomUnJoin)
@@ -338,7 +338,6 @@ func (rs *RoomSrv) PageFeedbackList(ctx context.Context,
 
 func (rs *RoomSrv) CreateFeedback(ctx context.Context, req *pbr.Feedback,
 	rsp *pbr.Feedback) error {
-
 	_, err := auth.GetUser(ctx)
 	if err != nil {
 		return err
@@ -348,17 +347,17 @@ func (rs *RoomSrv) CreateFeedback(ctx context.Context, req *pbr.Feedback,
 		return err
 	}
 	*rsp = *fb.ToProto()
-
 	return nil
 }
 
-func (rs *RoomSrv) RoomResultList(ctx context.Context, req *pbr.Room,
+func (rs *RoomSrv) RoomResultList(ctx context.Context, req *pbr.PageRoomResultListRequest,
 	rsp *pbr.RoomResultListReply) error {
 	u, err := auth.GetUser(ctx)
 	if err != nil {
 		return err
 	}
-	roomresult, err := room.RoomResultList(u.UserID, req.GameType)
+	page := mdpage.PageOptionFromProto(req.Page)
+	roomresult, err := room.RoomResultList(page, u.UserID, req.GameType)
 	if err != nil {
 		return err
 	}
@@ -372,7 +371,6 @@ func (rs *RoomSrv) CheckRoomExist(ctx context.Context, req *pbr.Room,
 	if err != nil {
 		return err
 	}
-	//GiveupResult
 	result, roomResults, err := room.CheckRoomExist(u.UserID)
 	if err != nil {
 		return err
@@ -383,20 +381,18 @@ func (rs *RoomSrv) CheckRoomExist(ctx context.Context, req *pbr.Room,
 		msg := roomResults.ToProto()
 		msg.UserID = u.UserID
 		topic.Publish(rs.broker, msg, TopicRoomExist)
-		//fmt.Printf("11111CheckRoomExist:%d\n",rsp.Result)
 	} else {
 		rsp.Result = result
 		msg := &pbr.CheckRoomExistReply{
 			Result: result,
 		}
 		topic.Publish(rs.broker, msg, TopicRoomExist)
-		//fmt.Printf("22222CheckRoomExist:%d\n",rsp.Result)
 	}
 
 	return nil
 }
 
-func (rs *RoomSrv) VoiceChat(ctx context.Context, req *pbr.VoiceChatRequest,rsp *pbr.RoomReply) error {
+func (rs *RoomSrv) VoiceChat(ctx context.Context, req *pbr.VoiceChatRequest, rsp *pbr.RoomReply) error {
 	u, err := auth.GetUser(ctx)
 	if err != nil {
 		return err
@@ -415,21 +411,68 @@ func (rs *RoomSrv) VoiceChat(ctx context.Context, req *pbr.VoiceChatRequest,rsp 
 	return nil
 }
 
-// func (rs *RoomSrv) OutReady(ctx context.Context, req *pbr.Room,
-// 	rsp *pbr.RoomUser) error {
-// 	u, err := auth.GetUser(ctx)
-// 	if err != nil {
-// 		return err
-// 	}
-// 	r, err := room.GetReadyOrUnReady(req.Password, u.UserID, enum.UserUnready)
-// 	if err != nil {
-// 		return err
-// 	}
-// 	*rsp = *r.ToProto()
-// 	msg := rsp
-// 	topic.Publish(rs.broker, msg, TopicRoomUnReady)
-// 	return nil
-// }
+func (rs *RoomSrv) GetAgentRoomList(ctx context.Context, req *pbr.Room,
+	rsp *pbr.RoomResultListReply) error {
+	u, err := auth.GetUser(ctx)
+	if err != nil {
+		return err
+	}
+	roomresult, err := room.GetAgentRoomList(u.UserID)
+	if err != nil {
+		return err
+	}
+	*rsp = *roomresult
+	return nil
+}
+
+func (rs *RoomSrv) DelteAgentRoomRecord(ctx context.Context, req *pbr.Room,
+	rsp *pbr.RoomReply) error {
+	u, err := auth.GetUser(ctx)
+	if err != nil {
+		return err
+	}
+	err = room.DelteAgentRoomRecord(u.UserID, req.Password, req.RoomID)
+	if err != nil {
+		return err
+	}
+	*rsp = pbr.RoomReply{
+		Result: 1,
+	}
+	return nil
+}
+
+func (rs *RoomSrv) DisbandAgentRoom(ctx context.Context, req *pbr.Room,
+	rsp *pbr.RoomReply) error {
+	u, err := auth.GetUser(ctx)
+	if err != nil {
+		return err
+	}
+	f := func() error {
+		r, err := room.DisbandAgentRoom(u.UserID, req.Password)
+		if err != nil {
+			return err
+		}
+		msg := &pbr.RoomUser{
+			UserID:  u.UserID,
+			Role:    enumr.UserRoleAgent,
+			Ids:     r.Ids,
+			Destroy: 1,
+		}
+
+		if r.Status == enumr.RoomStatusDestroy {
+			msg.Destroy = 1
+		}
+		topic.Publish(rs.broker, msg, TopicRoomUnJoin)
+		return nil
+	}
+	lock := RoomLockKey(req.Password)
+	err = gsync.GlobalTransaction(lock, f)
+	if err != nil {
+		log.Err("%s enter room failed: %v", lock, err)
+		return err
+	}
+	return nil
+}
 
 func (rs *RoomSrv) Heartbeat(ctx context.Context,
 	req *pbr.Room, rsp *pbr.Room) error {

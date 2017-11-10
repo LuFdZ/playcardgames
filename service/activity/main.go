@@ -14,10 +14,6 @@ import (
 )
 
 var FuncRights = map[string]int32{
-	"ActivitySrv.AddConfig":      auth.RightsActivityEdit,
-	"ActivitySrv.DeleteConfig":   auth.RightsActivityEdit,
-	"ActivitySrv.ListConfig":     auth.RightsActivityEdit,
-	"ActivitySrv.UpdateConfig":   auth.RightsActivityEdit,
 	"ActivitySrv.Share":          auth.RightsPlayer,
 	"ActivitySrv.Invite":         auth.RightsPlayer,
 	"ActivitySrv.InviteUserInfo": auth.RightsPlayer,

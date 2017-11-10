@@ -33,6 +33,14 @@ func Done() {
 
 func GetLockClients(topic string) map[*Client]bool {
 	RLock()
+	//str := "CheckTopc "
+	//for user,topicmap :=range topics{
+	//	str += fmt.Sprintf("UserID:%v",user)
+	//	for client,value := range topicmap{
+	//		str += fmt.Sprintf("(Ws:%v,Tops:%d,Value:%t)",client.ws,client.topics,value)
+	//	}
+	//}
+	//log.Debug(str)
 	return topics[topic]
 }
 
@@ -73,7 +81,6 @@ func Send(topic, typ string, msg interface{}) error {
 
 func SendTo(uid int32, topic, typ string, msg interface{}) error {
 	return SendWhere(topic, typ, msg, func(c *Client) bool {
-		//fmt.Printf("AAAAAAAAAA:%d|%d|%t\n",uid,c.UserID(),c.UserID() == uid)
 		return c.UserID() == uid
 	})
 }

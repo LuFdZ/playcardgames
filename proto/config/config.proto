@@ -3,6 +3,7 @@ import "playcards/proto/page/page.proto";
 
 package config;
 
+//结构体
 message Config {
     int32 ConfigID = 1;
     string Channel = 2;
@@ -16,18 +17,19 @@ message Config {
     int64 UpdatedAt = 10;
 }
 
+//请请求
+message PageConfigsRequest{
+    page.PageOption Page = 1;
+    Config Config = 2;
+}
 
+//回应
 message ConfigReply{
     int32 Result = 1;
 }
 
 message GetConfigsReply{
     repeated Config List = 1;
-}
-
-message PageConfigsRequest{
-    page.PageOption Page = 1;
-    Config Config = 2;
 }
 
 message PageConfigListReply {

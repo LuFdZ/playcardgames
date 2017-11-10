@@ -2,7 +2,7 @@ package main
 
 import (
 	"playcards/service/api/enum"
-	envinit "playcards/service/init"
+	"playcards/service/init"
 	"playcards/service/room/handler"
 	"playcards/utils/auth"
 	gcf "playcards/utils/config"
@@ -10,25 +10,28 @@ import (
 	"playcards/utils/log"
 	"playcards/utils/sync"
 
-	micro "github.com/micro/go-micro"
+	"github.com/micro/go-micro"
 )
 
 var FuncRights = map[string]int32{
-	"RoomSrv.Heartbeat":        auth.RightsNone,
-	"RoomSrv.CreateRoom":       auth.RightsPlayer,
-	"RoomSrv.EnterRoom":        auth.RightsPlayer,
-	"RoomSrv.LeaveRoom":        auth.RightsPlayer,
-	"RoomSrv.SetReady":         auth.RightsPlayer,
-	"RoomSrv.GiveUpGame":       auth.RightsPlayer,
-	"RoomSrv.GiveUpVote":       auth.RightsPlayer,
-	"RoomSrv.Renewal":          auth.RightsPlayer,
-	"RoomSrv.RoomResultList":   auth.RightsPlayer,
-	"RoomSrv.CheckRoomExist":   auth.RightsPlayer,
-	"RoomSrv.Shock":            auth.RightsPlayer,
-	"RoomSrv.VoiceChat":        auth.RightsPlayer,
-	"RoomSrv.PageFeedbackList": auth.RightsRoomAdmin,
-	"RoomSrv.CreateFeedback":   auth.RightsRoomAdmin,
-	"RoomSrv.TestClean":        auth.RightsNone,
+	"RoomSrv.Heartbeat":             auth.RightsNone,
+	"RoomSrv.CreateRoom":            auth.RightsPlayer,
+	"RoomSrv.EnterRoom":             auth.RightsPlayer,
+	"RoomSrv.LeaveRoom":             auth.RightsPlayer,
+	"RoomSrv.SetReady":              auth.RightsPlayer,
+	"RoomSrv.GiveUpGame":            auth.RightsPlayer,
+	"RoomSrv.GiveUpVote":            auth.RightsPlayer,
+	"RoomSrv.Renewal":               auth.RightsPlayer,
+	"RoomSrv.RoomResultList":        auth.RightsPlayer,
+	"RoomSrv.CheckRoomExist":        auth.RightsPlayer,
+	"RoomSrv.Shock":                 auth.RightsPlayer,
+	"RoomSrv.VoiceChat":             auth.RightsPlayer,
+	"RoomSrv.GetAgentRoomList":      auth.RightsPlayer,
+	"RoomSrv.DeleteAgentRoomRecord": auth.RightsPlayer,
+	"RoomSrv.DisbandAgentRoom":      auth.RightsPlayer,
+	"RoomSrv.PageFeedbackList":      auth.RightsRoomAdmin,
+	"RoomSrv.CreateFeedback":        auth.RightsRoomAdmin,
+	"RoomSrv.TestClean":             auth.RightsNone,
 }
 
 func main() {

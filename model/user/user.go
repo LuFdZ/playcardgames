@@ -8,20 +8,20 @@ import (
 	"io/ioutil"
 	"net/http"
 	"strings"
-
+	"playcards/model/bill"
+	"playcards/model/user/enum"
 	dbbill "playcards/model/bill/db"
 	mdbill "playcards/model/bill/mod"
 	mdpage "playcards/model/page"
 	cacheuser "playcards/model/user/cache"
 	dbu "playcards/model/user/db"
-	"playcards/model/user/enum"
+	enumbill "playcards/model/bill/enum"
 	erru "playcards/model/user/errors"
 	mdu "playcards/model/user/mod"
+	gsync "playcards/utils/sync"
 	"playcards/utils/auth"
 	"playcards/utils/db"
-	//"playcards/utils/errors"
 	"playcards/utils/log"
-
 	"github.com/asaskevich/govalidator"
 	"github.com/jinzhu/gorm"
 	"gopkg.in/go-playground/validator.v8"
@@ -63,7 +63,6 @@ func Register(u *mdu.User) (int32, error) {
 		if err != nil {
 			return err
 		}
-
 		return nil
 	}
 
@@ -71,18 +70,18 @@ func Register(u *mdu.User) (int32, error) {
 	return uid, err
 }
 
-func Login(u *mdu.User, address string) (*mdu.User, error) {
+func Login(u *mdu.User, address string) (*mdu.User, int64, error) {
 	var nu *mdu.User
 	var err error
 
 	_, err = govalidator.ValidateStruct(u)
 	if err != nil {
-		return nil, erru.ErrInvalidUserInfo
+		return nil, 0, erru.ErrInvalidUserInfo
 	}
 
 	hash := sha256.Sum256([]byte(u.Password + enum.Salt))
 	u.Password = fmt.Sprintf("%x", hash)
-
+	var diamond int64
 	f := func(tx *gorm.DB) error {
 		nu, err = dbu.GetUser(tx, &mdu.User{
 			Username: u.Username,
@@ -102,21 +101,21 @@ func Login(u *mdu.User, address string) (*mdu.User, error) {
 		//if err != nil {
 		//	return errors.Internal("login failed", err)
 		//}
-		now :=gorm.NowFunc()
+		now := gorm.NowFunc()
 		nu.LastLoginAt = &now
 		nu.LastLoginIP = address
-		_,err :=UpdateUser(nu);
+		_, err := UpdateUser(nu)
 		if err != nil {
 			return err
 		}
-		balance, _ := dbbill.GetUserBalance(tx, nu.UserID)
-		nu.Diamond = balance.Diamond
-
+		//nu.Diamond = balance.Diamond
+		balance, _ := GetUserRealBalance(nu.UserID)
+		diamond = balance.Diamond
 		return nil
 	}
 
 	err = db.Transaction(f)
-	return nu, err
+	return nu, diamond, err
 }
 
 func GetUser(u *mdu.User) (*mdu.User, error) {
@@ -270,11 +269,10 @@ func GetAndCheckWXToken(openid string) (*mdu.AccessTokenResponse, error) {
 	return accesstoken, nil
 }
 
-//GetRefreshToken
-func WXLogin(u *mdu.User, code string, address string) (int32, *mdu.User, error) {
-	fmt.Printf("AAAAWXLogin UserInfo:%s|%s|%s\n",u.MobileOs,u.Version,u.Channel)
+func WXLogin(u *mdu.User, code string, address string) (int64, *mdu.User, error) {
+	//fmt.Printf("AAAAWXLogin UserInfo:%s|%s|%s\n",u.MobileOs,u.Version,u.Channel)
 	if u.OpenID == "" && code == "" {
-		return enum.ResultStatusFail, nil, erru.ErrWXLoginParam
+		return 0, nil, erru.ErrWXLoginParam
 	}
 	atr := &mdu.AccessTokenResponse{}
 
@@ -282,7 +280,7 @@ func WXLogin(u *mdu.User, code string, address string) (int32, *mdu.User, error)
 		checkatr, err := GetWXToken(code)
 
 		if err != nil {
-			return enum.ResultStatusFail, nil, err
+			return 0, nil, err
 		}
 
 		atr = checkatr
@@ -292,7 +290,7 @@ func WXLogin(u *mdu.User, code string, address string) (int32, *mdu.User, error)
 		checkatr, err := GetAndCheckWXToken(u.OpenID) //cacheuser.GetAccessToken(u.OpenID)
 		if err != nil {
 			log.Err("user login set session failed, %v", err)
-			return enum.ResultStatusFail, nil, err
+			return 0, nil, err
 		}
 		atr = checkatr
 		//fmt.Printf("BBB WX Login Get Old Token:%v", atr)
@@ -300,12 +298,12 @@ func WXLogin(u *mdu.User, code string, address string) (int32, *mdu.User, error)
 
 	err := cacheuser.SetUserWXInfo(atr.OpenID, atr.AccessToken, atr.RefreshToken)
 	if err != nil {
-		return enum.ResultStatusSuccess, nil, err
+		return 0, nil, err
 	}
 	newUser, err := dbu.FindAndGetUser(db.DB(), u)
 
 	if err != nil {
-		return enum.ResultStatusFail, nil, err
+		return 0, nil, err
 	}
 
 	if newUser == nil {
@@ -319,7 +317,7 @@ func WXLogin(u *mdu.User, code string, address string) (int32, *mdu.User, error)
 		newUser.UnionID = u.UnionID
 		u, err = CreateUserByWX(newUser, atr)
 		if err != nil {
-			return enum.ResultStatusFail, nil, err
+			return 0, nil, err
 		}
 	} else {
 		newUser.MobileOs = u.MobileOs
@@ -327,19 +325,17 @@ func WXLogin(u *mdu.User, code string, address string) (int32, *mdu.User, error)
 		newUser.LastLoginIP = address
 		u, err = UpdateUserFromWX(newUser, atr)
 		if err != nil {
-			return enum.ResultStatusFail, nil, err
+			return 0, nil, err
 		}
 	}
 	now := gorm.NowFunc()
 	u.LastLoginAt = &now
 	u, err = UpdateUser(u)
 	if err != nil {
-		return enum.ResultStatusFail, nil, err
+		return 0, nil, err
 	}
-	balance, _ := dbbill.GetUserBalance(db.DB(), u.UserID)
-	u.Diamond = balance.Diamond
-
-	return enum.ResultStatusSuccess, u, err
+	balance, _ := GetUserRealBalance(u.UserID)
+	return balance.Diamond, u, err
 }
 
 func CreateUserByWX(u *mdu.User, atr *mdu.AccessTokenResponse) (*mdu.User, error) {
@@ -389,3 +385,48 @@ func UpdateUserFromWX(u *mdu.User, atr *mdu.AccessTokenResponse) (*mdu.User, err
 
 	return u, err
 }
+
+func GetUserRealBalance(uid int32)(*mdbill.UserBalance, error){
+	balance, err := bill.GetUserBalance(uid)
+	if err !=nil{
+		return nil,err
+	}
+	lockBalance,err := cacheuser.GetUserLockBalance(uid)
+	if err !=nil{
+		return nil,err
+	}
+	if lockBalance!=nil{
+		balance.Diamond -= lockBalance.Diamond
+		balance.Gold -= lockBalance.Gold
+	}
+	return balance,nil
+}
+
+func SetUserLockBalance(uid int32,balanceType int32,amount int64,rid int32) error{
+	lb := &mdu.Balance{}
+	if balanceType == enumbill.TypeGold {
+		lb.Gold = amount
+	}else if balanceType == enumbill.TypeDiamond{
+		lb.Diamond = amount
+	}
+
+	f := func() error {
+		err := cacheuser.SetUserLockBalance(uid,lb)
+		if err !=nil{
+			return err
+		}
+		return nil
+	}
+	lock := fmt.Sprintf("playcards.room.userbalance.lock:%s", uid)
+	err := gsync.GlobalTransaction(lock, f)
+	if err != nil {
+		log.Err("%s enter room failed: %v", lock, err)
+		return err
+	}
+	if err != nil{
+		return err
+	}
+	log.Debug("SetUserLockBalance rid:%d,uid:%d,balanceType:%d,amount:%d",rid,uid,balanceType,amount)
+	return nil
+}
+

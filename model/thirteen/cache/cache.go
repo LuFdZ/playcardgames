@@ -12,7 +12,7 @@ import (
 )
 
 func ThirteenHKey(rid int32) string {
-	return fmt.Sprintf(cache.KeyPrefix("THIRTEEN:%s"), rid)
+	return fmt.Sprintf(cache.KeyPrefix("THIRTEEN:%d"), rid)
 }
 
 func ThirteenHKeySearch() string {
@@ -100,7 +100,6 @@ func DeleteGame(rid int32) error {
 	key := ThirteenHKey(rid)
 	f := func(tx *redis.Tx) error {
 		tx.Pipelined(func(p *redis.Pipeline) error {
-
 			tx.Del(key)
 			return nil
 		})

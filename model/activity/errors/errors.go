@@ -1,5 +1,4 @@
 package errors
-
 import "playcards/utils/errors"
 
 var (

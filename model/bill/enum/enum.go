@@ -20,6 +20,11 @@ const (
 )
 
 const (
+	TypeGold = 1
+	TypeDiamond =2
+)
+
+const (
 	SystemOpUserID = 1000000001
 )
 

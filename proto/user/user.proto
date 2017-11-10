@@ -79,8 +79,8 @@ message GetTokenRequest{
 }
 
 message GetTokenReply{
-    int32 Result = 1;
-    int32 Code = 2;
+    int32 Result = 1; //1请求成功  2请求失败
+    int32 Code = 2;// 0查询到token 101 uid对应的 token不存在
     string Token = 3;
 }
 

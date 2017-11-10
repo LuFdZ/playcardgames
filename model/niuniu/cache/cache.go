@@ -12,7 +12,7 @@ import (
 )
 
 func NiuniuHKey(rid int32) string {
-	return fmt.Sprintf(cache.KeyPrefix("NIUNIU:%s"), rid)
+	return fmt.Sprintf(cache.KeyPrefix("NIUNIU:%d"), rid)
 }
 
 func NiuHKeySearch() string {
@@ -64,7 +64,6 @@ func DeleteGame(rid int32) error {
 	key := NiuniuHKey(rid)
 	f := func(tx *redis.Tx) error {
 		tx.Pipelined(func(p *redis.Pipeline) error {
-
 			tx.Del(key)
 			return nil
 		})

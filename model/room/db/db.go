@@ -1,7 +1,6 @@
 package db
 
 import (
-	"fmt"
 	mdpage "playcards/model/page"
 	"playcards/model/room/enum"
 	enumr "playcards/model/room/enum"
@@ -116,7 +115,7 @@ func PageFeedbackList(tx *gorm.DB, page *mdpage.PageOption,
 	if rtx.Error != nil {
 		return nil, 0, errors.Internal("page feed back failed", rtx.Error)
 	}
-	fmt.Printf("Page Feedback List:%v", out[0])
+	//fmt.Printf("Page Feedback List:%v", out[0])
 	return out, rows, nil
 }
 
@@ -131,6 +130,24 @@ func DeleteAll(tx *gorm.DB) error {
 	tx.Where(" game_type = 1001 ").Delete(mdr.Room{})
 	return nil
 }
+
+func PageRoomResultList(tx *gorm.DB, uid int32, gtype int32,page *mdpage.PageOption,
+	) ([]*mdr.Room, int64, error) {
+	var out []*mdr.Room
+	//rows, rtx := page.Find(tx.Model(r).Order("created_at desc").
+	//	Where(r), &out)
+	//if rtx.Error != nil {
+	//	return nil, 0, errors.Internal("page notice failed", rtx.Error)
+	//}
+	sqlstr := " game_type =? and room_id in (select room_id from player_rooms where user_id = ?)"
+	rows, rtx := page.Find(tx.Where(sqlstr, gtype, uid).
+		Order("created_at desc").Find(&out), &out)
+	if rtx.Error != nil {
+		return nil, 0, errors.Internal("page notice failed", rtx.Error)
+	}
+	return out, rows, nil
+}
+
 
 func GetRoomResultByUserIdAndGameType(tx *gorm.DB, uid int32, gtype int32) ([]*mdr.Room, error) {
 	var out []*mdr.Room
@@ -152,7 +169,7 @@ func GetRoomResultByUserIdAndGameType(tx *gorm.DB, uid int32, gtype int32) ([]*m
 
 	sqlstr := " game_type =? and room_id in (select room_id from player_rooms where user_id = ?)"
 	if err := tx.Where(sqlstr, gtype, uid).
-		Order("created_at desc").Find(&out).Error; err != nil {
+		Order("created_at desc").Find(&out).Limit(20).Error; err != nil {
 		return nil, errr.ErrRoomNotExisted
 	}
 	return out, nil

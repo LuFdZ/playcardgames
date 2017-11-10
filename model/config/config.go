@@ -9,6 +9,7 @@ import (
 	"playcards/utils/errors"
 	"playcards/utils/db"
 	"github.com/jinzhu/gorm"
+	"fmt"
 )
 
 func UpdateConfig(co *mdconf.Config) error {
@@ -58,9 +59,12 @@ func GetConfigs(channel string,version string,mobileOs string) map[int32]*mdconf
 func GetUniqueConfigByItemID(channel string,version string,mobileOs string) []*mdconf.Config {
 	cm := GetConfigs(channel,version,mobileOs)
 	var cos []*mdconf.Config
+	str := "GetUniqueConfigByItemID List "
 	for _,co :=range cm{
 		cos = append(cos,co)
+		str += fmt.Sprintf("ID:%d ",co.ConfigID)
 	}
+	fmt.Printf("%s\n",str)
 	return cos
 }
 

@@ -9,6 +9,7 @@ import (
 	"strconv"
 	enumconf "playcards/model/config/enum"
 	"github.com/jinzhu/gorm"
+	"fmt"
 )
 
 func GetUserBalance(uid int32) (*mdbill.UserBalance, error) {
@@ -89,6 +90,7 @@ func GainBalanceCondition(uid int32, channel string, version string, mobileOs st
 	*mdbill.UserBalance, error) {
 	rate := CheckConfigCondition(channel, version, mobileOs)
 	balance.Diamond = int64(rate * float64(balance.Diamond))
+	fmt.Printf("GainBalanceCondition:%f",balance.Diamond)
 	f := func(tx *gorm.DB) error {
 		err := dbbill.GainBalance(tx, uid, balance, balanceType,
 			aid, enumbill.SystemOpUserID, enumbill.DefaultChannel)

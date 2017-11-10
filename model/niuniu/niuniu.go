@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"math/rand"
 	bill "playcards/model/bill"
+	muser "playcards/model/user"
 	enumbill "playcards/model/bill/enum"
 	mdbill "playcards/model/bill/mod"
 	cacheniu "playcards/model/niuniu/cache"
@@ -28,12 +29,6 @@ import (
 )
 
 func CreateNiuniu() []*mdniu.Niuniu {
-	//rooms, err := GetRoomsByStatusAndGameType()
-	//if err != nil {
-	//	log.Err("get niuniu rooms by status and game type err :%v", err)
-	//	return nil
-	//}
-	//enumr.RoomStatusAllReady, enumniu.GameID
 	f := func(r *mdr.Room) bool {
 		if r.Status == enumr.RoomStatusAllReady && r.GameType == enumniu.GameID {
 			return true
@@ -56,15 +51,12 @@ func CreateNiuniu() []*mdniu.Niuniu {
 		if err := l.DoFile("lua/niuniulua/Logic.lua"); err != nil {
 			log.Err("niuniu logic do file %v", err)
 		}
-		ostime := time.Now().UnixNano()
-		if err := l.DoString(fmt.Sprintf("return Logic:new(%d)",ostime)); err != nil {
+		ostimeA := time.Now().UnixNano()
+		ostimeB := ostimeA<<32|ostimeA>>32
+		if err := l.DoString(fmt.Sprintf("return Logic:new(%d)",ostimeB)); err != nil {
 			log.Err("niuniu logic do string %+v", err)
 			continue
 		}
-		//if err := l.DoString("return Logic:new()"); err != nil {
-		//	log.Err("niuniu logic do string %v", err)
-		//}
-		//logic := l.Get(1)
 		l.Pop(1)
 
 		var roomparam *mdniu.NiuniuRoomParam
@@ -218,7 +210,11 @@ func CreateNiuniu() []*mdniu.Niuniu {
 				billForeignKey := fmt.Sprintf("%d:%d:%d", room.GameType, room.RoomID, niuniu.GameID)
 				diamond := -int64(room.MaxNumber * room.RoundNumber * enumr.NiuniuGameCost)
 				_,u :=cacheuser.GetUserByID(room.PayerID)
-
+				err = muser.SetUserLockBalance(room.PayerID,enumbill.TypeDiamond,-diamond,room.RoomID)
+				if err != nil {
+					log.Err("room create set lock balance redis failed,%v | %v\n", room, err)
+					return err
+				}
 				_,err := bill.GainBalanceCondition(room.PayerID,u.Channel,u.Version,u.MobileOs,billForeignKey,
 					&mdbill.Balance{0, 0, diamond},enumbill.JournalTypeNiuniu)
 				if err != nil {
@@ -245,28 +241,15 @@ func CreateNiuniu() []*mdniu.Niuniu {
 
 		err := db.Transaction(f)
 		if err != nil {
-			//fmt.Printf("niuniu create failed,%+v | %+v", niuniu, err)
 			log.Err("niuniu create failed,%v | %v", niuniu, err)
 			continue
 		}
 		newGames = append(newGames, niuniu)
-		//err = cacher.SetRoom(room)
-		//if err != nil {
-		//	//fmt.Printf("room create set redis failed,%+v | %+v", room, err)
-		//	log.Err("room create set redis failed,%v | %v", room, err)
-		//	continue
-		//}
-
 	}
 	return newGames
 }
 
 func UpdateGame() []*mdniu.Niuniu {
-	//niunius, err := dbniu.GetNiuniuAline(db.DB())
-	//if err != nil {
-	//	log.Err("get niuniu rooms by status and game type err :%v", err)
-	//	return nil
-	//}
 	f := func(r *mdniu.Niuniu) bool {
 		if r.Status < enumniu.GameStatusDone {
 			return true
@@ -343,11 +326,11 @@ func UpdateGame() []*mdniu.Niuniu {
 			room, err := cacher.GetRoom(pwd)
 			if err != nil {
 				//print(err)
-				log.Err("room get session failed, %v", err)
+				log.Err("niuniu room get session failed, roomid:%d,pwd:%s,err:%v",niuniu.RoomID,pwd, err)
 				continue
 			}
 			if room == nil {
-				log.Err("room get session nil, %v|%d", pwd, niuniu.RoomID)
+				log.Err("niuniu room get session nil, %v|%d", pwd, niuniu.RoomID)
 				continue
 			}
 
@@ -395,7 +378,7 @@ func UpdateGame() []*mdniu.Niuniu {
 					if userResult.UserID == result.UserID {
 						if len(userResult.GameCardCount) > 0 {
 							if err := json.Unmarshal([]byte(userResult.GameCardCount), &m); err != nil {
-								log.Err("lua str do struct %v", err)
+								log.Err("niuniu lua str do struct %v", err)
 							}
 						}
 						if _, ok := m[result.Cards.CardType]; ok {
@@ -443,28 +426,27 @@ func UpdateGame() []*mdniu.Niuniu {
 				}
 				return nil
 			}
-			go db.Transaction(f)
-			//err = db.Transaction(f)
-			//if err != nil {
-			//	print(err)
-			//	log.Err("niuniu update failed, %v", err)
-			//	continue
-			//}
+			//go db.Transaction(f)
+			err = db.Transaction(f)
+			if err != nil {
+				//print(err)
+				log.Err("niuniu update failed, %v", err)
+				continue
+			}
 			err = cacheniu.DeleteGame(niuniu.RoomID)
 			if err != nil {
-				log.Err("niuniu set session failed, %v", err)
+				log.Err("niuniu room del session failed, roomid:%d,pwd:%s,err:%v",niuniu.RoomID,pwd, err)
 				continue
 			}
 
 			err = cacher.UpdateRoom(room)
 			if err != nil {
-				log.Err("room update room redis failed,%v | %v",
+				log.Err("niuniu room update room redis failed,%v | %v",
 					room, err)
 				continue
 			}
 			//UpdateNiuniu(niuniu, false)
 		}
-
 		updateGames = append(updateGames, niuniu)
 	}
 
@@ -667,22 +649,7 @@ func SubmitCard(uid int32,room *mdr.Room) ([]int32, error) {
 		log.Err("niuniu set session failed, %v", err)
 		return nil, err
 	}
-
-	//f := func(tx *gorm.DB) error {
-	//	niu, err = dbniu.UpdateNiuniu(tx, niu)
-	//	if err != nil {
-	//		return err
-	//	}
-	//
-	//	return nil
-	//}
-	//err = db.Transaction(f)
-	//if err != nil {
-	//	return 0, err
-	//}
-
 	return niu.Ids, nil //
-
 }
 
 func GetUserAndAllOtherStatusReady(n *mdniu.Niuniu, uid int32,
@@ -717,7 +684,6 @@ func GetUserAndAllOtherStatusReady(n *mdniu.Niuniu, uid int32,
 }
 
 func AutoSetBankerScore(niu *mdniu.Niuniu) {
-	//var ids []int32
 	for _, userResult := range niu.Result.List {
 		if userResult.Status == enumniu.UserStatusInit {
 			userResult.Info = &mdniu.BankerAndBet{
@@ -726,22 +692,17 @@ func AutoSetBankerScore(niu *mdniu.Niuniu) {
 				Role:        enumniu.Player,
 			}
 			userResult.Status = enumniu.UserStatusGetBanker
-			//ids = append(ids, userResult.UserID)
 		}
 	}
-	//return ids
 }
 
 func AutoSetBetScore(niu *mdniu.Niuniu) {
-	//var ids []int32
 	for _, userResult := range niu.Result.List {
 		if userResult.Info.BetScore == 0 {
 			userResult.Info.BetScore = enumniu.MinSetBet
 			userResult.Status = enumniu.UserStatusSetBet
-			//ids = append(ids, userResult.UserID)
 		}
 	}
-	//return ids
 }
 
 func ChooseBanker(niu *mdniu.Niuniu) int32 {
@@ -759,16 +720,13 @@ func ChooseBanker(niu *mdniu.Niuniu) int32 {
 			maxScore = user.Info.BankerScore
 		}
 	}
-	//fmt.Printf("Choose Banker:%v", m)
 	ids := m[maxScore]
 	if len(ids) > 1 {
 		r := rand.New(rand.NewSource(time.Now().UnixNano()))
 		id := int32(ids[r.Intn(len(ids))])
-		//fmt.Printf("Banker is :%v", id)
 		return id
 	} else {
 		id := ids[0]
-		//fmt.Printf("Banker is :%v", id)
 		return id
 	}
 }
@@ -826,10 +784,6 @@ func NiuniuRecovery(rid int32, uid int32) (int32, *mdniu.NiuniuRoomResult,
 
 func CleanGame() error {
 	var gids []int32
-	//rids, err := dbr.GetGiveUpRoomIDByGameType(db.DB(), enumniu.GameID)
-	//if err != nil {
-	//	log.Err("get niuniu give up room err:%v", err)
-	//}
 	rids, err := cacher.GetAllDeleteRoomKey(enumniu.GameID)
 	if err != nil {
 		log.Err("get niuniu clean room err:%v", err)
@@ -842,6 +796,7 @@ func CleanGame() error {
 			continue
 		}
 		if game != nil {
+			log.Debug("clean niuniu game:%d|%d|%+v\n",game.GameID,game.RoomID,game.Ids)
 			gids = append(gids, game.GameID)
 			err = cacheniu.DeleteGame(rid)
 			if err != nil {
@@ -849,8 +804,20 @@ func CleanGame() error {
 					err)
 				continue
 			}
+			err = cacher.CleanDeleteRoom(enumniu.GameID,game.RoomID)
+			if err != nil {
+				log.Err(" delete niuniu delete room session failed,roomid:%d,err: %v",game.RoomID,
+					err)
+				continue
+			}
+		}else{
+			err = cacher.CleanDeleteRoom(enumniu.GameID,rid)
+			if err != nil {
+				log.Err(" delete null game niuniu delete room session failed,roomid:%d,err: %v",rid,
+					err)
+				continue
+			}
 		}
-
 	}
 	if len(gids) > 0 {
 		f := func(tx *gorm.DB) error {
@@ -861,10 +828,6 @@ func CleanGame() error {
 			return nil
 		}
 		go db.Transaction(f)
-		//err = db.Transaction(f)
-		//if err != nil {
-		//	return err
-		//}
 	}
 
 	return nil

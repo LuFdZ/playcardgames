@@ -13,6 +13,12 @@ import (
 	"unicode/utf8"
 )
 
+type Balance struct {
+	Amount  int64
+	Gold    int64
+	Diamond int64
+}
+
 type User struct {
 	UserID        int32  `gorm:"primary_key"`
 	Username      string `reg:"required,min=6,max=32,excludesall= 	"`
@@ -39,8 +45,6 @@ type User struct {
 	RegIP         string
 	OpenID        string
 	UnionID       string
-	//RoomID        int32  `gorm:"-"` // Ignore this field
-	Diamond       int64  `gorm:"-"`
 	AccessToken   string `gorm:"-"`
 }
 
@@ -83,7 +87,7 @@ func (u *User) ToProto() *pbu.User {
 		UserID:        u.UserID,
 		Username:      u.Username,
 		Password:      u.Password,
-		Nickname:      u.Nickname,//DecodNickName(u.Nickname),
+		Nickname:      u.Nickname, //DecodNickName(u.Nickname),
 		Mobile:        u.Mobile,
 		Email:         u.Email,
 		Avatar:        u.Avatar,
@@ -105,7 +109,6 @@ func (u *User) ToProto() *pbu.User {
 		Sex:           u.Sex,
 		OpenID:        u.OpenID,
 		UnionID:       u.UnionID,
-		Diamond:       u.Diamond,
 	}
 }
 func (u *UserInfo) ToProto() *pbu.UserInfo {
@@ -172,24 +175,6 @@ func UserFromWXLoginRequestProto(u *pbu.WXLoginRequest) *User {
 	}
 }
 
-//func (u *User) BeforeUpdate(scope *gorm.Scope) error {
-//	//u.Nickname = FilterEmoji(u.Nickname)
-//	input := []byte(u.Nickname)
-//	uEnc := base64.StdEncoding.EncodeToString([]byte(input))
-//	u.Nickname = uEnc
-//	scope.SetColumn("nickname", u.Nickname)
-//	return nil
-//}
-
-//func (u *User) BeforeCreate(scope *gorm.Scope) error {
-//	//u.Nickname = FilterEmoji(u.Nickname)
-//	input := []byte(u.Nickname)
-//	uEnc := base64.StdEncoding.EncodeToString([]byte(input))
-//	u.Nickname = uEnc
-//	scope.SetColumn("nickname", u.Nickname)
-//	return nil
-//}
-
 func (u *User) AfterFind() error {
 	u.Password = ""
 	return nil
@@ -204,15 +189,15 @@ func EncodNickName(nikename string) string {
 func DecodNickName(nikename string) string {
 	uDec, err := base64.StdEncoding.DecodeString(nikename)
 	if err != nil {
-		log.Err("EncodNickName nickname:%s,err:%v",nikename,err)
+		log.Err("EncodNickName nickname:%s,err:%v", nikename, err)
 	}
 	//nikename = string(uDec)
 	return string(uDec)
 }
 
 /***
- 过滤坑爹的Emoji表情
- */
+过滤坑爹的Emoji表情
+*/
 func FilterEmoji(content string) string {
 	new_content := ""
 	for _, value := range content {

@@ -2,6 +2,7 @@ syntax = "proto3";
 
 package thirteen;
 
+//结构体
 message GroupCard {
     int32 UserID = 1;
     repeated string CardList = 2;
@@ -9,30 +10,10 @@ message GroupCard {
     int32 BankerID = 4;
 }
 
-message GameReady {
-    //int32 RoomID = 1;
-    int32 UserID = 2;
-    repeated int32 Ids = 3;
-}
-
 message GameResultList {
     //int32 RoomID = 1;
     repeated ThirteenResult Result= 2;
     repeated int32 Ids = 3;
-}
-
-message SubmitCard {
-    repeated string Head = 1;
-    repeated string Middle = 2;
-    repeated string Tail = 3;
-}
-
-message GameResultListRequest {
-    int32 RoomID = 1;
-}
-
-message GameResultListReply {
-    repeated GameResultList List= 1;
 }
 
 message ThirteenSettle {
@@ -58,12 +39,35 @@ message ThirteenGroupResult {
 }
 
 message ResGroup {
-    string GroupType = 1; 
+    string GroupType = 1;
     repeated string CardList =2;
+}
+
+
+message GameReady {
+    //int32 RoomID = 1;
+    int32 UserID = 2;
+    repeated int32 Ids = 3;
+}
+
+message SubmitCard {
+    repeated string Head = 1;
+    repeated string Middle = 2;
+    repeated string Tail = 3;
+}
+
+//请求
+message GameResultListRequest {
+    int32 RoomID = 1;
 }
 
 message ThirteenRequest {
     int32 RoomID = 1;
+}
+
+//返回
+message GameResultListReply {
+    repeated GameResultList List= 1;
 }
 
 message ThirteenReply {

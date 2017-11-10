@@ -19,7 +19,7 @@ func UserHKey(uid int32) string {
 }
 
 func UserHWXKey(openid string) string {
-	return fmt.Sprintf(cache.KeyPrefix("USER:%d"), openid)
+	return fmt.Sprintf(cache.KeyPrefix("USERWXTOKEN:%s"), openid)
 }
 
 func UserHKeySearch() string {
@@ -54,6 +54,43 @@ func GetRefreshToken(openid string) (string, error) {
 	key := UserHWXKey(openid)
 	val := cache.KV().HGet(key, "refreshtoken").Val()
 	return val, nil
+}
+
+func SetUserLockBalance(uid int32,lb *mdu.Balance)error{
+	key := UserHKey(uid)
+	f := func(tx *redis.Tx) error {
+		tx.Pipelined(func(p *redis.Pipeline) error {
+			b, _ := json.Marshal(lb)
+			tx.HSet(key, "lockbalance", string(b))
+			return nil
+		})
+		return nil
+	}
+
+	err := cache.KV().Watch(f, key)
+	if err != nil {
+		return errors.Internal("set user lock balance error", err)
+	}
+
+	return nil
+}
+
+func GetUserLockBalance(uid int32) (*mdu.Balance, error) {
+	key := UserHKey(uid)
+	val, err := cache.KV().HGet(key, "lockbalance").Bytes()
+	if err == redis.Nil {
+		return nil, nil
+	}
+
+	if err != nil && err != redis.Nil {
+		return nil, errors.Internal("get lock balance failed", err)
+	}
+
+	lb := &mdu.Balance{}
+	if err := json.Unmarshal(val, lb); err != nil {
+		return nil, errors.Internal("get lock balance failed", err)
+	}
+	return lb, nil
 }
 
 func SetUserWXInfo(openid string, accesstoken string, refreshtoken string) error {

@@ -3,6 +3,7 @@ import "playcards/proto/page/page.proto";
 
 package notice;
 
+//结构体
 message Notice {
     int32 NoticeID = 1;
     int32 NoticeType = 2;
@@ -18,14 +19,15 @@ message Notice {
     int64 UpdatedAt = 12;
 }
 
-
-message NoticeList{
-    repeated Notice List = 1;
-}
-
+//请求
 message PageNoticeListRequest{
     page.PageOption Page = 1;
     Notice Notice = 2;
+}
+
+//回应
+message NoticeListReply{
+    repeated Notice List = 1;
 }
 
 message PageNoticeListReply {
@@ -35,8 +37,8 @@ message PageNoticeListReply {
 }
 
 service RoomSrv {
-    rpc GetNotice(Notice) returns (NoticeList) {}
-    rpc AllNotice(Notice) returns (NoticeList) {}
+    rpc GetNotice(Notice) returns (NoticeListReply) {}
+    rpc AllNotice(Notice) returns (NoticeListReply) {}
     rpc CreateNotice(Notice) returns (Notice) {}
     rpc UpdateNotice(Notice) returns (Notice) {}
     rpc PageNoticeList(PageNoticeListRequest) returns (PageNoticeListReply) {}

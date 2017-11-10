@@ -17,6 +17,7 @@ type Config struct {
 	Description string
 	CreatedAt   *time.Time
 	UpdatedAt   *time.Time
+	Hkey        string `gorm:"-"`
 }
 
 

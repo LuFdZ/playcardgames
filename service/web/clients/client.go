@@ -8,7 +8,7 @@ import (
 	"playcards/utils/auth"
 	"playcards/utils/log"
 	"time"
-
+	//"runtime/debug"
 	"golang.org/x/net/websocket"
 )
 
@@ -39,29 +39,37 @@ func NewClient(token string, u *mdu.User, ws *websocket.Conn) *Client {
 	Lock()
 	defer Unlock()
 
+
 	cs, ok := clients[u.UserID]
 	if !ok {
 		cs = make(map[*Client]bool)
 		clients[u.UserID] = cs
 	}
 	//else{
-	//	for k,_ := range cs{
-	//		k.ws.Close()
+	//	for oldClient,_ := range cs{
+	//		//oldClient.UnsubscribeAll()
+	//		//oldClient.ws.Close()
+	//		DeleteClient(oldClient)
+	//		close(oldClient.stop)
+	//		close(oldClient.channel)
+	//		cs[oldClient] = false
 	//	}
 	//	cs = make(map[*Client]bool)
 	//	clients[u.UserID] = cs
 	//	log.Debug("NewClientCoverOld:%d\n",u.UserID)
+	//	//fmt.Printf("NewClientCoverOld:%d\n",u.UserID)
 	//}
-	log.Debug("add connection: %v", c)
-	cs[c] = true
-	str := ""
-	for k, v := range clients {
-		str = fmt.Sprintf("--userid:%s |\n", k)
-		for k2, v2 := range v {
-			str += fmt.Sprintf("----Token:%s|Topics:%#v|Ws|V:%t\n", k2.token, k2.topics,  v2)
-		}
-	}
-	fmt.Printf("NewClient %s",str)
+	//log.Debug("add connection: %v", c)
+	//cs[c] = true
+	//str := ""
+	//for k, v := range clients {
+	//	str = fmt.Sprintf("--userid:%s |\n", k)
+	//	for k2, v2 := range v {
+	//		str += fmt.Sprintf("----Token:%s|Topics:%#v|Ws|V:%t\n", k2.token, k2.topics,  v2)
+	//	}
+	//}
+	//log.Debug("NewClientMap %s\n%s\n",str,string(debug.Stack()))
+	//fmt.Printf("NewClientMap %s",str)
 	return c
 }
 
@@ -102,13 +110,13 @@ func (c *Client) Subscribe(tpc []string) {
 			continue
 		}
 		//若订阅时发现有相同userid的连接对象，则新连接覆盖老连接
-		//for cli,_ :=range cs{
-		//	if cli.UserID() == c.UserID(){
-		//		delete(cli.topics, t)
-		//		delete(cs, cli)
-		//		log.Debug(str+"NewSubscribeAnddeleteOld user:%v,tpc:%+v \n",cli.user,t)
-		//	}
-		//}
+		for cli,_ :=range cs{
+			if cli.UserID() == c.UserID(){
+				delete(cli.topics, t)
+				delete(cs, cli)
+				log.Debug(str+"NewSubscribeAnddeleteOld user:%v,tpc:%+v \n",cli.user,t)
+			}
+		}
 		c.topics[t] = true
 		cs[c] = true
 		str += t+"|"

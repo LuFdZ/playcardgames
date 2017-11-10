@@ -2,22 +2,22 @@ package room
 
 import (
 	"math/rand"
-	"playcards/model/bill"
+	mbill"playcards/model/bill"
+	muser"playcards/model/user"
 	mdpage "playcards/model/page"
 	cacher "playcards/model/room/cache"
 	dbr "playcards/model/room/db"
 	enumr "playcards/model/room/enum"
+	enumb "playcards/model/bill/enum"
 	"playcards/model/room/errors"
 	mdr "playcards/model/room/mod"
 	mdu "playcards/model/user/mod"
 	pbr "playcards/proto/room"
-	//gsync "playcards/utils/sync"
 	"playcards/utils/db"
 	"playcards/utils/log"
 	"strconv"
 	"time"
 	"github.com/jinzhu/gorm"
-	"fmt"
 )
 
 func GenerateRangeNum(min, max int) string {
@@ -27,16 +27,16 @@ func GenerateRangeNum(min, max int) string {
 	return strconv.Itoa(randNum)
 }
 
-func GetRoomByUserID(uid int32)(*mdr.Room,error){
+func GetRoomByUserID(uid int32) (*mdr.Room, error) {
 	pwd := cacher.GetRoomPasswordByUserID(uid)
 	if len(pwd) == 0 {
-		return nil,errors.ErrUserNotInRoom
+		return nil, errors.ErrUserNotInRoom
 	}
 	room, err := cacher.GetRoom(pwd)
 	if err != nil {
 		return nil, err
 	}
-	return room,nil
+	return room, nil
 }
 
 func RenewalRoom(pwd string, user *mdu.User) (int32, []int32, *mdr.Room, error) {
@@ -79,18 +79,40 @@ func RenewalRoom(pwd string, user *mdu.User) (int32, []int32, *mdr.Room, error) 
 func CreateRoom(rtype int32, gtype int32, maxNum int32, roundNum int32,
 	gparam string, user *mdu.User, pwd string) (*mdr.Room,
 	error) {
-
 	var err error
 	checkpwd := cacher.GetRoomPasswordByUserID(user.UserID)
 	if len(checkpwd) != 0 {
 		return nil, errors.ErrUserAlreadyInRoom
 	}
 
-	balance, err := bill.GetUserBalance(user.UserID)
+	users := []*mdr.RoomUser{}
+	ids :=[]int32{}
+	if rtype == 0 {
+		rtype = enumr.RoomTypeNom
+	}
+	if rtype == enumr.RoomTypeNom {
+		roomUser := GetRoomUser(user, enumr.UserUnready, 1,
+			enumr.UserRoleMaster)
+		users = append(users, roomUser)
+		ids = append(ids,user.UserID)
+	} else {
+		f := func(r *mdr.Room) bool {
+			if r.PayerID == user.UserID && r.Status < enumr.RoomStatusDelay {
+				return true
+			}
+			return false
+		}
+		rooms := cacher.GetAllAgentRoom(f)
+		if len(rooms) >= enumr.AgentRoomLimit {
+			return nil, errors.ErrRoomAgentLimit
+		}
+	}
+
+	balance, err := muser.GetUserRealBalance(user.UserID)
 	if err != nil {
 		return nil, err
 	}
-	rate := bill.CheckConfigCondition(user.Channel, user.Version, user.MobileOs)
+	rate := mbill.CheckConfigCondition(user.Channel, user.Version, user.MobileOs)
 	needDiamond := int64(rate * float64(int64(maxNum*roundNum*enumr.ThirteenGameCost)))
 	if balance.Diamond < needDiamond {
 		return nil, errors.ErrNotEnoughDiamond
@@ -111,16 +133,7 @@ func CreateRoom(rtype int32, gtype int32, maxNum int32, roundNum int32,
 		}
 		pwd = pwdNew
 	}
-	users := []*mdr.RoomUser{}
-	if rtype == 0 {
-		rtype = 1
-	}
-	if rtype == enumr.RoomTypeNom {
 
-		roomUser := GetRoomUser(user, enumr.UserUnready, 1,
-			enumr.UserRoleMaster)
-		users = append(users, roomUser)
-	}
 
 	now := gorm.NowFunc()
 	room := &mdr.Room{
@@ -138,7 +151,7 @@ func CreateRoom(rtype int32, gtype int32, maxNum int32, roundNum int32,
 		GiveupAt:    &now,
 		CreatedAt:   &now,
 		UpdatedAt:   &now,
-		Ids:         []int32{user.UserID},
+		Ids:         ids,
 	}
 
 	f := func(tx *gorm.DB) error {
@@ -154,39 +167,31 @@ func CreateRoom(rtype int32, gtype int32, maxNum int32, roundNum int32,
 		}
 		err = cacher.SetRoomUser(room.RoomID, room.Password, user.UserID)
 		if err != nil {
-			log.Err("room create set room user set redis failed,%v | %v\n", room, err)
+			log.Err("room create set room user redis failed,%v | %v\n", room, err)
+			return err
+		}
+		err = muser.SetUserLockBalance(room.PayerID, enumb.TypeDiamond, needDiamond, room.RoomID)
+		if err != nil {
+			log.Err("room create set lock balance redis failed,%v | %v\n", room, err)
+			return err
+		}
+		err = cacher.SetAgentRoom(room.PayerID, room.Password, room.RoomID)
+		if err != nil {
+			log.Err("agent room set redis failed,%v | %v\n", room, err)
 			return err
 		}
 		return nil
 	}
-	//go db.Transaction(f)
-
-	//读写分离
-	//f := func(tx *gorm.DB) error {
-	//	err := dbr.CreateRoom(tx, room)
-	//	if err != nil {
-	//		log.Err("room create failed,%v | %v", room, err)
-	//		return err
-	//	}
-	//	return nil
-	//}
 	err = db.Transaction(f)
 	if err != nil {
-		//cacher.DeleteRoom(room.Password)
 		return nil, err
 	}
 	//读写分离
-
 	return room, nil
-
 }
 
 func JoinRoom(pwd string, user *mdu.User) (*mdr.RoomUser, *mdr.Room, error) {
 	checkpwd := cacher.GetRoomPasswordByUserID(user.UserID)
-	//var lock = new(sync.RWMutex)
-	//lock.Lock()
-	//defer lock.Unlock()
-
 	if len(checkpwd) != 0 && pwd != checkpwd {
 		return nil, nil, errors.ErrUserAlreadyInRoom
 	}
@@ -246,11 +251,12 @@ func JoinRoom(pwd string, user *mdu.User) (*mdr.RoomUser, *mdr.Room, error) {
 }
 
 func LeaveRoom(user *mdu.User) (*mdr.RoomUser, *mdr.Room, error) {
-	pwd := cacher.GetRoomPasswordByUserID(user.UserID)
-	if len(pwd) == 0 {
-		return nil, nil, errors.ErrUserNotInRoom
-	}
-	room, err := cacher.GetRoom(pwd)
+	//pwd := cacher.GetRoomPasswordByUserID(user.UserID)
+	//if len(pwd) == 0 {
+	//	return nil, nil, errors.ErrUserNotInRoom
+	//}
+	//room, err := cacher.GetRoom(pwd)
+	room, err := GetRoomByUserID(user.UserID)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -271,7 +277,7 @@ func LeaveRoom(user *mdu.User) (*mdr.RoomUser, *mdr.Room, error) {
 		if u.UserID == user.UserID {
 			handle = 1
 			roomUser = u
-			if u.Role == enumr.UserRoleMaster {
+			if u.Role == enumr.UserRoleMaster && room.RoomType == enumr.RoomTypeNom {
 				log.Info("delete room cause master leave.user:%d,room:%d\n",
 					user.UserID, room.RoomID)
 				isDestroy = 1
@@ -291,7 +297,8 @@ func LeaveRoom(user *mdu.User) (*mdr.RoomUser, *mdr.Room, error) {
 	if handle == 0 {
 		return nil, nil, errors.ErrUserNotInRoom
 	}
-	if isDestroy == 1 || len(newUsers) == 0 {
+	if (isDestroy == 1 || len(newUsers) == 0) &&
+		room.RoomType == enumr.RoomTypeNom {
 		room.Users = nil
 
 		err = cacher.DeleteAllRoomUser(room.Password, "LeaveRoom")
@@ -300,23 +307,19 @@ func LeaveRoom(user *mdu.User) (*mdr.RoomUser, *mdr.Room, error) {
 				room.RoomID, err)
 			return nil, nil, err
 		}
-		fmt.Printf("AAAleavedeleteleader:%+v", room.Users)
 		err = cacher.DeleteRoom(room.Password)
 		if err != nil {
 			log.Err("leave room delete room failed, %d|%v\n",
 				room.RoomID, err)
 			return nil, nil, err
 		}
-		fmt.Printf("BBBleavedeleteleader:%+v", room.Users)
 	} else {
-		fmt.Printf("AAAleavedeleteuser:%+v", room.Users)
 		err := cacher.UpdateRoom(room)
 		if err != nil {
 			log.Err("room leave room delete failed, %d|%v\n",
 				room.RoomID, err)
 			return nil, nil, err
 		}
-		fmt.Printf("BBBleavedeleteuser:%+v", room.Users)
 		err = cacher.DeleteRoomUser(user.UserID)
 		if err != nil {
 			log.Err("room leave room delete user failed, %d|%v\n",
@@ -370,46 +373,12 @@ func GetReady(pwd string, uid int32) (*mdr.RoomUser, []int32, error) {
 		return nil, nil, err
 	}
 
-	//读写分离
-	//f := func(tx *gorm.DB) error {
-	//	r, err := dbr.UpdateRoom(tx, room)
-	//	if err != nil {
-	//		return err
-	//	}
-	//	room = r
-	//	return nil
-	//}
-	//err = db.Transaction(f)
-	//if err != nil {
-	//	return nil, 0, err
-	//}
-	//读写分离
-
 	readyUser := &mdr.RoomUser{
 		UserID: uid,
 	}
 
 	return readyUser, room.Ids, nil
 }
-
-//func GetRoomsByStatus(status int32) ([]*mdr.Room, error) {
-//	var (
-//		rooms []*mdr.Room
-//	)
-//	f := func(tx *gorm.DB) error {
-//		list, err := dbr.GetRoomsByStatus(db.DB(), status)
-//		if err != nil {
-//			return err
-//		}
-//		rooms = list
-//		return nil
-//	}
-//	err := db.Transaction(f)
-//	if err != nil {
-//		return nil, err
-//	}
-//	return rooms, nil
-//}
 
 func GiveUpGame(pwd string, uid int32) ([]int32, *mdr.GiveUpGameResult,
 	error) {
@@ -460,7 +429,6 @@ func GiveUpGame(pwd string, uid int32) ([]int32, *mdr.GiveUpGameResult,
 		room.GiveupAt = &now
 		giveUpResult.Status = enumr.GiveupStatusWairting
 	}
-	//giveUpResult.RoomID = room.RoomID
 
 	giveUpResult.UserStateList = list
 	room.GiveupGame = giveUpResult
@@ -475,6 +443,10 @@ func GiveUpGame(pwd string, uid int32) ([]int32, *mdr.GiveUpGameResult,
 			log.Err("room give up set session failed, %v", err)
 			return nil, nil, err
 		}
+		err = cacher.SetRoomDelete(room.GameType, room.RoomID)
+		if err != nil {
+			log.Err("give up set delete room redis err, %d|%v\n", room.RoomID, err)
+		}
 	} else {
 		err = cacher.UpdateRoom(room)
 		if err != nil {
@@ -482,13 +454,6 @@ func GiveUpGame(pwd string, uid int32) ([]int32, *mdr.GiveUpGameResult,
 			return nil, nil, err
 		}
 	}
-	//读写分离
-	//_, err = UpdateRoom(room)
-	//if err != nil {
-	//	log.Err("room give up update failed, %v", err)
-	//	return nil, err
-	//}
-	//读写分离
 
 	log.Info("give up game:%d|%v", uid, giveUpResult)
 	return room.Ids, &giveUpResult, nil
@@ -551,6 +516,10 @@ func GiveUpVote(pwd string, status int32, uid int32) ([]int32, *mdr.GiveUpGameRe
 			log.Err("room give up set session failed, %v", err)
 			return nil, nil, err
 		}
+		err = cacher.SetRoomDelete(room.GameType, room.RoomID)
+		if err != nil {
+			log.Err("give up set delete room redis err, %d|%v\n", room.RoomID, err)
+		}
 	} else if giveup == enumr.GiveupStatusDisAgree {
 		room.Giveup = enumr.NoGiveUp
 		giveUpResult.Status = enumr.GiveupStatusDisAgree
@@ -568,15 +537,6 @@ func GiveUpVote(pwd string, status int32, uid int32) ([]int32, *mdr.GiveUpGameRe
 			return nil, nil, err
 		}
 	}
-
-	//读写分离
-	//_, err = UpdateRoom(room)
-	//if err != nil {
-	//	log.Err("room give up update failed, %v", err)
-	//	return nil, err
-	//}
-	//fmt.Printf("give up game:%v", giveUpResult)
-	//读写分离
 
 	log.Info("give up game vote:%d|%v", uid, giveUpResult)
 	return room.Ids, &giveUpResult, nil
@@ -659,9 +619,13 @@ func CreateFeedback(fb *mdr.Feedback) (*mdr.Feedback, error) {
 	return dbr.CreateFeedback(db.DB(), fb)
 }
 
-func RoomResultList(uid int32, gtype int32) (*pbr.RoomResultListReply, error) {
+func RoomResultList(page *mdpage.PageOption, uid int32, gtype int32) (*pbr.RoomResultListReply, error) {
 	var list []*pbr.RoomResults
-	rooms, err := dbr.GetRoomResultByUserIdAndGameType(db.DB(), uid, gtype)
+	if page == nil {
+		page.Page = 1
+		page.PageSize = 20
+	}
+	rooms, rows, err := dbr.PageRoomResultList(db.DB(), uid, gtype, page)
 	if err != nil {
 		return nil, err
 	}
@@ -676,27 +640,24 @@ func RoomResultList(uid int32, gtype int32) (*pbr.RoomResultListReply, error) {
 		list = append(list, result.ToProto())
 	}
 	out := &pbr.RoomResultListReply{
-		List: list,
+		List:  list,
+		Count: rows,
 	}
 	return out, nil
 }
 
 func CheckRoomExist(uid int32) (int32, *mdr.CheckRoomExist, error) {
 	pwd := cacher.GetRoomPasswordByUserID(uid)
-	//fmt.Printf("AAAAA CRE:%s", pwd)
 	if len(pwd) == 0 {
-		log.Err("CheckRoomExistPWDNULL:%s|%d", pwd, uid)
+		log.Err("check room exist pwd null:%s|%d", pwd, uid)
 		return 2, nil, nil
 	}
 
 	room, err := cacher.GetRoom(pwd)
-	//fmt.Printf("BBBB CRE:%s|%v", pwd, room)
 	if err != nil {
 		return 3, nil, err
 	}
-	//fmt.Printf("BBBB CRE:%v", room)
 	if room == nil {
-		//log.Err("check pwd exist but room null, %s|%d", pwd, uid)
 		err = cacher.DeleteAllRoomUser(pwd, "CheckRoomExistRoomNull")
 		if err != nil {
 			log.Err("room give up delete room users redis err, %v", err)
@@ -733,7 +694,6 @@ func CheckRoomExist(uid int32) (int32, *mdr.CheckRoomExist, error) {
 				break
 			}
 		}
-		//return 2, nil, nil
 	} else if room.Status == enumr.RoomStatusReInit {
 		roomStatus = enumr.RecoveryInitNoReady
 	} else {
@@ -759,11 +719,6 @@ func CheckRoomExist(uid int32) (int32, *mdr.CheckRoomExist, error) {
 
 func RoomUserStatusCheck() []*pbr.UserConnection {
 	var ucs []*pbr.UserConnection
-	//rooms, err := GetRoomsByStatus(enumr.RoomStatusStarted)
-	//if err != nil {
-	//	log.Err("room user status check err:%v", err)
-	//	return nil
-	//}
 	f := func(r *mdr.Room) bool {
 		if r.Status == enumr.RoomStatusStarted {
 			return true
@@ -775,11 +730,9 @@ func RoomUserStatusCheck() []*pbr.UserConnection {
 		return nil
 	}
 	for _, room := range rooms {
-		//Room.UserOffAline
 		for _, user := range room.Users {
 			status := cacher.GetUserStatus(user.UserID)
 			notice := cacher.GetUserSocketNotice(user.UserID)
-
 			//若房间不在游戏开始状态 或者连接状态未初始化 或者已广播过 不做处理
 			if (room.Status != enumr.RoomStatusInit &&
 				room.Status != enumr.RoomStatusStarted &&
@@ -806,12 +759,82 @@ func RoomUserStatusCheck() []*pbr.UserConnection {
 	return ucs
 }
 
+func GetAgentRoomList(uid int32) (*pbr.RoomResultListReply, error) {
+	var list []*pbr.RoomResults
+	f := func(r *mdr.Room) bool {
+		if r.PayerID == uid {
+			return true
+		}
+		return false
+	}
+	rooms := cacher.GetAllAgentRoom(f)
+	if rooms == nil && len(rooms) == 0 {
+		return nil, nil
+	}
+	for _, room := range rooms {
+		result := &mdr.RoomResults{
+			RoomID:          room.RoomID,
+			Status:          room.Status,
+			Password:        room.Password,
+			GameType:        room.GameType,
+			CreatedAt:       room.CreatedAt,
+			MaxPlayerNumber: room.MaxNumber,
+			PlayerNumberNow: int32(len(room.Users)),
+			RoundNumber:     room.RoundNumber,
+			RoundNow:        room.RoundNow,
+			//List:      room.UserResults,
+		}
+		list = append(list, result.ToProto())
+	}
+	out := &pbr.RoomResultListReply{
+		List: list,
+	}
+	return out, nil
+}
+
+func DelteAgentRoomRecord(uid int32, pwd string, rid int32) error {
+	err := cacher.DeleteAgentRoom(uid, pwd, rid)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func DisbandAgentRoom(uid int32, pwd string) (*mdr.Room, error) {
+	room, err := cacher.GetRoom(pwd)
+	if room.PayerID != uid {
+		return nil, errors.ErrNotPayer
+	}
+	if room.RoundNumber > 1 && room.Status > enumr.RoomStatusAllReady {
+		return nil,errors.ErrGameHasBegin
+	}
+
+	if room.Giveup == enumr.WaitGiveUp {
+		return nil, errors.ErrInGiveUp
+	}
+	room.Status = enumr.RoomStatusDestroy
+	room.Users = nil
+	err = cacher.DeleteAllRoomUser(room.Password, "LeaveRoom")
+	if err != nil {
+		log.Err("leave room delete all users failed, %d|%v\n",
+			room.RoomID, err)
+		return nil, err
+	}
+	err = cacher.DeleteRoom(room.Password)
+	if err != nil {
+		log.Err("leave room delete room failed, %d|%v\n",
+			room.RoomID, err)
+		return nil, err
+	}
+
+	err = cacher.DeleteAgentRoom(uid, pwd, room.RoomID)
+	if err != nil {
+		return nil, err
+	}
+	return room, nil
+}
+
 func ReInit() []*mdr.Room {
-	//rooms, err := dbr.GetRoomsByStatus(db.DB(), enumr.RoomStatusReInit)
-	//if err != nil {
-	//	log.Err("reinit get rooms by status err, %v\n", err)
-	//	return nil
-	//}
 
 	f := func(r *mdr.Room) bool {
 		if r.Status == enumr.RoomStatusReInit {
@@ -863,27 +886,19 @@ func ReInit() []*mdr.Room {
 			}
 			return nil
 		}
-		go db.Transaction(f)
+		//go db.Transaction(f)
 		//读写分离
-		//err = db.Transaction(f)
-		//if err != nil {
-		//	log.Err("reinit update room transaction err, %v", err)
-		//	continue
-		//}
+		err = db.Transaction(f)
+		if err != nil {
+			log.Err("reinit update room transaction err, %v", err)
+			continue
+		}
 		//读写分离
 	}
 	return rooms
 }
 
 func GiveUpRoomDestroy() []*mdr.Room {
-	//rooms, err := dbr.GetRoomsGiveup(db.DB())
-	//if err != nil {
-	//	log.Err("giveup room destroy get rooms by status err, %v", err)
-	//	return nil
-	//}
-
-	//tx.Where(" giveup = ? and status < ?", enumr.WaitGiveUp,
-	//	enumr.RoomStatusDone)
 
 	f := func(r *mdr.Room) bool {
 		if r.Giveup == enumr.WaitGiveUp && r.Status < enumr.RoomStatusDone {
@@ -927,13 +942,13 @@ func GiveUpRoomDestroy() []*mdr.Room {
 					return nil
 				}
 				log.Debug("GiveUpRoomDestroyPolling roomid:%d,pwd:%s,subdate:%f m\n", room.RoomID, room.Password, sub.Minutes())
-				go db.Transaction(f)
+				//go db.Transaction(f)
 				//读写分离
-				//err = db.Transaction(f)
-				//if err != nil {
-				//	log.Err("room give up destroy delete room users redis err, %v", err)
-				//	continue
-				//}
+				err = db.Transaction(f)
+				if err != nil {
+					log.Err("room give up destroy delete room users redis err, %v", err)
+					continue
+				}
 				//读写分离
 
 				giveRooms = append(giveRooms, checkRoom)
@@ -944,11 +959,6 @@ func GiveUpRoomDestroy() []*mdr.Room {
 }
 
 func DelayRoomDestroy() error {
-	//rooms, err := dbr.GetRoomsByStatus(db.DB(), enumr.RoomStatusDelay)
-	//if err != nil {
-	//	log.Err("reinit get rooms by status err, %v", err)
-	//	return nil
-	//}
 	f := func(r *mdr.Room) bool {
 		if r.Status == enumr.RoomStatusDelay {
 			return true
@@ -992,11 +1002,12 @@ func DelayRoomDestroy() error {
 				//room = r
 				return nil
 			}
-			go db.Transaction(f)
-			//err = db.Transaction(f)
-			//if err != nil {
-			//	return err
-			//}
+			//go db.Transaction(f)
+			err = db.Transaction(f)
+			if err != nil {
+				log.Err("room delay room destroy delete room users redis err, %v", err)
+				return err
+			}
 		}
 	}
 	return nil
@@ -1039,7 +1050,12 @@ func DeadRoomDestroy() error {
 			}
 			return nil
 		}
-		go db.Transaction(f)
+		//go db.Transaction(f)
+		err = db.Transaction(f)
+		if err != nil {
+			log.Err("room dead room destroy delete room users redis err, %v", err)
+			return err
+		}
 	}
 
 	return nil

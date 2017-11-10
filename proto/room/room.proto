@@ -3,6 +3,7 @@ import "playcards/proto/page/page.proto";
 
 package room;
 
+//结构体
 message Room {
     int32 RoomID = 1;
     string Password = 2;
@@ -52,7 +53,7 @@ message GameUserResult {
 }
 
 message RoomResults {
-    //int32 RoomID = 1;
+    int32 RoomID = 1;
     int32 RoundNumber = 2;
     int32 RoundNow = 3;
     int32 Status = 4;
@@ -61,8 +62,25 @@ message RoomResults {
     int64 CreatedAt = 7;
     int32 GameType = 8;
     repeated int32 Ids = 9;
+    int32 MaxPlayerNumber = 10;
+    int32 PlayerNumberNow = 11;
 }
 
+message Feedback {
+    int32  FeedbackID    =1;
+    int32  UserID        =2;
+    string Channel       =3;
+    string Version       =4;
+    string Content       =5;
+    string MobileModel   =6;
+    string MobileNetWork =7;
+    string MobileOs      =8;
+    string LoginIP       =9;
+    int64 CreatedAt      =10;
+    int64 UpdatedAt      =11;
+}
+
+//请求
 message GiveUpGameRequest {
     string Password = 1;
 }
@@ -79,6 +97,59 @@ message GiveUpGameResult {
     repeated int32 Ids = 4;
 }
 
+message PageFeedbackListRequest{
+    page.PageOption Page = 1;
+    Feedback Feedback = 2;
+}
+
+message PageRoomResultListRequest{
+    page.PageOption Page = 1;
+    int32 GameType = 2;
+}
+
+message VoiceChatRequest{
+    string  FileCode      =1;
+    repeated int32 Ids = 2;
+}
+
+message CheckRoomExistRequest{
+}
+
+message RenewalRequest {
+    string Password = 2;
+}
+
+message HeartbeatRequest{}
+
+//回应
+message PageFeedbackListReply {
+    int32 Result = 1;
+    repeated Feedback List = 2;
+    int64 Count = 3;
+}
+
+message RoomResultListReply {
+    repeated RoomResults List= 1;
+    int64 Count = 2;
+}
+
+message CheckRoomExistReply{
+    int32 Result = 1;
+    int32 Status = 2;
+    int32 Giveup = 3;
+    Room Room = 4;
+    GiveUpGameResult GiveupResult = 5;
+    RoomResults GameResult = 6;
+    int32 UserID = 7;
+}
+
+message RoomReply{
+    int32 Result = 1;
+}
+
+message HeartbeatReply{}
+
+//广播
 message UserState {
     int32 State = 1;
     int32 UserID = 2;
@@ -92,63 +163,14 @@ message RenewalRoomReady {
 }
 
 message Shock {
-    //int32 RoomID = 1;
-    int32 UserIDFrom = 2;
-    int32 UserIDTo = 3;
+    int32 UserIDFrom = 1;
+    int32 UserIDTo = 2;
 }
 
 message UserConnection {
-    //int32 RoomID = 1;
-    int32 UserID = 2;
-    int32 Status = 3;//1 重连 2掉线
-    repeated int32 Ids = 4;
-}
-
-message Renewal {
-    string Password = 2;
-}
-
-message PageFeedbackListRequest{
-    page.PageOption Page = 1;
-    Feedback Feedback = 2;
-}
-
-message PageFeedbackListReply {
-    int32 Result = 1;
-    repeated Feedback List = 2;
-    int64 Count = 3;
-}
-
-message Feedback {
-    int32  FeedbackID    =1; 
-    int32  UserID        =2;
-    string Channel       =3;
-    string Version       =4;
-    string Content       =5;
-    string MobileModel   =6;
-    string MobileNetWork =7;
-    string MobileOs      =8;
-    string LoginIP       =9;
-    int64 CreatedAt      =10;
-    int64 UpdatedAt      =11;
-}
-
-message RoomResultListReply {
-    repeated RoomResults List= 1;
-}
-
-message CheckRoomExistRequest{
-    
-}
-
-message CheckRoomExistReply{
-    int32 Result = 1;
-    int32 Status = 2;
-    int32 Giveup = 3;
-    Room Room = 4;
-    GiveUpGameResult GiveupResult = 5;
-    RoomResults GameResult = 6;
-    int32 UserID = 7;
+    int32 UserID = 1;
+    int32 Status = 2;//1 重连 2掉线
+    repeated int32 Ids = 3;
 }
 
 message VoiceChat{
@@ -157,18 +179,6 @@ message VoiceChat{
     string  FileCode      =3;
     repeated int32 Ids = 4;
 }
-
-message VoiceChatRequest{
-    string  FileCode      =1;
-    repeated int32 Ids = 2;
-}
-
-message RoomReply{
-    int32 Result = 1;
-}
-
-message HeartbeatRequest{}
-message HeartbeatReply{}
 
 service RoomSrv {
     rpc CreateRoom(Room) returns (RoomReply) {}
@@ -179,13 +189,16 @@ service RoomSrv {
     rpc GiveUpGame(GiveUpGameRequest) returns (GiveUpGameResult) {}
     rpc GiveUpVote(GiveUpVoteRequest) returns (GiveUpVoteRequest) {}
     rpc Shock(RoomUser) returns (RoomReply) {}
-    rpc Renewal(Room) returns (RoomReply) {}
+    rpc Renewal(RenewalRequest) returns (RoomReply) {}
     rpc CreateFeedback(Feedback) returns (Feedback) {}
     rpc PageFeedbackList(PageFeedbackListRequest) returns (PageFeedbackListReply) {}
-    rpc RoomResultList(Room) returns (RoomResultListReply) {}
+    rpc RoomResultList(PageRoomResultListRequest) returns (RoomResultListReply) {}
     rpc CheckRoomExist(Room) returns (CheckRoomExistReply) {}
     rpc VoiceChat(VoiceChatRequest) returns (RoomReply) {}
     rpc Heartbeat(HeartbeatRequest) returns (HeartbeatReply) {}
+    rpc GetAgentRoomList(Room) returns (RoomResultListReply) {}
+    rpc DelteAgentRoomRecord(Room) returns (RoomReply) {}
+    rpc DisbandAgentRoom(Room) returns (RoomReply) {}
 }
 
 

@@ -2,28 +2,19 @@ syntax = "proto3";
 
 package activity;
 
-message ActivityConfig {
-    int32 ConfigID = 1;
-    string Description = 2;
-    string Parameter = 3;
-    int32 LastModifyUserID = 4;
-}
-
-message ConfigList {
-    repeated ActivityConfig List = 1;
-}
-
+//请求
 message ShareRequest{
     
 }
 
+message InviteRequest{
+    int32 UserID = 1;
+}
+
+//回应
 message ShareReply{
     int32 Result = 1;
     int64 Diamond = 3;
-}
-
-message InviteRequest{
-    int32 UserID = 1;
 }
 
 message InviteReply{
@@ -36,10 +27,6 @@ message InviteUserInfoReply{
 }
 
 service ActicitySrv {
-    rpc AddConfig(ActivityConfig) returns (ActivityConfig) {}
-    rpc DeleteConfig(ActivityConfig) returns (ActivityConfig) {}
-    rpc ListConfig(ActivityConfig) returns (ConfigList) {}
-    rpc UpdateConfig(ActivityConfig) returns (ActivityConfig) {}
     rpc Share(ShareRequest) returns (ShareReply) {}
     rpc Invite(InviteRequest) returns (InviteReply) {}
     rpc InviteUserInfo(InviteRequest) returns (InviteUserInfoReply) {}

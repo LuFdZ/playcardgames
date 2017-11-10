@@ -11,7 +11,7 @@ import (
 	//"strconv"
 	"runtime/debug"
 	"strings"
-
+	errr "playcards/model/room/errors"
 	"gopkg.in/redis.v5"
 )
 
@@ -23,16 +23,24 @@ func UserHKey(uid int32) string {
 	return fmt.Sprintf(cache.KeyPrefix("ROOMUSER:%d"), uid)
 }
 
+func AgentRoomHKey() string {
+	return fmt.Sprintf(cache.KeyPrefix("AGENTROOM"))
+}
+
+func AgentRoomHSubKey(uid int32, pwd string, rid int32) string {
+	return fmt.Sprintf("%d:%s:%d", uid, pwd, rid)
+}
+
 func RoomHKeySearch() string {
 	return cache.KeyPrefix("ROOM:*")
 }
 
 func RoomHKeyDelete(gametype int32, rid int32) string {
-	return fmt.Sprintf(cache.KeyPrefix("ROOMDELETE:%d:%s"), gametype, rid)
+	return fmt.Sprintf(cache.KeyPrefix("ROOMDELETE:%d:%d"), gametype, rid)
 }
 
 func RoomHKeyDeleteSearch(gametype int32) string {
-	return fmt.Sprintf(cache.KeyPrefix("ROOMDELETE:%d"), gametype)
+	return fmt.Sprintf(cache.KeyPrefix("ROOMDELETE:%d*"), gametype)
 }
 
 func SetRoom(r *mdr.Room) error {
@@ -106,7 +114,7 @@ func GetRoom(pwd string) (*mdr.Room, error) {
 	key := RoomHKey(pwd)
 	val, err := cache.KV().HGet(key, "room").Bytes()
 	if err == redis.Nil {
-		return nil, errors.Internal("room not find", err)
+		return nil, errr.ErrRoomNotFind //errors.Internal("room not find", err)
 	}
 
 	if err != nil && err != redis.Nil {
@@ -232,7 +240,6 @@ func DeleteAllRoomUser(password string, callFrom string) error {
 
 func GetRoomPasswordByUserID(uid int32) string {
 	key := UserHKey(uid)
-	//fmt.Printf("GetRoomPasswordByUserID:%d|%s\n",uid,key)
 	pwd := cache.KV().HGet(key, "password").Val()
 	return pwd
 }
@@ -258,29 +265,38 @@ func GetUserSocketNotice(uid int32) int32 {
 	return 0
 }
 
-
-func GetRoomLock(pwd string) string {
-	key := RoomHKey(pwd)
-	lock := cache.KV().HGet(key, "lock").Val()
-	return lock
-}
-
-func SetRoomLock(password string,value string) error {
-	key :=""
+func SetAgentRoom(uid int32, pwd string, rid int32) error {
+	var key string
 	f := func(tx *redis.Tx) error {
-		key := RoomHKey(password)
+		key = AgentRoomHKey()
 		tx.Pipelined(func(p *redis.Pipeline) error {
-			tx.HSet(key, "lock", value)
+			subKey := AgentRoomHSubKey(uid,pwd,rid)
+			tx.HSet(key, subKey, rid)
 			return nil
 		})
-
 		return nil
 	}
-
 	if err := cache.KV().Watch(f, key); err != nil {
-		return errors.Internal("set room failed", err)
+		return errors.Internal("set config failed", err)
 	}
-	fmt.Printf("SetRoomLock:%s|%s\n",password,value)
+	return nil
+}
+
+func DeleteAgentRoom(uid int32, pwd string, rid int32) error {
+	var key string
+	f := func(tx *redis.Tx) error {
+		key = AgentRoomHKey()
+		tx.Pipelined(func(p *redis.Pipeline) error {
+			subKey := AgentRoomHSubKey(uid,pwd,rid)
+			tx.HDel(key,subKey)
+			return nil
+		})
+		return nil
+	}
+	err := cache.KV().Watch(f, key)
+	if err != nil {
+		return errors.Internal("del room user error", err)
+	}
 	return nil
 }
 
@@ -332,11 +348,11 @@ func GetAllDeleteRoomKey(gametype int32) ([]int32, error) {
 		var rids []int32
 		for _, key := range keys {
 			cols := strings.Split(key, ":")
-			if len(cols) != 3 {
+			if len(cols) != 4 {
 				log.Err("get all delete room id format err:%s", key)
 				continue
 			}
-			rid, err := strconv.Atoi(cols[2])
+			rid, err := strconv.Atoi(cols[3])
 			if err != nil {
 				log.Err("get all delete room id no number err:%s", key)
 				continue
@@ -348,6 +364,7 @@ func GetAllDeleteRoomKey(gametype int32) ([]int32, error) {
 			break
 		}
 	}
+	//fmt.Printf("GetAllDeleteRoomKey:%+v\n",drks)
 	return drks, nil
 }
 
@@ -377,9 +394,53 @@ func GetAllRoomKey() ([]string, error) {
 	return rks, nil
 }
 
+func GetAllAgentRoomKey() ([]string, error) {
+	var curson uint64
+	var rks []string
+	var count int64
+	count = 999
+	for {
+		scan := cache.KV().HScan(AgentRoomHKey(),curson, "*", count)
+		keys, cur, err := scan.Result()
+		if err != nil {
+			return nil, errors.Internal("list room list failed", err)
+		}
+
+		curson = cur
+		rks = append(rks, keys...)
+
+		if curson == 0 {
+			break
+		}
+	}
+	return rks, nil
+}
+
 func GetAllRoom(f func(*mdr.Room) bool) []*mdr.Room {
 	var rooms []*mdr.Room
 	keys, err := GetAllRoomKey()
+	if err != nil {
+		log.Err("redis get all room err: %v", err)
+	}
+	for _, k := range keys {
+		room, err := GetRoomByKey(k)
+		if err != nil {
+			log.Err("redis get room err: %v", err)
+		}
+		if room == nil {
+			continue
+		}
+		if f != nil && !f(room) {
+			continue
+		}
+		rooms = append(rooms, room)
+	}
+	return rooms
+}
+
+func GetAllAgentRoom(f func(*mdr.Room) bool) []*mdr.Room {
+	var rooms []*mdr.Room
+	keys, err := GetAllAgentRoomKey()
 	if err != nil {
 		log.Err("redis get all room err: %v", err)
 	}

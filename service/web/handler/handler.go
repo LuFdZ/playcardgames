@@ -43,11 +43,12 @@ func NewWebHandler(c client.Client) *Web {
 
 func (w *Web) Subscribe(ws *websocket.Conn) {
 	var msg []byte
+
 	if err := websocket.Message.Receive(ws, &msg); err != nil {
 		log.Err("websocket recv error: %v", err)
 		return
 	}
-
+	//log.Err("Subscribe websocket recv\n: %+v", string(msg))
 	token := string(msg)
 	u, err := auth.GetUserByToken(token)
 	if err != nil {

@@ -13,18 +13,18 @@ import (
 )
 
 type Room struct {
-	RoomID         int32  `gorm:"primary_key"`
-	Password       string `reg:"required,min=6,max=32,excludesall= 	"`
+	RoomID         int32             `gorm:"primary_key"`
+	Password       string            `reg:"required,min=6,max=32,excludesall= 	"`
 	Status         int32
 	Giveup         int32
-	MaxNumber      int32 `reg:"required"`
-	RoundNumber    int32 `reg:"required"`
+	MaxNumber      int32             `reg:"required"`
+	RoundNumber    int32             `reg:"required"`
 	RoundNow       int32
 	UserList       string
-	RoomType       int32 `reg:"required"`
+	RoomType       int32             `reg:"required"`
 	PayerID        int32
-	GameType       int32  `reg:"required"`
-	GameParam      string `reg:"required,min=1,excludesall= 	"`
+	GameType       int32             `reg:"required"`
+	GameParam      string            `reg:"required,min=1,excludesall= 	"`
 	GameUserResult string
 	CreatedAt      *time.Time
 	UpdatedAt      *time.Time
@@ -32,7 +32,7 @@ type Room struct {
 	UserResults    []*GameUserResult `gorm:"-"`
 	Users          []*RoomUser       `gorm:"-"`
 	GiveupGame     GiveUpGameResult  `gorm:"-"`
-	Ids            []int32 `gorm:"-"`
+	Ids            []int32           `gorm:"-"`
 }
 
 type GiveUpGameResult struct {
@@ -68,14 +68,17 @@ type GameUserResult struct {
 }
 
 type RoomResults struct {
-	RoundNumber int32
-	RoundNow    int32
-	Status      int32
-	Password    string
-	GameType    int32
-	CreatedAt   *time.Time
-	List        []*GameUserResult
-	GameParam   string
+	RoomID          int32
+	RoundNumber     int32
+	RoundNow        int32
+	Status          int32
+	Password        string
+	GameType        int32
+	CreatedAt       *time.Time
+	List            []*GameUserResult
+	GameParam       string
+	MaxPlayerNumber int32
+	PlayerNumberNow int32
 }
 
 type PlayerRoom struct {
@@ -147,7 +150,7 @@ func (r *Room) ToProto() *pbr.Room {
 func (r *RoomUser) ToProto() *pbr.RoomUser {
 	return &pbr.RoomUser{
 		UserID:   r.UserID,
-		Nickname: r.Nickname,//DecodNickName(r.Nickname),
+		Nickname: r.Nickname, //DecodNickName(r.Nickname),
 		Ready:    r.Ready,
 		Position: r.Position,
 		Icon:     r.Icon,
@@ -172,7 +175,7 @@ func (r *RoomResults) ToProto() *pbr.RoomResults {
 func (ur *GameUserResult) ToProto() *pbr.GameUserResult {
 	return &pbr.GameUserResult{
 		UserID:        ur.UserID,
-		Nickname:      ur.Nickname,//DecodNickName(ur.Nickname),
+		Nickname:      ur.Nickname, //DecodNickName(ur.Nickname),
 		Win:           ur.Win,
 		Lost:          ur.Lost,
 		Tie:           ur.Tie,
@@ -185,19 +188,19 @@ func (cre *CheckRoomExist) ToProto() *pbr.CheckRoomExistReply {
 	out := &pbr.CheckRoomExistReply{}
 	out.Result = cre.Result
 	out.Status = cre.Status
-	if &cre.Room == nil{
+	if &cre.Room == nil {
 		out.Room = nil
-	}else{
+	} else {
 		out.Room = cre.Room.ToProto()
 	}
-	if &cre.GiveupResult == nil{
+	if &cre.GiveupResult == nil {
 		out.GiveupResult = nil
-	}else{
+	} else {
 		out.GiveupResult = cre.GiveupResult.ToProto()
 	}
-	if &cre.GameResult == nil{
+	if &cre.GameResult == nil {
 		out.GameResult = nil
-	}else{
+	} else {
 		out.GameResult = cre.GameResult.ToProto()
 	}
 	return out
@@ -317,11 +320,10 @@ func FeedbackFromProto(fb *pbr.Feedback) *Feedback {
 	}
 }
 
-
 func DecodNickName(nikename string) string {
 	uDec, err := base64.StdEncoding.DecodeString(nikename)
 	if err != nil {
-		log.Err("EncodNickName nickname:%s,err:%v",nikename,err)
+		log.Err("EncodNickName nickname:%s,err:%v", nikename, err)
 	}
 	//nikename = string(uDec)
 	return string(uDec)

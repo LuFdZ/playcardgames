@@ -13,7 +13,6 @@ import (
 	"golang.org/x/net/context"
 	//"fmt"
 	"strings"
-	"fmt"
 )
 
 type UserSrv struct {
@@ -52,7 +51,7 @@ func (us *UserSrv) AddUser(ctx context.Context, req *pbu.User,
 func (us *UserSrv) Login(ctx context.Context, req *pbu.User,
 	rsp *pbu.LoginReply) error {
 	address, _ := ctx.Value("X-Real-Ip").(string)
-	u, err := user.Login(mdu.UserFromProto(req), address)
+	u, diamond,err := user.Login(mdu.UserFromProto(req), address)
 	if err != nil {
 		return err
 	}
@@ -63,7 +62,9 @@ func (us *UserSrv) Login(ctx context.Context, req *pbu.User,
 		return err
 	}
 	rsp.Token = token
-	rsp.User = u.ToProto()
+	reply := u.ToProto()
+	reply.Diamond = diamond
+	rsp.User = reply
 	log.Debug("login: %v", u)
 	//room.AutoSubscribe(u.UserID)
 	return nil
@@ -166,7 +167,7 @@ func (us *UserSrv) WXLogin(ctx context.Context, req *pbu.WXLoginRequest,
 		list := strings.Split(addresslist, ",")
 		address = list[0]
 	}
-	_, u, err := user.WXLogin(mdu.UserFromWXLoginRequestProto(req), req.Code, address)
+	diamond,u, err := user.WXLogin(mdu.UserFromWXLoginRequestProto(req), req.Code, address)
 	if err != nil {
 		return err
 	}
@@ -177,7 +178,9 @@ func (us *UserSrv) WXLogin(ctx context.Context, req *pbu.WXLoginRequest,
 	}
 	rsp.Token = token
 	log.Debug("login: %v|%s", u,address)
+	reply := u.ToProto()
+	reply.Diamond = diamond
 	rsp.User = u.ToProto()
-	fmt.Printf("WXLogin:%v\n",rsp.User)
+	//fmt.Printf("WXLogin:%v\n",rsp.User)
 	return nil
 }

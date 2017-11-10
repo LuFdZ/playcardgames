@@ -72,7 +72,7 @@ func init() {
 		SubscribeRoomMessage)
 	request.RegisterHandler("UnSubscribeRoomMessage", auth.RightsPlayer,
 		UnsubscribeRoomMessage)
-	request.RegisterHandler("ClinetHearbeat", auth.RightsPlayer,
+	request.RegisterHandler("ClientHeartbeat", auth.RightsPlayer,
 		ClinetHearbeatMessage)
 	request.RegisterHeartbeatHandler(HeartbeatCallback)
 }

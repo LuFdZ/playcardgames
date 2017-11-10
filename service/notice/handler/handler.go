@@ -15,7 +15,7 @@ type NoticeSrv struct {
 }
 
 func (us *NoticeSrv) GetNotice(ctx context.Context, req *pbn.Notice,
-	rsp *pbn.NoticeList) error {
+	rsp *pbn.NoticeListReply) error {
 
 	u, err := auth.GetUser(ctx)
 	if err != nil {
@@ -31,7 +31,7 @@ func (us *NoticeSrv) GetNotice(ctx context.Context, req *pbn.Notice,
 }
 
 func (us *NoticeSrv) AllNotice(ctx context.Context, req *pbn.Notice,
-	rsp *pbn.NoticeList) error {
+	rsp *pbn.NoticeListReply) error {
 	_, err := auth.GetUser(ctx)
 	if err != nil {
 		return err

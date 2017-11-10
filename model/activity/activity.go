@@ -5,7 +5,6 @@ import (
 	dba "playcards/model/activity/db"
 	enum "playcards/model/activity/enum"
 	"playcards/model/activity/errors"
-	mda "playcards/model/activity/mod"
 	"playcards/model/bill"
 	enumbill "playcards/model/bill/enum"
 	mbill "playcards/model/bill/mod"
@@ -17,31 +16,6 @@ import (
 
 	"github.com/jinzhu/gorm"
 )
-
-func AddActivityConfig(ac *mda.ActivityConfig) error {
-	return db.Transaction(func(tx *gorm.DB) error {
-		return dba.AddActivityConfig(tx, ac)
-	})
-}
-
-func UpdateActivityConfig(ac *mda.ActivityConfig) error {
-	if ac.ConfigID <1{
-		return errors.ErrIDNotFIND
-	}
-	return db.Transaction(func(tx *gorm.DB) error {
-		return dba.UpdateActivityConfig(tx, ac)
-	})
-}
-
-func DeleteActivityConfig(ac *mda.ActivityConfig) error {
-	return db.Transaction(func(tx *gorm.DB) error {
-		return dba.DeleteActivityConfig(tx, ac)
-	})
-}
-
-func ActivityConfigList() ([]*mda.ActivityConfig, error) {
-	return dba.ActivityConfigList(db.DB())
-}
 
 func Invite(u *mdu.User, inviterID int32) (int32, []*mbill.UserBalance, error) {
 	var (

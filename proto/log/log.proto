@@ -2,6 +2,7 @@ syntax = "proto3";
 
 package log;
 
+//结构体
 message ClientErrorLog {
     string Message = 1;
     string Condition = 2;

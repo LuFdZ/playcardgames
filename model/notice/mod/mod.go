@@ -26,8 +26,8 @@ type NoticeList struct {
 	List []*Notice
 }
 
-func (nl *NoticeList) ToProto() *pbn.NoticeList {
-	out := &pbn.NoticeList{}
+func (nl *NoticeList) ToProto() *pbn.NoticeListReply {
+	out := &pbn.NoticeListReply{}
 	utilproto.ProtoSlice(nl.List, &out.List)
 	return out
 }

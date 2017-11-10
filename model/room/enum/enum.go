@@ -4,7 +4,8 @@ package enum
 const (
 	ErrUID           = -1
 	ThirteenGameCost = 1.0
-	NiuniuGameCost = 1.0
+	NiuniuGameCost   = 1.0
+	AgentRoomLimit   = 10
 )
 
 //globle config
@@ -58,8 +59,9 @@ const (
 
 // room user role
 const (
-	UserRoleMaster = 1
-	UserRoleSlave  = 2
+	UserRoleMaster = 1 //庄家
+	UserRoleSlave  = 2 //闲家
+	UserRoleAgent  = 3 //代开房主
 )
 
 // room user ready status

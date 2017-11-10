@@ -25,6 +25,7 @@ func UpdateConfig(tx *gorm.DB, co *mdconf.Config) (*mdconf.Config, error) {
 		Version:     co.Version,
 		MobileOs:    co.MobileOs,
 		Status:      co.Status,
+		ItemValue:   co.ItemValue,
 		Description: co.Description,
 		UpdatedAt:   &now,
 	}
