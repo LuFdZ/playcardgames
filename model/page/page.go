@@ -29,6 +29,18 @@ type PageOption struct {
 	EndAt    *time.Time
 }
 
+type PageReply struct {
+	PageNow   int32
+	PageTotal int32
+}
+
+func (pr *PageReply) ToProto() *pbpage.PageReply {
+	return &pbpage.PageReply{
+		PageNow:   pr.PageNow,
+		PageTotal: pr.PageTotal,
+	}
+}
+
 func (o *PageOption) RowOffset() int32 {
 	return o.Page * o.PageSize
 }

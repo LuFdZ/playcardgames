@@ -2,16 +2,15 @@ package enum
 
 const (
 	JournalTypeInitBalance = iota + 1
-	JournalTypeDeposito
-	JournalTypeDash
-	JournalTypeGive
 	JournalTypeRecharge
 	JournalTypeInvite
 	JournalTypeInvited
 	JournalTypeShare
-	JournalTypeRoom
 	JournalTypeThirteen
 	JournalTypeNiuniu
+	JournalTypeThirteenRefund
+	JournalTypeNiuniuRefund
+	JournalTypeClubRecharge
 )
 
 const (
@@ -25,7 +24,7 @@ const (
 )
 
 const (
-	SystemOpUserID = 1000000001
+	SystemOpUserID = 100000
 )
 
 const (
@@ -36,4 +35,9 @@ const (
 
 const (
 	DefaultChannel = "system"
+)
+
+const (
+	TypeUser = 1
+	TypeClub = 2
 )

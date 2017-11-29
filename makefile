@@ -19,6 +19,8 @@ all:  api-srv           \
       thirteen-srv      \
       notice-srv        \
       niuniu-srv        \
+      club-srv          \
+      common-srv        \
 
 dev:
 	-${GOGET} github.com/golang/lint
@@ -79,6 +81,8 @@ gen: dep
 	${PROTO_BUILD} ./proto/thirteen/thirteen.proto
 	${PROTO_BUILD} ./proto/notice/notice.proto
 	${PROTO_BUILD} ./proto/niuniu/niuniu.proto
+	${PROTO_BUILD} ./proto/club/club.proto
+	${PROTO_BUILD} ./proto/common/common.proto
 
 api-srv: gen
 	${BUILD} -o ./bin/api-srv service/api/main.go
@@ -112,6 +116,13 @@ notice-srv: gen
 
 niuniu-srv: gen
 	${BUILD} -o ./bin/niuniu-srv service/niuniu/main.go
+
+club-srv: gen
+	${BUILD} -o ./bin/club-srv service/club/main.go
+
+common-srv: gen
+	${BUILD} -o ./bin/common-srv service/common/main.go
+
 
 db-reset-init:
 	${MIGRATE_CMD} goto 1

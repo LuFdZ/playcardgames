@@ -67,6 +67,9 @@ func SubscribeAllRoomMessage(brk broker.Broker) error {
 	subscribe.SrvSubscribe(brk, topic.Topic(srvroom.TopicRoomExist),
 		RoomExistHandler,
 	)
+	subscribe.SrvSubscribe(brk, topic.Topic(srvroom.TopicRoomNotice),
+		RoomNoticeHandler,
+	)
 	return nil
 }
 
@@ -78,7 +81,6 @@ func RoomCreateHandler(p broker.Publication) error {
 	if err != nil {
 		return err
 	}
-	//fmt.Printf("AAAAAAAAA:%d",rs.UserID)
 	err = clients.SendTo(rs.UserID, t, enum.MsgRoomCreate, rs)
 	if err != nil {
 		return err
@@ -114,7 +116,6 @@ func RoomUnJoinHandler(p broker.Publication) error {
 	}
 	ids := rs.Ids
 	rs.Ids = nil
-	//fmt.Printf("RoomUnJoinHandler:%v",ids)
 	err = clients.SendRoomUsers(ids, t, enum.MsgRoomUnJoin, rs)
 	if err != nil {
 		return err
@@ -256,3 +257,19 @@ func RoomExistHandler(p broker.Publication) error {
 	return nil
 }
 
+func RoomNoticeHandler(p broker.Publication) error {
+	t := p.Topic()
+	msg := p.Message()
+	rs := &pbroom.RoomNotice{}
+	err := proto.Unmarshal(msg.Body, rs)
+	if err != nil {
+		return err
+	}
+	ids := rs.Ids
+	rs.Ids = nil
+	err = clients.SendRoomUsers(ids, t, enum.MsgRoomNotice, rs)
+	if err != nil {
+		return err
+	}
+	return nil
+}

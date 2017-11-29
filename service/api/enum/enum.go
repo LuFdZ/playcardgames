@@ -19,6 +19,8 @@ var (
 	ThirteenServiceName = "playcards.srv.thirteen"
 	NoticeServiceName   = "playcards.srv.notice"
 	NiuniuServiceName   = "playcards.srv.niuniu"
+	ClubServiceName     = "playcards.srv.club"
+	CommonServiceName   = "playcards.srv.common"
 )
 
 var (

@@ -2,6 +2,8 @@ package handler
 
 import (
 	"context"
+	"fmt"
+	"playcards/model/room"
 	"playcards/model/thirteen"
 	"playcards/model/thirteen/enum"
 	mdt "playcards/model/thirteen/mod"
@@ -11,10 +13,9 @@ import (
 	gsync "playcards/utils/sync"
 	"playcards/utils/topic"
 	"time"
-	"playcards/model/room"
+
 	"github.com/micro/go-micro/broker"
 	"github.com/micro/go-micro/server"
-	"fmt"
 )
 
 type ThirteenSrv struct {
@@ -39,7 +40,7 @@ func (ts *ThirteenSrv) update(gt *gsync.GlobalTimer) {
 	lock := "playcards.thirteen.update.lock"
 	f := func() error {
 		//s := time.Now()
-		//log.Debug("thirteen update loop... and has %d thirteens")
+		//log.Debug("thirteen update loop... and has %d thirteens")≤
 		newGames := thirteen.CreateThirteen()
 		if newGames != nil {
 			for _, game := range newGames {
@@ -77,25 +78,13 @@ func (ts *ThirteenSrv) SubmitCard(ctx context.Context, req *pbt.SubmitCard,
 	if err != nil {
 		return err
 	}
-	r,err :=room.GetRoomByUserID(u.UserID)
+	r, err := room.GetRoomByUserID(u.UserID)
+	var ids []int32
 	f := func() error {
-		ids, err := thirteen.SubmitCard(u.UserID, mdt.SubmitCardFromProto(req, u.UserID),r)
+		ids, err = thirteen.SubmitCard(u.UserID, mdt.SubmitCardFromProto(req, u.UserID), r)
 		if err != nil {
 			return err
 		}
-		reply := &pbt.ThirteenReply{
-			Result: 1,
-		}
-		*rsp = *reply
-
-		msg := &pbt.GameReady{
-			Ids:    ids,
-			UserID: u.UserID,
-		}
-		topic.Publish(ts.broker, msg, TopicThirteenGameReady)
-		//if len(pwd) == 0{
-		//	return
-		//}
 		return nil
 	}
 	lock := RoomLockKey(r.Password)
@@ -104,6 +93,20 @@ func (ts *ThirteenSrv) SubmitCard(ctx context.Context, req *pbt.SubmitCard,
 		log.Err("%s enter room failed: %v", lock, err)
 		return err
 	}
+	reply := &pbt.ThirteenReply{
+		Result: 1,
+	}
+	*rsp = *reply
+
+	msg := &pbt.GameReady{
+		Ids:    ids,
+		UserID: u.UserID,
+	}
+	topic.Publish(ts.broker, msg, TopicThirteenGameReady)
+	//if len(pwd) == 0{
+	//	return
+	//}
+
 	return nil
 }
 

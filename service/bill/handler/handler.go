@@ -4,7 +4,6 @@ import (
 	"playcards/model/bill"
 	_ "playcards/model/bill"
 	enumbill "playcards/model/bill/enum"
-	mbill "playcards/model/bill/mod"
 	pbbill "playcards/proto/bill"
 	"playcards/utils/auth"
 	gctx "playcards/utils/context"
@@ -12,6 +11,8 @@ import (
 
 	"github.com/micro/go-micro/broker"
 	"github.com/micro/go-micro/server"
+
+	"strconv"
 
 	"golang.org/x/net/context"
 )
@@ -62,32 +63,37 @@ func (b *BillSrv) GetUserBalance(ctx context.Context,
 	return nil
 }
 
-func (b *BillSrv) GainBalance(ctx context.Context, req *pbbill.Balance,
-	rsp *pbbill.Balance) error {
-	u := gctx.GetUser(ctx)
-	ub, err := bill.GainBalance(req.UserID, u.UserID,
-		&mbill.Balance{Gold: req.Gold, Diamond: req.Diamond})
-	if err != nil {
-		return err
-	}
-	*rsp = *ub.ToProto()
-	// if req.UserID != u.UserID {
-	// 	msg := &pbbill.BalanceChange{
-	// 		UserID:  req.UserID,
-	// 		Diamond: ub.Diamond,
-	// 	}
-	// 	topic.Publish(b.broker, msg, TopicBillChange)
-	// }
-	return nil
-}
+//func (b *BillSrv) GainBalance(ctx context.Context, req *pbbill.Balance,
+//	rsp *pbbill.Balance) error {
+//	u := gctx.GetUser(ctx)
+//	ub, err := bill.GainBalance(req.UserID, u.UserID,
+//		&mbill.Balance{Gold: req.Gold, Diamond: req.Diamond})
+//	if err != nil {
+//		return err
+//	}
+//	*rsp = *ub.ToProto()
+//	// if req.UserID != u.UserID {
+//	// 	msg := &pbbill.BalanceChange{
+//	// 		UserID:  req.UserID,
+//	// 		Diamond: ub.Diamond,
+//	// 	}
+//	// 	topic.Publish(b.broker, msg, TopicBillChange)
+//	// }
+//	return nil
+//}
 
 func (b *BillSrv) Recharge(ctx context.Context, req *pbbill.RechargeRequest,
 	rsp *pbbill.RechargeReply) error {
 	rsp.Result = 2
 	rsp.Code = 101
 	u := gctx.GetUser(ctx)
+	orderID, err := strconv.ParseInt(req.OrderID, 10, 64)
+	if err != nil {
+		rsp.Code = 102
+		return err
+	}
 	res, ub, err := bill.Recharge(req.UserID, u.UserID, req.Diamond,
-		req.OrderID, enumbill.JournalTypeRecharge, u.Channel)
+		orderID, enumbill.JournalTypeRecharge, u.Channel)
 	if err != nil {
 		rsp.Code = 102
 		return err

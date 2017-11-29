@@ -6,8 +6,9 @@ import (
 	mdt "playcards/model/thirteen/mod"
 	"playcards/utils/cache"
 	"playcards/utils/errors"
-	"strconv"
 	"playcards/utils/log"
+	"strconv"
+
 	"gopkg.in/redis.v5"
 )
 
@@ -217,7 +218,7 @@ func GetAllThirteen(f func(*mdt.Thirteen) bool) []*mdt.Thirteen {
 		if err != nil {
 			log.Err("redis get thirteen err: %v", err)
 		}
-		if thirteen == nil{
+		if thirteen == nil {
 			continue
 		}
 		if f != nil && !f(thirteen) {

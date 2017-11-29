@@ -1,19 +1,19 @@
 package config
 
 import (
-	dbconf "playcards/model/config/db"
-	mdconf "playcards/model/config/mod"
 	cachec "playcards/model/config/cache"
+	dbconf "playcards/model/config/db"
 	enumc "playcards/model/config/enum"
+	mdconf "playcards/model/config/mod"
 	mdpage "playcards/model/page"
-	"playcards/utils/errors"
 	"playcards/utils/db"
+	"playcards/utils/errors"
+
 	"github.com/jinzhu/gorm"
-	"fmt"
 )
 
 func UpdateConfig(co *mdconf.Config) error {
-	if co.ConfigID <1{
+	if co.ConfigID < 1 {
 		return errors.Conflict(70001, "未找到数据ID！")
 	}
 	return db.Transaction(func(tx *gorm.DB) error {
@@ -43,7 +43,7 @@ func CreateConfig(co *mdconf.Config) error {
 	})
 }
 
-func GetConfigs(channel string,version string,mobileOs string) map[int32]*mdconf.Config{
+func GetConfigs(channel string, version string, mobileOs string) map[int32]*mdconf.Config {
 	f := func(co *mdconf.Config) bool {
 		if co.Status == enumc.ConfigOpenStatusAble &&
 			(co.Channel == channel || len(co.Channel) == 0) &&
@@ -56,20 +56,21 @@ func GetConfigs(channel string,version string,mobileOs string) map[int32]*mdconf
 	return cachec.GetAllConfig(f)
 }
 
-func GetUniqueConfigByItemID(channel string,version string,mobileOs string) []*mdconf.Config {
-	cm := GetConfigs(channel,version,mobileOs)
+func GetUniqueConfigByItemID(channel string, version string, mobileOs string) []*mdconf.Config {
+	cm := GetConfigs(channel, version, mobileOs)
+
 	var cos []*mdconf.Config
-	str := "GetUniqueConfigByItemID List "
-	for _,co :=range cm{
-		cos = append(cos,co)
-		str += fmt.Sprintf("ID:%d ",co.ConfigID)
+	//str := "GetUniqueConfigByItemID List "
+	for _, co := range cm {
+		cos = append(cos, co)
+		//str += fmt.Sprintf("ID:%d ",co.ConfigID)
 	}
-	fmt.Printf("%s\n",str)
+	//fmt.Printf("%s\n",str)
 	return cos
 }
 
-func RefreshAllConfigsFromDB() error{
-	cos,err :=dbconf.GetConfigs(db.DB())
+func RefreshAllConfigsFromDB() error {
+	cos, err := dbconf.GetConfigs(db.DB())
 	if err != nil {
 		return err
 	}
@@ -80,4 +81,3 @@ func PageConfigs(page *mdpage.PageOption, c *mdconf.Config) (
 	[]*mdconf.Config, int64, error) {
 	return dbconf.PageConfigs(db.DB(), page, c)
 }
-

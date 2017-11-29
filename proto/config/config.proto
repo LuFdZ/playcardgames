@@ -29,7 +29,8 @@ message ConfigReply{
 }
 
 message GetConfigsReply{
-    repeated Config List = 1;
+    int32 Result = 1;
+    repeated Config List = 2;
 }
 
 message PageConfigListReply {
@@ -43,6 +44,7 @@ service ConfigSrv {
     rpc CreateConfig (Config) returns (ConfigReply) {}
     rpc UpdateConfig (Config) returns (ConfigReply) {}
     rpc GetConfigs (Config) returns (GetConfigsReply) {}
+    rpc GetConfigsBeforeLogin (Config) returns (GetConfigsReply) {}
     rpc PageConfigs (PageConfigsRequest) returns (PageConfigListReply) {}
     rpc RefreshAllConfigsFromDB (Config) returns (ConfigReply) {}
 }

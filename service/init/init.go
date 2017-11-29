@@ -40,8 +40,10 @@ func Init() {
 	err = db.Open(Debug, "mysql", dburl)
 	env.ErrExit(err)
 
-	redishost := gcf.RedisHost()[0]
-	cache.Init(redishost)
+	redisconfig := gcf.RedisHost()
+	redishost := redisconfig[0]
+	redispassword := redisconfig[1]
+	cache.Init(redishost,redispassword)
 	sync.Init()
 
 	InitPProfServices()

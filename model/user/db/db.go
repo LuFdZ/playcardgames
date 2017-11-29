@@ -55,11 +55,19 @@ func UpdateUser(tx *gorm.DB, u *mdu.User) (*mdu.User, error) {
 		Icon:         u.Icon,
 		InviteUserID: u.InviteUserID,
 		LastLoginIP:  u.LastLoginIP,
+		ClubID:       u.ClubID,
 	}
 	if err := tx.Model(u).Updates(user).Error; err != nil {
 		return nil, errors.Internal("update user failed", err)
 	}
 	return u, nil
+}
+
+func ReSetUserClubID(tx *gorm.DB, u *mdu.User) error {
+	if err := tx.Model(u).Update("club_id", 0).Error; err != nil {
+		return errors.Internal("reset user club_id failed", err)
+	}
+	return nil
 }
 
 func PageUserList(tx *gorm.DB, page *mdpage.PageOption, u *mdu.User) (
@@ -155,6 +163,6 @@ func FindAndGetUser(tx *gorm.DB, u *mdu.User) (*mdu.User, error) {
 	if !found {
 		return nil, nil
 	}
-	fmt.Printf("FindAndGetUser UserInfo:%s|%s|%s\n",u.MobileOs,u.Version,u.Channel)
+	//fmt.Printf("FindAndGetUser UserInfo:%s|%s|%s\n", u.MobileOs, u.Version, u.Channel)
 	return u, nil
 }

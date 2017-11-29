@@ -1,7 +1,6 @@
 package handler
 
 import (
-	//"fmt"
 	mdpage "playcards/model/page"
 	"playcards/model/user"
 	cacheuser "playcards/model/user/cache"
@@ -10,9 +9,10 @@ import (
 	"playcards/utils/auth"
 	"playcards/utils/log"
 	utilpb "playcards/utils/proto"
-	"golang.org/x/net/context"
-	//"fmt"
+	utilproto "playcards/utils/proto"
 	"strings"
+
+	"golang.org/x/net/context"
 )
 
 type UserSrv struct {
@@ -51,7 +51,7 @@ func (us *UserSrv) AddUser(ctx context.Context, req *pbu.User,
 func (us *UserSrv) Login(ctx context.Context, req *pbu.User,
 	rsp *pbu.LoginReply) error {
 	address, _ := ctx.Value("X-Real-Ip").(string)
-	u, diamond,err := user.Login(mdu.UserFromProto(req), address)
+	u, diamond, err := user.Login(mdu.UserFromProto(req), address)
 	if err != nil {
 		return err
 	}
@@ -98,6 +98,10 @@ func (us *UserSrv) GetUser(ctx context.Context, req *pbu.User,
 
 func (us *UserSrv) PageUserList(ctx context.Context,
 	req *pbu.PageUserListRequest, rsp *pbu.PageUserListReply) error {
+	_, err := auth.GetUser(ctx)
+	if err != nil {
+		return err
+	}
 	rsp.Result = 2
 	rsp.Code = 101
 	page := mdpage.PageOptionFromProto(req.Page)
@@ -160,27 +164,79 @@ func (us *UserSrv) CheckUser(ctx context.Context, req *pbu.CheckUserRequest,
 
 func (us *UserSrv) WXLogin(ctx context.Context, req *pbu.WXLoginRequest,
 	rsp *pbu.WXLoginRsply) error {
-	forwarded :=ctx.Value("X-Forwarded-For")
+	forwarded := ctx.Value("X-Forwarded-For")
 	address := ""
-	if  forwarded !=nil{
-		addresslist, _ := forwarded.(string)//ctx.Value("X-Real-Ip").(string)
+	if forwarded != nil {
+		addresslist, _ := forwarded.(string) //ctx.Value("X-Real-Ip").(string)
 		list := strings.Split(addresslist, ",")
 		address = list[0]
 	}
-	diamond,u, err := user.WXLogin(mdu.UserFromWXLoginRequestProto(req), req.Code, address)
+	diamond, u, err := user.WXLogin(mdu.UserFromWXLoginRequestProto(req), req.Code, address)
 	if err != nil {
 		return err
 	}
+	u.MobileOs = req.MobileOs
+	u.Version = req.Version
+	u.Channel = req.Channel
 	token, err := cacheuser.SetUser(u)
 	if err != nil {
 		log.Err("user login set session failed, %v", err)
 		return err
 	}
 	rsp.Token = token
-	log.Debug("login: %v|%s", u,address)
+	log.Debug("login: %v|%s", u, address)
 	reply := u.ToProto()
 	reply.Diamond = diamond
 	rsp.User = u.ToProto()
 	//fmt.Printf("WXLogin:%v\n",rsp.User)
+	return nil
+}
+
+func (us *UserSrv) DayActiveUserList(ctx context.Context, req *pbu.GetUserDayActiveRequest,
+	rsp *pbu.GetUserDayActiveRsply) error {
+	_, err := auth.GetUser(ctx)
+	if err != nil {
+		return err
+	}
+	ul, pr := user.DayActiveUserList(req.Page)
+	resply := &pbu.GetUserDayActiveRsply{
+		PageReply: pr.ToProto(),
+	}
+	utilproto.ProtoSlice(ul, &resply.List)
+	*rsp = *resply
+	return nil
+}
+
+func (us *UserSrv) GetUserOnlineCount(ctx context.Context, req *pbu.User,
+	rsp *pbu.AlineConutRsply) error {
+	_, err := auth.GetUser(ctx)
+	if err != nil {
+		return err
+	}
+	resply := &pbu.AlineConutRsply{}
+	count, err := user.GetUserOnlineCount()
+	if err != nil {
+		return err
+	}
+	resply.Count = count
+	*rsp = *resply
+	return nil
+}
+
+func (us *UserSrv) SetLocation(ctx context.Context, req *pbu.SetLocationRequest,
+	rsp *pbu.UserRsply) error {
+	u, err := auth.GetUser(ctx)
+	if err != nil {
+		return err
+	}
+	resply := &pbu.UserRsply{
+		Result: 1,
+	}
+	err = user.SetLocation(u, req.Json)
+	if err != nil {
+		return err
+	}
+
+	*rsp = *resply
 	return nil
 }

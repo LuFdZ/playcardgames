@@ -17,12 +17,12 @@ const (
 	MsgRoomUserConnection = "UserConnection"
 	MsgRoomRenewal        = "RoomRenewal"
 	MsgRoomVoiceChat      = "RoomVoiceChat"
-	MsgRoomExist         = "RoomExist"
+	MsgRoomExist          = "RoomExist"
+	MsgRoomNotice         = "RoomNotice"
 )
 
 const (
 	MsgThireteenGameResult = "ThirteenGameResult"
-	MsgThireteenSurrender  = "ThirteenSurrender"
 	MsgThireteenGameReady  = "ThirteenGameReady"
 	MsgThireteenGameStart  = "ThirteenGameStart"
 )
@@ -42,5 +42,12 @@ const (
 )
 
 const (
-	MsgHearbeat = "Hearbeat"
+	MsgClubMemberJoin   = "ClubMemberJoin"
+	MsgClubMemberLeave  = "ClubMemberLeave"
+	MsgClubInfo         = "ClubInfo"
+	MsgClubOnlineStatus = "ClubOnlineStatus"
+	MsgClubRoomCreate   = "ClubRoomCreate"
+	MsgClubRoomJoin     = "ClubRoomJoin"
+	MsgClubRoomUnJoin   = "ClubRoomUnJoin"
+	MsgClubRoomFinish   = "ClubRoomFinish"
 )

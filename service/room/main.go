@@ -14,7 +14,6 @@ import (
 )
 
 var FuncRights = map[string]int32{
-	"RoomSrv.Heartbeat":             auth.RightsNone,
 	"RoomSrv.CreateRoom":            auth.RightsPlayer,
 	"RoomSrv.EnterRoom":             auth.RightsPlayer,
 	"RoomSrv.LeaveRoom":             auth.RightsPlayer,
@@ -29,9 +28,11 @@ var FuncRights = map[string]int32{
 	"RoomSrv.GetAgentRoomList":      auth.RightsPlayer,
 	"RoomSrv.DeleteAgentRoomRecord": auth.RightsPlayer,
 	"RoomSrv.DisbandAgentRoom":      auth.RightsPlayer,
+	"RoomSrv.GetRoomUserLocation":   auth.RightsPlayer,
+	"RoomSrv.CreateClubRoom":        auth.RightsPlayer,
+	"RoomSrv.CreateFeedback":        auth.RightsPlayer,
+	"RoomSrv.PageRoomList":          auth.RightsNoticeAdmin,
 	"RoomSrv.PageFeedbackList":      auth.RightsRoomAdmin,
-	"RoomSrv.CreateFeedback":        auth.RightsRoomAdmin,
-	"RoomSrv.TestClean":             auth.RightsNone,
 }
 
 func main() {

@@ -17,6 +17,7 @@ CREATE TABLE `users` (
   `sex`             INT          NOT NULL DEFAULT '0',
   `icon`            VARCHAR(128)          DEFAULT NULL,
   `invite_user_id`  INT          NOT NULL DEFAULT '0',
+  `club_id`         INT          NOT NULL DEFAULT '0',
   `mobile_uu_id`    VARCHAR(30)           DEFAULT NULL,
   `mobile_model`    VARCHAR(20)           DEFAULT NULL,
   `mobile_net_work` VARCHAR(20)           DEFAULT NULL,
@@ -26,31 +27,20 @@ CREATE TABLE `users` (
   `open_id`         VARCHAR(30)           DEFAULT NULL,
   `union_id`        VARCHAR(30)           DEFAULT NULL,
   PRIMARY KEY (`user_id`),
-#   UNIQUE KEY `email_unique` (`email`),
-#   UNIQUE KEY `username_unique` (`username`),
+  #   UNIQUE KEY `email_unique` (`email`),
+  UNIQUE KEY `username_unique` (`username`),
   UNIQUE KEY `openid_unique` (`open_id`)
-
 )
   ENGINE = InnoDB
   AUTO_INCREMENT = 100000
   DEFAULT CHARSET = utf8;
 
-insert into users values(0,"admin@xnhd","67bad3e758b4d324381586f209fee08bca0701396a606f12029425f31cd29ce8","YWRtaW5AeG5oZA==","","","",0,"","",0,now(),now(),now(),131071,1,"",0,"","","","","","","","");
-
 CREATE TABLE `balances` (
-  `user_id`                INT      NOT NULL,
-  `deposit`                BIGINT   NOT NULL DEFAULT '0',
-  `freeze`                 BIGINT   NOT NULL DEFAULT '0',
-  `gold`                   BIGINT   NOT NULL DEFAULT '0',
-  `diamond`                BIGINT   NOT NULL DEFAULT '0',
-  `amount`                 BIGINT   NOT NULL DEFAULT '0',
-  `gold_profit`            BIGINT   NOT NULL DEFAULT '0',
-  `diamond_profit`         BIGINT   NOT NULL DEFAULT '0',
-  `cumulative_recharge`    BIGINT   NOT NULL DEFAULT '0',
-  `cumulative_consumption` BIGINT   NOT NULL DEFAULT '0',
-  `cumulative_gift`        BIGINT   NOT NULL DEFAULT '0',
-  `created_at`             DATETIME NOT NULL,
-  `updated_at`             DATETIME NOT NULL,
+  `user_id`    INT      NOT NULL,
+  `gold`       BIGINT   NOT NULL DEFAULT '0',
+  `diamond`    BIGINT   NOT NULL DEFAULT '0',
+  `created_at` DATETIME NOT NULL,
+  `updated_at` DATETIME NOT NULL,
   PRIMARY KEY (`user_id`),
   KEY `created_at_index` (`created_at`)
 )
@@ -58,54 +48,58 @@ CREATE TABLE `balances` (
   DEFAULT CHARSET = utf8;
 
 CREATE TABLE `journals` (
-  `id`         INT          NOT NULL AUTO_INCREMENT,
-  `user_id`    INT          NOT NULL,
-  `gold`       BIGINT       NOT NULL DEFAULT '0',
-  `diamond`    BIGINT       NOT NULL DEFAULT '0',
-  `amount`     BIGINT       NOT NULL DEFAULT '0',
-  `type`       INT          NOT NULL,
-  `foreign`    VARCHAR(128) NOT NULL,
-  `channel`    VARCHAR(64)  NOT NULL,
-  `created_at` DATETIME     NOT NULL,
-  `updated_at` DATETIME     NOT NULL,
-  `op_user_id` INT          NOT NULL,
+  `id`            INT         NOT NULL AUTO_INCREMENT,
+  `user_id`       INT         NOT NULL,
+  `amount_type`   BIGINT      NOT NULL DEFAULT '0',
+  `amount`        BIGINT      NOT NULL DEFAULT '0',
+  `amount_before` BIGINT      NOT NULL DEFAULT '0',
+  `amount_after`  BIGINT      NOT NULL DEFAULT '0',
+  `type`          INT         NOT NULL,
+  `foreign`       BIGINT      NOT NULL DEFAULT '0',
+  `channel`       VARCHAR(64) NOT NULL,
+  `created_at`    DATETIME    NOT NULL,
+  `updated_at`    DATETIME    NOT NULL,
+  `op_user_id`    INT         NOT NULL,
   KEY `created_at_index` (`created_at`),
-  UNIQUE KEY `foreign_type_index` (`type`, `foreign`),
-  PRIMARY KEY (`id`)
-)
-  ENGINE = InnoDB
-  DEFAULT CHARSET = utf8;
-
-CREATE TABLE `deposits` (
-  `id`         INT      NOT NULL AUTO_INCREMENT,
-  `user_id`    INT      NOT NULL,
-  `amount`     BIGINT   NOT NULL DEFAULT '0',
-  `created_at` DATETIME NOT NULL,
-  `type`       INT      NOT NULL,
+  UNIQUE KEY `foreign_type_index` (`amount_type`, `type`, `foreign`),
   PRIMARY KEY (`id`),
-  KEY `created_at_index` (`created_at`)
-)
-  ENGINE = InnoDB
-  DEFAULT CHARSET = utf8;
-
-CREATE TABLE `activity_configs` (
-  `config_id`           INT          NOT NULL,
-  `description`         VARCHAR(60)  NOT NULL,
-  `parameter`           VARCHAR(400) NOT NULL,
-  `last_modify_user_id` INT          NOT NULL,
-  `created_at`          DATETIME     NOT NULL,
-  `updated_at`          DATETIME     NOT NULL,
-  PRIMARY KEY (`config_id`),
+  KEY `idx_amount_type`(`amount_type`),
+  KEY `idx_opid`(`op_user_id`),
   KEY `idx_created`(`created_at`)
 )
   ENGINE = InnoDB
-  AUTO_INCREMENT = 1
   DEFAULT CHARSET = utf8;
+
+# CREATE TABLE `deposits` (
+#   `id`         INT      NOT NULL AUTO_INCREMENT,
+#   `user_id`    INT      NOT NULL,
+#   `amount`     BIGINT   NOT NULL DEFAULT '0',
+#   `created_at` DATETIME NOT NULL,
+#   `type`       INT      NOT NULL,
+#   PRIMARY KEY (`id`),
+#   KEY `created_at_index` (`created_at`)
+# )
+#   ENGINE = InnoDB
+#   DEFAULT CHARSET = utf8;
+#
+# CREATE TABLE `activity_configs` (
+#   `config_id`           INT          NOT NULL,
+#   `description`         VARCHAR(60)  NOT NULL,
+#   `parameter`           VARCHAR(400) NOT NULL,
+#   `last_modify_user_id` INT          NOT NULL,
+#   `created_at`          DATETIME     NOT NULL,
+#   `updated_at`          DATETIME     NOT NULL,
+#   PRIMARY KEY (`config_id`),
+#   KEY `idx_created`(`created_at`)
+# )
+#   ENGINE = InnoDB
+#   AUTO_INCREMENT = 1
+#   DEFAULT CHARSET = utf8;
 
 CREATE TABLE `rooms` (
   `room_id`          INT           NOT NULL AUTO_INCREMENT,
   `password`         VARCHAR(16)   NOT NULL,
-  `user_list`        VARCHAR(3200)  NOT NULL DEFAULT '',
+  `user_list`        VARCHAR(3200) NOT NULL DEFAULT '',
   `max_number`       INT           NOT NULL DEFAULT '0',
   `round_number`     INT           NOT NULL DEFAULT '0',
   `round_now`        INT           NOT NULL DEFAULT '0',
@@ -119,6 +113,10 @@ CREATE TABLE `rooms` (
   `created_at`       DATETIME      NOT NULL,
   `updated_at`       DATETIME      NOT NULL,
   `giveup_at`        DATETIME      NOT NULL,
+  `flag`             INT           NOT NULL DEFAULT '0',
+  `club_id`          INT           NOT NULL DEFAULT '0',
+  `cost`             BIGINT        NOT NULL DEFAULT '0',
+  `cost_type`        INT           NOT NULL DEFAULT '0',
   `pre_item_1`       VARCHAR(255)  NOT NULL DEFAULT '',
   `pre_item_2`       VARCHAR(255)  NOT NULL DEFAULT '',
   PRIMARY KEY (`room_id`),
@@ -230,17 +228,17 @@ CREATE TABLE `player_shares` (
   DEFAULT CHARSET = utf8;
 
 CREATE TABLE `niunius` (
-  `game_id`           INT           NOT NULL AUTO_INCREMENT,
-  `room_id`           INT           NOT NULL DEFAULT '0',
-  `index`             INT           NOT NULL DEFAULT '0',
-  `banker_type`       INT           NOT NULL DEFAULT '0',
-  `banker_id`         INT           NOT NULL DEFAULT '0',
-  `user_cards`        VARCHAR(1000) NOT NULL DEFAULT '',
-  `game_results`      VARCHAR(1500) NOT NULL DEFAULT '',
-  `status`            INT           NOT NULL DEFAULT '0',
-  `op_date_at`        DATETIME      NOT NULL,
-  `created_at`        DATETIME      NOT NULL,
-  `updated_at`        DATETIME      NOT NULL,
+  `game_id`      INT           NOT NULL AUTO_INCREMENT,
+  `room_id`      INT           NOT NULL DEFAULT '0',
+  `index`        INT           NOT NULL DEFAULT '0',
+  `banker_type`  INT           NOT NULL DEFAULT '0',
+  `banker_id`    INT           NOT NULL DEFAULT '0',
+  `user_cards`   VARCHAR(1000) NOT NULL DEFAULT '',
+  `game_results` VARCHAR(1500) NOT NULL DEFAULT '',
+  `status`       INT           NOT NULL DEFAULT '0',
+  `op_date_at`   DATETIME      NOT NULL,
+  `created_at`   DATETIME      NOT NULL,
+  `updated_at`   DATETIME      NOT NULL,
   PRIMARY KEY (`game_id`),
   KEY `idx_status` (`status`),
   KEY `idx_room` (`room_id`),
@@ -251,26 +249,142 @@ CREATE TABLE `niunius` (
   DEFAULT CHARSET = utf8;
 
 CREATE TABLE `configs` (
-  `config_id`         INT           NOT NULL AUTO_INCREMENT,
-  `channel`           VARCHAR(20)   DEFAULT NULL,
-  `version`           VARCHAR(20)   DEFAULT NULL,
-  `mobile_os`         VARCHAR(20)   DEFAULT NULL,
-  `item_id`           INT           DEFAULT NULL,
-  `item_value`        VARCHAR(20)   DEFAULT NULL,
-  `status`            INT           NOT NULL DEFAULT '1',
-  `description`       VARCHAR(200)  DEFAULT NULL,
-  `created_at`        DATETIME      NOT NULL,
-  `updated_at`        DATETIME      NOT NULL,
+  `config_id`   INT      NOT NULL AUTO_INCREMENT,
+  `channel`     VARCHAR(20)       DEFAULT NULL,
+  `version`     VARCHAR(20)       DEFAULT NULL,
+  `mobile_os`   VARCHAR(20)       DEFAULT NULL,
+  `item_id`     INT               DEFAULT NULL,
+  `item_value`  VARCHAR(20)       DEFAULT NULL,
+  `status`      INT      NOT NULL DEFAULT '1',
+  `description` VARCHAR(200)      DEFAULT NULL,
+  `created_at`  DATETIME NOT NULL,
+  `updated_at`  DATETIME NOT NULL,
   PRIMARY KEY (`config_id`),
   KEY `idx_channel` (`channel`),
   KEY `idx_version` (`version`),
   KEY `idx_os` (`mobile_os`),
   KEY `idx_created`(`created_at`),
-  UNIQUE KEY `config_open_unique` (`channel`,`version`,`mobile_os`,`item_id`)
+  UNIQUE KEY `config_open_unique` (`channel`, `version`, `mobile_os`, `item_id`)
 )
   ENGINE = InnoDB
   AUTO_INCREMENT = 1
   DEFAULT CHARSET = utf8;
 
-insert into configs values(0,"","","",100001,"1",1,"全局默认充值开关",now(),now());
-insert into configs values(0,"","","",110001,"100",1,"全局默认消费开关",now(),now());
+CREATE TABLE `clubs` (
+  `club_id`       INT          NOT NULL AUTO_INCREMENT,
+  `club_name`     VARCHAR(128) NOT NULL,
+  `status`        VARCHAR(128) NOT NULL, #'俱乐部状态 -1审核中 1正常 2冻结',
+  `creator_id`    INT          NOT NULL,
+  `creator_proxy` INT          NOT NULL DEFAULT '0',
+  `club_remark`   VARCHAR(200),
+  `icon`          VARCHAR(128)          DEFAULT NULL,
+  `gold`          BIGINT       NOT NULL DEFAULT '0',
+  `diamond`       BIGINT       NOT NULL DEFAULT '0',
+  `club_param`    VARCHAR(128) NOT NULL,
+  `created_at`    DATETIME     NOT NULL,
+  `updated_at`    DATETIME     NOT NULL,
+  PRIMARY KEY (`club_id`),
+  UNIQUE KEY `name_unique` (`club_name`),
+  KEY `idx_created`(`created_at`),
+  KEY `idx_status`(`status`),
+  KEY `idx_name`(`club_name`),
+  KEY `idx_creator`(`creator_id`),
+  KEY `idx_proxy`(`creator_proxy`)
+)
+  ENGINE = InnoDB
+  AUTO_INCREMENT = 10000
+  DEFAULT CHARSET = utf8;
+
+CREATE TABLE `club_journals` (
+  `id`            INT      NOT NULL AUTO_INCREMENT,
+  `club_id`       INT      NOT NULL,
+  `amount_type`   BIGINT   NOT NULL DEFAULT '0',
+  `amount`        BIGINT   NOT NULL DEFAULT '0',
+  `amount_before` BIGINT   NOT NULL DEFAULT '0',
+  `amount_after`  BIGINT   NOT NULL DEFAULT '0',
+  `type`          INT      NOT NULL,
+  `foreign`       BIGINT   NOT NULL DEFAULT '0',
+  `created_at`    DATETIME NOT NULL,
+  `updated_at`    DATETIME NOT NULL,
+  `op_user_id`    INT      NOT NULL,
+  KEY `created_at_index` (`created_at`),
+  UNIQUE KEY `foreign_type_index` (`type`, `foreign`),
+  PRIMARY KEY (`id`),
+  KEY `idx_amount_type`(`amount_type`),
+  KEY `idx_opid`(`op_user_id`),
+  KEY `idx_created`(`created_at`)
+)
+  ENGINE = InnoDB
+  DEFAULT CHARSET = utf8;
+
+CREATE TABLE `club_members` (
+  `member_id`  INT      NOT NULL AUTO_INCREMENT,
+  `club_id`    INT      NOT NULL,
+  `user_id`    INT      NOT NULL,
+  `role`       INT      NOT NULL,
+  `status`     INT      NOT NULL, #'成员状态 1正常 2禁用 3主动退出 4被动退出 5黑名单',
+  `created_at` DATETIME NOT NULL,
+  `updated_at` DATETIME NOT NULL,
+
+  PRIMARY KEY (`member_id`),
+  #UNIQUE KEY `members_unique` (`club_id`, `user_id`),
+  KEY `idx_created`(`created_at`),
+  KEY `idx_club`(`club_id`),
+  KEY `idx_user`(`user_id`),
+  KEY `idx_status`(`status`)
+)
+  ENGINE = InnoDB
+  AUTO_INCREMENT = 1
+  DEFAULT CHARSET = utf8;
+
+CREATE TABLE `black_lists` (
+  `black_id`   INT      NOT NULL AUTO_INCREMENT,
+  `type`       INT      NOT NULL, #'黑名单类型 1俱乐部'
+  `origin_id`  INT      NOT NULL, #'发起对象id'
+  `target_id`  INT      NOT NULL, #'被屏蔽对象id'
+  `status`     INT      NOT NULL, #'1生效 2失效'
+  `op_id`      INT      NOT NULL, #'操作人id'
+  `created_at` DATETIME NOT NULL,
+  `updated_at` DATETIME NOT NULL,
+
+  PRIMARY KEY (`black_id`),
+  #UNIQUE KEY `black_unique` (`type`, `origin_id`, `target_id`),
+  KEY `idx_created`(`created_at`),
+  KEY `idx_type`(`type`),
+  KEY `idx_origin`(`origin_id`),
+  KEY `idx_target`(`target_id`),
+  KEY `idx_status`(`status`)
+)
+  ENGINE = InnoDB
+  AUTO_INCREMENT = 1
+  DEFAULT CHARSET = utf8;
+
+CREATE TABLE `examines` (
+  `examine_id`   INT      NOT NULL AUTO_INCREMENT,
+  `type`         INT      NOT NULL, #'审核申请类型 1俱乐部'
+  `applicant_id` INT      NOT NULL, #'申请人id'
+  `auditor_id`   INT      NOT NULL, #'审核人id'
+  `status`       INT      NOT NULL, #'-1 未处理 1同意 2拒绝'
+  `op_id`        INT      NOT NULL, #'操作人id'
+  `created_at`   DATETIME NOT NULL,
+  `updated_at`   DATETIME NOT NULL,
+
+  PRIMARY KEY (`examine_id`),
+  # UNIQUE KEY `black_unique` (`type`, `applicant_id`, `auditor_id`),
+  KEY `idx_created`(`created_at`),
+  KEY `idx_type`(`type`),
+  KEY `idx_applicant`(`applicant_id`),
+  KEY `idx_auditor`(`auditor_id`),
+  KEY `idx_status`(`status`)
+)
+  ENGINE = InnoDB
+  AUTO_INCREMENT = 1
+  DEFAULT CHARSET = utf8;
+
+
+INSERT INTO users VALUES
+  (0, "admin@xnhd", "67bad3e758b4d324381586f209fee08bca0701396a606f12029425f31cd29ce8", "YWRtaW5AeG5oZA==", "", "", "",
+      0, "", "", 0, now(), now(), now(), 2097151, 1, "", 0, 0, "", "", "", "", "", "", "", "");
+INSERT INTO balances VALUES (100000, 100000000, 100000000, now(), now());
+INSERT INTO configs VALUES (0, "", "", "", 100001, "1", 1, "全局默认充值开关", now(), now());
+INSERT INTO configs VALUES (0, "", "", "", 110001, "100", 1, "全局默认消费开关", now(), now());

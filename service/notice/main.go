@@ -18,7 +18,6 @@ var FuncRights = map[string]int32{
 	"NoticeSrv.CreateNotice":   auth.RightsNoticeAdmin,
 	"NoticeSrv.UpdateNotice":   auth.RightsNoticeAdmin,
 	"NoticeSrv.PageNoticeList": auth.RightsNoticeAdmin,
-	//"RoomSrv.OutReady":   auth.RightsNone,
 }
 
 func main() {

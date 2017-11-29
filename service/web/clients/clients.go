@@ -5,6 +5,7 @@ import (
 	"playcards/utils/log"
 	"sync"
 	"fmt"
+
 )
 
 var waitGroup = new(sync.WaitGroup)
@@ -33,14 +34,6 @@ func Done() {
 
 func GetLockClients(topic string) map[*Client]bool {
 	RLock()
-	//str := "CheckTopc "
-	//for user,topicmap :=range topics{
-	//	str += fmt.Sprintf("UserID:%v",user)
-	//	for client,value := range topicmap{
-	//		str += fmt.Sprintf("(Ws:%v,Tops:%d,Value:%t)",client.ws,client.topics,value)
-	//	}
-	//}
-	//log.Debug(str)
 	return topics[topic]
 }
 
@@ -83,6 +76,18 @@ func SendTo(uid int32, topic, typ string, msg interface{}) error {
 	return SendWhere(topic, typ, msg, func(c *Client) bool {
 		return c.UserID() == uid
 	})
+}
+
+func SendToNoLog(uid int32,topic, typ string, msg interface{}) error {
+	cs := GetLockClients(topic)
+	defer Done()
+	for c, _ := range cs {
+		if c.UserID() != uid {
+			continue
+		}
+		c.SendMessage(topic, typ, msg)
+	}
+	return nil
 }
 
 func SendWhere(topic, typ string, msg interface{},
@@ -132,15 +137,15 @@ func DeleteClient(c *Client) {
 
 func CloseAll() {
 	Lock()
-
 	for _, cs := range clients {
+		if len(cs)== 0{
+			break
+		}
 		for c, _ := range cs {
 			c.Close()
 		}
 	}
-
 	Unlock()
-	log.Info("all connections are closed: %v", waitGroup)
 	waitGroup.Wait()
 }
 

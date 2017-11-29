@@ -1,0 +1,227 @@
+syntax = "proto3";
+
+package club;
+import "playcards/proto/room/room.proto";
+import "playcards/proto/page/page.proto";
+
+//***********************************************结构体***********************************************
+
+//俱乐部结构体
+message Club {
+    int32 ClubID = 1;
+    string ClubName = 2; //俱乐部名称
+    int32 Status = 3; //俱乐部状态 -1审核中 1正常 2禁用
+    int32 CreatorID = 4; //俱乐部创建人游戏角色id
+    int32 CreatorProxy = 5; //俱乐部创建人代理id
+    string ClubRemark = 6;
+    string Icon = 7;
+    string ClubParam = 8; //俱乐部游戏抽成参数json
+    int64 CreatedAt = 10;
+    int64 UpdatedAt = 11;
+    int64 Diamond = 12; //俱乐部游戏抽成参数json
+    int32 MemberNumber = 13;
+}
+
+//成员结构体
+message ClubMember {
+    int32 MemberId = 1;
+    int32 ClubID = 2;
+    int32 UserID = 3;
+    int32 Role = 4; //俱乐部成员角色
+    int32 Status = 5;//成员状态 1正常 2禁用
+    string Nickname = 6;
+    string Icon = 7;
+    int32 Online = 8;
+    int64 CreatedAt = 9;
+    int64 UpdatedAt = 10;
+}
+
+//***********************************************请求***********************************************
+
+message ClubInfoRequest {
+    Club Club = 1;
+    repeated ClubMember ClubMemberList = 2;
+    repeated room.Room RoomList = 3;
+}
+
+message PageClubRoomRequest {
+    //page.PageOption Page = 1;
+    //room.Room Room = 2;
+    int32 ClubID = 1;
+    int32 Page = 2;
+    int32 PageSize = 3;
+    int32 Flag = 4;
+}
+
+message PageSimpleClubRoomRequest {
+    int32 RoomID = 1;
+}
+
+message CreateClubMemberRequest {
+    int32 ClubID = 1;
+    int32 UserID = 2;
+    int32 Role = 3;
+}
+
+message SetUserToBlackRequest {
+    int32 UserID = 1;
+    int32 Status = 2;
+}
+
+message ClubRechargeRequest{
+    int32 ClubID = 1;
+    int64 Amount = 2;
+    int32 AmountType = 3;
+}
+
+message PageClubRequest {
+    page.PageOption Page = 1;
+    Club Club = 2;
+}
+
+message PageClubMemberRequest {
+    page.PageOption Page = 1;
+    ClubMember ClubMember = 2;
+}
+
+message SetClubRoomFlagRequest {
+    int32 ClubID = 1;
+    int32 RoomID = 2;
+}
+
+message CreateClubRoomRequest{
+    room.Room Room = 1;
+}
+
+//***********************************************回应***********************************************
+message ClubReply {
+    int32 Result = 1;
+    int32 Code = 2;
+}
+
+message PageClubReply {
+    int32 Result = 1;
+    int32 Code = 2;
+    repeated Club List = 3;
+    int64 Count = 4;
+}
+
+message PageClubMemberReply {
+    int32 Result = 1;
+    int32 Code = 2;
+    repeated ClubMember List = 3;
+    int64 Count = 4;
+}
+
+message PageClubRoomReply {
+    int32 Result = 1;
+    int32 Code = 2;
+    repeated room.Room List = 3;
+    int64 Count = 4;
+}
+
+//***********************************************广播***********************************************
+
+//俱乐部成员变动通知
+//message ClubMemberChange {
+//    ClubMember ClubMember = 1;
+//    int32 Status = 2;//1 新成员加入 2成员退出
+//}
+
+message ClubMemberOnline {
+    int32 ClubID = 1;
+    int32 UserID = 2;
+    int32 Status = 3;//1 上线 2离线
+}
+
+//俱乐部房间变动通知
+message ClubRoomChange {
+    int32 RoomID = 1;
+    int32 Status = 2;//1 新增加入房间 2房间已满退出列表
+}
+
+//俱乐部房间玩家进出通知
+message ClubRoomUserChange {
+    int32 RoomID = 1;
+    //房间成员
+    //下发字段[UserID,Position,Icon,Nickname]
+    room.RoomUser RoomUser = 2;
+    int32 Status = 3;//1 新增加入房间 2房间已满退出列表
+}
+
+//俱乐部信息
+message ClubInfo {
+    int32 UserID = 1;
+    //俱乐部基本信息
+    //下发字段[ClubName,ClubRemark,Icon,ClubParam,Diamond]
+    Club Club = 2;
+
+    //成员信息列表
+    //下发字段[UserID,Role,Nickname,Icon,Online]
+    repeated ClubMember ClubMemberList = 3;
+
+    //可用房间列表
+    //下发字段[RoomID，Password，UserList，MaxNumber，RoundNumber，GameType，GameParam]
+    repeated room.Room RoomList = 4;
+}
+
+service ClubSrv {
+    //创建俱乐部
+    //必要参数 [ClubName,CreatorID,CreatorProxy]
+    rpc CreateClub (Club) returns (ClubReply) {
+    }
+    //俱乐部充值
+    rpc ClubRecharge (ClubRechargeRequest) returns (ClubReply) {
+    }
+    //管理员更新俱乐部
+    rpc UpdateClub (Club) returns (ClubReply) {
+    }
+    //创建或审核通过 俱乐部成员
+    rpc CreateClubMember (CreateClubMemberRequest) returns (ClubReply) {
+    }
+    //移除俱乐部成员
+    rpc RemoveClubMember (ClubMember) returns (ClubReply) {
+    }
+    //客户端请求加入俱乐部
+    //必要参数 [ClubID]
+    rpc JoinClub (Club) returns (ClubReply) {
+    }
+    //客户端请求退出俱乐部
+    //必要参数 [ClubID]
+    rpc LeaveClub (Club) returns (ClubReply) {
+    }
+    //请求俱乐部当前可加入的房间列表
+    //必要参数 [ClubID]
+    rpc PageClubRoom (PageClubRoomRequest) returns (PageClubRoomReply) {
+    }
+    //俱乐部分页请求
+    rpc PageClub (PageClubRequest) returns (PageClubReply) {
+    }
+    //俱乐部成员分页请求
+    rpc PageClubMember (PageClubMemberRequest) returns (PageClubMemberReply) {
+    }
+    //客户端获得俱乐部信息
+    //必要参数 [ClubID]
+    //tcp下发俱乐部信息
+    rpc GetClub (Club) returns (ClubReply) {
+    }
+    //设置黑名单
+    //必要参数 [ClubID,UserID]
+    rpc SetBlackList (ClubMember) returns (ClubReply) {
+    }
+    //处理俱乐部审批
+    //必要参数 [ClubID,UserID,Status]
+    rpc UpdateClubExamine(ClubMember) returns (ClubReply) {
+
+    }
+    //标记俱乐部房间
+    //必要参数 [ClubID,RoomID]
+    rpc SetClubRoomFlag(SetClubRoomFlagRequest) returns (ClubReply) {
+
+    }
+    //创建俱乐部房间
+    //必要参数 [MaxNumber,RoundNumber,GameType,GameParam,RoomType,ClubID]
+    rpc CreateClubRoom(CreateClubRoomRequest) returns (ClubReply) {
+
+    }
+}

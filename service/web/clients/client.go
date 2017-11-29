@@ -2,13 +2,11 @@ package clients
 
 import (
 	"fmt"
-	cacheroom "playcards/model/room/cache"
 	mdu "playcards/model/user/mod"
 	"playcards/service/web/enum"
 	"playcards/utils/auth"
 	"playcards/utils/log"
 	"time"
-	//"runtime/debug"
 	"golang.org/x/net/websocket"
 )
 
@@ -45,31 +43,8 @@ func NewClient(token string, u *mdu.User, ws *websocket.Conn) *Client {
 		cs = make(map[*Client]bool)
 		clients[u.UserID] = cs
 	}
-	//else{
-	//	for oldClient,_ := range cs{
-	//		//oldClient.UnsubscribeAll()
-	//		//oldClient.ws.Close()
-	//		DeleteClient(oldClient)
-	//		close(oldClient.stop)
-	//		close(oldClient.channel)
-	//		cs[oldClient] = false
-	//	}
-	//	cs = make(map[*Client]bool)
-	//	clients[u.UserID] = cs
-	//	log.Debug("NewClientCoverOld:%d\n",u.UserID)
-	//	//fmt.Printf("NewClientCoverOld:%d\n",u.UserID)
-	//}
-	//log.Debug("add connection: %v", c)
-	//cs[c] = true
-	//str := ""
-	//for k, v := range clients {
-	//	str = fmt.Sprintf("--userid:%s |\n", k)
-	//	for k2, v2 := range v {
-	//		str += fmt.Sprintf("----Token:%s|Topics:%#v|Ws|V:%t\n", k2.token, k2.topics,  v2)
-	//	}
-	//}
-	//log.Debug("NewClientMap %s\n%s\n",str,string(debug.Stack()))
-	//fmt.Printf("NewClientMap %s",str)
+	log.Debug("add connection: %v", c)
+	cs[c] = true
 	return c
 }
 
@@ -96,32 +71,20 @@ func (c *Client) Auth(sright int32) error {
 func (c *Client) Close() {
 	log.Info("server close ws connection: %v", c)
 	c.ws.Close()
-	//断线后更新用户缓存连接状态
-	cacheroom.UpdateRoomUserSocektStatus(c.User().UserID, enum.SocketClose, 0)
 }
 
 func (c *Client) Subscribe(tpc []string) {
 	Lock()
 	defer Unlock()
-	str := fmt.Sprintf("UserSubscribeTopic:%d  :",c.UserID())
 	for _, t := range tpc {
 		cs, ok := topics[t]
 		if !ok {
 			continue
 		}
-		//若订阅时发现有相同userid的连接对象，则新连接覆盖老连接
-		for cli,_ :=range cs{
-			if cli.UserID() == c.UserID(){
-				delete(cli.topics, t)
-				delete(cs, cli)
-				log.Debug(str+"NewSubscribeAnddeleteOld user:%v,tpc:%+v \n",cli.user,t)
-			}
-		}
 		c.topics[t] = true
 		cs[c] = true
-		str += t+"|"
+		log.Debug("%v subscribe topic [%v]", c, t)
 	}
-	log.Debug(str+"\n")
 }
 
 func (c *Client) Unsubscribe(tpc []string) {
@@ -160,8 +123,8 @@ func (c *Client) SendMessage(topic, typ string, msg interface{}) {
 	}
 }
 
-func (c *Client) SendNewClientBackMessage() {
-	m := &Message{Type: "SubscribeSuccess"}
+func (c *Client) SendNewClientBackMessage(success string) {
+	m := &Message{Type: success}
 	select {
 	case c.channel <- m:
 	default:
@@ -170,7 +133,6 @@ func (c *Client) SendNewClientBackMessage() {
 }
 
 func (c *Client) SendHearbeatMessage() {
-	//m := &Message{"h"}
 	select {
 	case c.channel <- 1:
 	default:

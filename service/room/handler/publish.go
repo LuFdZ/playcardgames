@@ -12,4 +12,12 @@ const (
 	TopicRoomRenewal        = "playcards.room.Renewal"
 	TopicRoomVoiceChat      = "playcards.room.VoiceChat"
 	TopicRoomExist          = "playcards.room.Exist"
+	TopicRoomNotice         = "playcards.room.Notice"
+)
+
+const (
+	TopicClubRoomCreate = "playcards.room.ClubRoomCreate"
+	TopicClubRoomJoin   = "playcards.room.ClubRoomJoin"
+	TopicClubRoomUnJoin = "playcards.room.ClubRoomUnJoin"
+	TopicClubRoomFinish = "playcards.room.ClubRoomFinish"
 )

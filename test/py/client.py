@@ -165,6 +165,12 @@ class Client(object):
     def SubscribeNiu(self):
         self.StreamSend("SubscribeNiuniuMessage", {})
 
+    def SubscribeClub(self):
+        self.StreamSend("SubscribeClubMessage", {})
+
+    def UnSubscribeClub(self):
+        self.StreamSend("UnSubscribeClubMessage", {})
+
     def ClinetHearbeat(self):
         self.StreamSend("ClinetHearbeat", {})
 
@@ -414,7 +420,159 @@ class Client(object):
         })
         return ul
 
-    def AgentRoomList(self):
-        ul = self.Request("/room/roomSrv/AgentRoomList", {
+    def AgentRoomList(self, page, gametyp):
+        ul = self.Request("/room/roomSrv/GetAgentRoomList", {
+            "Page": page,
+            "GameType": gametyp,
+
+        })
+        return ul
+
+    def DayActive(self, page):
+        ul = self.Request("/user/userSrv/DayActiveUserList", {
+            "Page": page,
+        })
+        return ul
+
+    def OnlineCount(self):
+        ul = self.Request("/user/userSrv/GetUserOnlineCount", {
+        })
+        return ul
+
+    def GetConfigs(self):
+        ul = self.Request("/config/configSrv/GetConfigs", {
+        })
+        return ul
+
+    def SetLocation(self, json):
+        ul = self.Request("/user/userSrv/SetLocation", {
+            "Json": json,
+        })
+        return ul
+
+    def GetLocation(self):
+        ul = self.Request("/room/roomSrv/GetRoomUserLocation", {
+        })
+        return ul
+
+    def GetConfigsBeforeLogin(self, channel, version, mobileOs):
+        ul = self.Request("/config/configSrv/GetConfigsBeforeLogin", {
+            "Channel": channel,
+            "Version": version,
+            "MobileOs": mobileOs,
+        })
+        return ul
+
+    def PageClub(self, page, pagesize):
+        ul = self.Request("/club/clubSrv/PageClub", {
+            "Page": {
+                "Page": page,
+                "PageSize": pagesize,
+                "Time": {
+                    "Start": 0,
+                    "End": 0,
+                },
+                "Sum": False,
+            },
+            "Club": {}
+        })
+        return ul
+
+    def PageClubMember(self, page, pagesize):
+        ul = self.Request("/club/clubSrv/PageClubMember", {
+            "Page": {
+                "Page": page,
+                "PageSize": pagesize,
+                "Time": {
+                    "Start": 0,
+                    "End": 0,
+                },
+                "Sum": False,
+            },
+            "ClubMember": {}
+        })
+        return ul
+
+    def PageClubRoom(self, page, pagesize):
+        ul = self.Request("/club/clubSrv/PageClubRoom", {
+            "Page": {
+                "Page": page,
+                "PageSize": pagesize,
+                "Time": {
+                    "Start": 0,
+                    "End": 0,
+                },
+                "Sum": False,
+            },
+            "Room": {}
+        })
+        return ul
+
+    def UpdateClub(self, clubid, status):
+        ul = self.Request("/club/clubSrv/UpdateClub", {
+            "ClubID": clubid,
+            "Status": status,
+        })
+        return ul
+
+    def RemoveClubMember(self, clubid, uid, status):
+        ul = self.Request("/club/clubSrv/UpdateClubMember", {
+            "ClubID": clubid,
+            "UserID": uid,
+        })
+        return ul
+
+    def ClubRecharge(self, amount, clubid):
+        ul = self.Request("/club/clubSrv/ClubRecharge", {
+            "ClubID": clubid,
+            "Amount": amount,
+            "AmountType": 2,
+        })
+        return ul
+
+    def CreateClub(self, clubname, creatorid, creatorproxy):
+        ul = self.Request("/club/clubSrv/CreateClub", {
+            "ClubName": clubname,
+            "CreatorID": creatorid,
+            "CreatorProxy": creatorproxy,
+        })
+        return ul
+
+    def CreateClubMember(self, clubid, userid):
+        ul = self.Request("/club/clubSrv/CreateClubMember", {
+            "ClubID": clubid,
+            "UserID": userid,
+        })
+        return ul
+
+    def JoinClub(self, clubid):
+        ul = self.Request("/club/clubSrv/JoinClub", {
+            "ClubID": clubid,
+        })
+        return ul
+
+    def LeaveClub(self, clubid):
+        ul = self.Request("/club/clubSrv/LeaveClub", {
+            "ClubID": clubid,
+        })
+        return ul
+
+    def GetClub(self):
+        ul = self.Request("/club/clubSrv/GetClub", {
+        })
+        return ul
+
+    def SetBlackList(self, clubid, uid):
+        ul = self.Request("/club/clubSrv/SetBlackList", {
+            "ClubID": clubid,
+            "UserID": uid,
+        })
+        return ul
+
+    def CancelBlackList(self, originID, targetID):
+        ul = self.Request("/common/commonSrv/CancelBlackList", {
+            "Type": 1,
+            "OriginID": originID,
+            "TargetID": targetID,
         })
         return ul

@@ -8,15 +8,8 @@ message Balance {
     int64 Amount = 2;
     int64 Gold = 3;
     int64 Diamond = 4;
-    int64 Deposit = 5;
-    int64 Freeze = 6;
-    int64 GoldProfit = 7;
-    int64 DiamondProfit = 8;
-    int64 CreatedAt = 9;
-    int64 UpdatedAt = 10;
-    int64 CumulativeRecharge    =11;
-    int64 CumulativeGift       =12;
-    int64 CumulativeConsumption=13;
+    int64 CreatedAt = 5;
+    int64 UpdatedAt = 6;
 }
 
 //请求
@@ -39,14 +32,18 @@ message RechargeReply {
 }
 
 //广播
-message BalanceChange{
+message BalanceChange {
     int32 UserID = 1;
     int64 Diamond = 2;
 }
 
 service BillSrv {
-    rpc GetUserBalance(GetBalanceRequest) returns (Balance) {}
-    rpc GetBalance(GetBalanceRequest) returns (Balance) {}
-    rpc GainBalance(Balance) returns (Balance) {}
-    rpc Recharge(RechargeRequest) returns(RechargeReply) {}
+    rpc GetUserBalance (GetBalanceRequest) returns (Balance) {
+    }
+    rpc GetBalance (GetBalanceRequest) returns (Balance) {
+    }
+    rpc GainBalance (Balance) returns (Balance) {
+    }
+    rpc Recharge (RechargeRequest) returns (RechargeReply) {
+    }
 }

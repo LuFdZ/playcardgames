@@ -51,7 +51,7 @@ func (n Notice) ToProto() *pbn.Notice {
 }
 
 func NoticeFromProto(n *pbn.Notice) *Notice {
-	if n == nil{
+	if n == nil {
 		return &Notice{}
 	}
 	return &Notice{

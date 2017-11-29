@@ -3,16 +3,16 @@ package handler
 import (
 	"playcards/model/config"
 	mdconf "playcards/model/config/mod"
-	pbconf "playcards/proto/config"
 	mdpage "playcards/model/page"
-	utilproto "playcards/utils/proto"
+	pbconf "playcards/proto/config"
 	gctx "playcards/utils/context"
-	"golang.org/x/net/context"
 	utilpb "playcards/utils/proto"
+	utilproto "playcards/utils/proto"
+
+	"golang.org/x/net/context"
 )
 
 type ConfigSrv struct {
-
 }
 
 func NewHandler() *ConfigSrv {
@@ -23,9 +23,9 @@ func NewHandler() *ConfigSrv {
 func (cs *ConfigSrv) Init() {
 	config.RefreshAllConfigsFromDB()
 }
+
 func (cs *ConfigSrv) CreateConfig(ctx context.Context,
 	req *pbconf.Config, rsp *pbconf.ConfigReply) error {
-
 	co := mdconf.ConfigFromProto(req)
 	err := config.CreateConfig(co)
 	if err != nil {
@@ -53,12 +53,24 @@ func (cs *ConfigSrv) UpdateConfig(ctx context.Context,
 	return nil
 }
 
+func (cs *ConfigSrv) GetConfigsBeforeLogin(ctx context.Context,
+	req *pbconf.Config, rsp *pbconf.GetConfigsReply) error {
+	//u := gctx.GetUser(ctx)
+	cos := config.GetUniqueConfigByItemID(req.Channel, req.Version, req.MobileOs)
+	reply := &pbconf.GetConfigsReply{}
+	utilproto.ProtoSlice(cos, &reply.List)
+	*rsp = *reply
+	return nil
+}
+
 func (cs *ConfigSrv) GetConfigs(ctx context.Context,
 	req *pbconf.Config, rsp *pbconf.GetConfigsReply) error {
 	u := gctx.GetUser(ctx)
-	cos := config.GetUniqueConfigByItemID(u.Channel,u.Version,u.MobileOs)
-	reply := &pbconf.GetConfigsReply{}
-	utilproto.ProtoSlice(reply.List, &cos)
+	cos := config.GetUniqueConfigByItemID(u.Channel, u.Version, u.MobileOs)
+	reply := &pbconf.GetConfigsReply{
+		Result: 1,
+	}
+	utilproto.ProtoSlice(cos, &reply.List)
 	*rsp = *reply
 	return nil
 }

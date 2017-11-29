@@ -1,7 +1,6 @@
 package activity
 
 import (
-	"fmt"
 	dba "playcards/model/activity/db"
 	enum "playcards/model/activity/enum"
 	"playcards/model/activity/errors"
@@ -57,7 +56,7 @@ func Invite(u *mdu.User, inviterID int32) (int32, []*mbill.UserBalance, error) {
 	var result int32
 	result = 1
 
-	fmt.Printf("Invite date Count:%d|%d|%v\n", date.TimeSubDays(time.Now(), *u.CreatedAt), u.UserID,u.CreatedAt)
+	//fmt.Printf("Invite date Count:%d|%d|%v\n", date.TimeSubDays(time.Now(), *u.CreatedAt), u.UserID,u.CreatedAt)
 	if date.TimeSubDays(time.Now(), *u.CreatedAt) > enum.InviteCreateDaysLimit {
 		isBalance = false
 		result = 2

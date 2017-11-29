@@ -3,8 +3,9 @@ package db
 import (
 	"playcards/model/config/enum"
 	mdconf "playcards/model/config/mod"
-	"playcards/utils/errors"
 	mdpage "playcards/model/page"
+	"playcards/utils/errors"
+
 	"github.com/jinzhu/gorm"
 )
 

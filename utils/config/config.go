@@ -30,7 +30,7 @@ func DBURL() string {
 
 func RedisHost() []string {
 	return ConfigDefault.Get("redis_host").
-		StringSlice([]string{"127.0.0.1:6379"})
+		StringSlice([]string{"127.0.0.1:6379",""})
 		//StringSlice([]string{"172.19.90.246:6379"})
 }
 

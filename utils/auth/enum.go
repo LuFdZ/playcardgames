@@ -2,7 +2,7 @@ package auth
 
 const RightsNone = 0
 const (
-	RightsPlayer = 1 << iota
+	RightsPlayer       = 1 << iota
 	RightsUserView
 	RightsUserEdit
 	RightsBillView
@@ -19,6 +19,10 @@ const (
 	RightsNoticeEdit
 	RightsActivityView
 	RightsActivityEdit
+	RightsClubView
+	RightsClubEdit
+	RightsCommonView
+	RightsCommonEdit
 )
 
 const (
@@ -30,6 +34,8 @@ const (
 	RightsConfigAdmin   = RightsConfigView | RightsConfigEdit
 	RightsNoticeAdmin   = RightsNoticeView | RightsNoticeEdit
 	RightsActivityAdmin = RightsActivityView | RightsActivityEdit
+	RightsClubAdmin     = RightsClubView | RightsClubEdit
+	RightsCommonAdmin   = RightsCommonView | RightsCommonEdit
 	RightsViewer        = RightsUserView | RightsChatView | RightsBillView |
 		RightsActivityView | RightsRoomView | RightsThirteenView |
 		RightsNoticeView | RightsConfigView
@@ -42,5 +48,7 @@ const (
 		RightsConfigAdmin |
 		RightsNoticeAdmin |
 		RightsActivityAdmin |
+		RightsClubAdmin|
+		RightsCommonAdmin|
 		RightsPlayer
 )

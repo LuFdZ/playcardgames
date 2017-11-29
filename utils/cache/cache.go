@@ -8,14 +8,14 @@ import (
 
 var cache *redis.Client
 
-func Init(host string) {
-	cache = NewCache(host)
+func Init(host string,password string) {
+	cache = NewCache(host,password)
 }
 
-func NewCache(host string) *redis.Client {
+func NewCache(host string,password string) *redis.Client {
 	kv := redis.NewClient(&redis.Options{
 		Addr:     host,
-		Password: "",
+		Password: password,
 		DB:       0,
 	})
 	return kv

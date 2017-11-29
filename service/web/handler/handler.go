@@ -5,6 +5,7 @@ import (
 	pbweb "playcards/proto/web"
 	webbill "playcards/service/web/bill"
 	"playcards/service/web/clients"
+	webclub "playcards/service/web/club"
 	webniu "playcards/service/web/niuniu"
 	"playcards/service/web/publish"
 	"playcards/service/web/request"
@@ -38,6 +39,7 @@ func NewWebHandler(c client.Client) *Web {
 	webroom.Init(w.broker)
 	webthirteen.Init(w.broker)
 	webniu.Init(w.broker)
+	webclub.Init(w.broker)
 	return w
 }
 
@@ -55,15 +57,16 @@ func (w *Web) Subscribe(ws *websocket.Conn) {
 		log.Err("websocket login failed: %v token: %v", err, token)
 		return
 	}
-	if u == nil{
+	if u == nil {
 		log.Err("websocket get user null: %v", string(msg))
 		return
 	}
 	c := clients.NewClient(token, u, ws)
-	webroom.SubscribeRoomMessage(c,nil)
-	webbill.SubscribeBillMessage(c,nil)
-	webthirteen.SubscribeThirteenMessage(c,nil)
-	webniu.SubscribeNiuniuMessage(c,nil)
+	webroom.SubscribeRoomMessage(c, nil)
+	webbill.SubscribeBillMessage(c, nil)
+	webthirteen.SubscribeThirteenMessage(c, nil)
+	webniu.SubscribeNiuniuMessage(c, nil)
+	webclub.ClubOnlineNotice(c)
 	log.Debug("new client: %v", c)
 	f := func(msg []byte) error {
 		req := &request.Request{}
@@ -94,4 +97,5 @@ func init() {
 
 func (w *Web) Stop() {
 	clients.CloseAll()
+
 }

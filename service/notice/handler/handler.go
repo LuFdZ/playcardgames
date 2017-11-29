@@ -14,14 +14,14 @@ import (
 type NoticeSrv struct {
 }
 
-func (us *NoticeSrv) GetNotice(ctx context.Context, req *pbn.Notice,
+func (ns *NoticeSrv) GetNotice(ctx context.Context, req *pbn.Notice,
 	rsp *pbn.NoticeListReply) error {
 
 	u, err := auth.GetUser(ctx)
 	if err != nil {
 		return err
 	}
-	nl, err := notice.GetNotice(req.Versions, u.Channel)
+	nl, err := notice.GetNotice(u.Channel, req.Versions)
 	if err != nil {
 		return err
 	}
@@ -30,7 +30,7 @@ func (us *NoticeSrv) GetNotice(ctx context.Context, req *pbn.Notice,
 	return nil
 }
 
-func (us *NoticeSrv) AllNotice(ctx context.Context, req *pbn.Notice,
+func (ns *NoticeSrv) AllNotice(ctx context.Context, req *pbn.Notice,
 	rsp *pbn.NoticeListReply) error {
 	_, err := auth.GetUser(ctx)
 	if err != nil {
@@ -45,7 +45,7 @@ func (us *NoticeSrv) AllNotice(ctx context.Context, req *pbn.Notice,
 	return nil
 }
 
-func (us *NoticeSrv) CreateNotice(ctx context.Context, req *pbn.Notice,
+func (ns *NoticeSrv) CreateNotice(ctx context.Context, req *pbn.Notice,
 	rsp *pbn.Notice) error {
 
 	_, err := auth.GetUser(ctx)
@@ -61,7 +61,7 @@ func (us *NoticeSrv) CreateNotice(ctx context.Context, req *pbn.Notice,
 	return nil
 }
 
-func (us *NoticeSrv) UpdateNotice(ctx context.Context, req *pbn.Notice,
+func (ns *NoticeSrv) UpdateNotice(ctx context.Context, req *pbn.Notice,
 	rsp *pbn.Notice) error {
 	_, err := auth.GetUser(ctx)
 	if err != nil {
@@ -76,7 +76,7 @@ func (us *NoticeSrv) UpdateNotice(ctx context.Context, req *pbn.Notice,
 	return nil
 }
 
-func (rs *NoticeSrv) PageNoticeList(ctx context.Context,
+func (ns *NoticeSrv) PageNoticeList(ctx context.Context,
 	req *pbn.PageNoticeListRequest, rsp *pbn.PageNoticeListReply) error {
 	page := mdpage.PageOptionFromProto(req.Page)
 	l, rows, err := notice.PageNoticeList(page,

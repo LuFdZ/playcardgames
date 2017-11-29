@@ -14,3 +14,9 @@ DROP TABLE IF EXISTS `player_rooms`;
 DROP TABLE IF EXISTS `player_shares`;
 DROP TABLE IF EXISTS `niunius`;
 DROP TABLE IF EXISTS `config_open`;
+
+DROP TABLE IF EXISTS `clubs`;
+DROP TABLE IF EXISTS `club_journals`;
+DROP TABLE IF EXISTS `club_members`;
+DROP TABLE IF EXISTS `black_lists`;
+DROP TABLE IF EXISTS `examines`;

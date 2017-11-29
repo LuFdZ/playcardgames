@@ -7,21 +7,21 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
-	"strings"
 	"playcards/model/bill"
-	"playcards/model/user/enum"
 	dbbill "playcards/model/bill/db"
 	mdbill "playcards/model/bill/mod"
 	mdpage "playcards/model/page"
 	cacheuser "playcards/model/user/cache"
 	dbu "playcards/model/user/db"
-	enumbill "playcards/model/bill/enum"
+	"playcards/model/user/enum"
 	erru "playcards/model/user/errors"
 	mdu "playcards/model/user/mod"
-	gsync "playcards/utils/sync"
 	"playcards/utils/auth"
 	"playcards/utils/db"
 	"playcards/utils/log"
+	"strings"
+	"time"
+
 	"github.com/asaskevich/govalidator"
 	"github.com/jinzhu/gorm"
 	"gopkg.in/go-playground/validator.v8"
@@ -47,7 +47,7 @@ func Register(u *mdu.User) (int32, error) {
 
 	// TODO: delete this before release
 	u.Rights = auth.RightsAdmin
-
+	u.OpenID = u.Username
 	f := func(tx *gorm.DB) error {
 		uid, err = dbu.AddUser(tx, u)
 		if err != nil {
@@ -55,9 +55,8 @@ func Register(u *mdu.User) (int32, error) {
 		}
 
 		b := &mdbill.Balance{
-			Gold:    0,
+			Gold:    enum.NewUserGold,
 			Diamond: enum.NewUserDiamond,
-			Amount:  enum.RegisterBalance,
 		}
 		err = dbbill.CreateBalance(tx, uid, b)
 		if err != nil {
@@ -87,7 +86,6 @@ func Login(u *mdu.User, address string) (*mdu.User, int64, error) {
 			Username: u.Username,
 			Password: u.Password,
 		})
-
 		if err != nil {
 			return err
 		}
@@ -104,12 +102,15 @@ func Login(u *mdu.User, address string) (*mdu.User, int64, error) {
 		now := gorm.NowFunc()
 		nu.LastLoginAt = &now
 		nu.LastLoginIP = address
+		nu.Version = u.Version
+		nu.MobileOs = u.MobileOs
+		nu.Channel = u.Channel
 		_, err := UpdateUser(nu)
 		if err != nil {
 			return err
 		}
 		//nu.Diamond = balance.Diamond
-		balance, _ := GetUserRealBalance(nu.UserID)
+		balance, _ := bill.GetUserBalance(nu.UserID)
 		diamond = balance.Diamond
 		return nil
 	}
@@ -270,7 +271,7 @@ func GetAndCheckWXToken(openid string) (*mdu.AccessTokenResponse, error) {
 }
 
 func WXLogin(u *mdu.User, code string, address string) (int64, *mdu.User, error) {
-	//fmt.Printf("AAAAWXLogin UserInfo:%s|%s|%s\n",u.MobileOs,u.Version,u.Channel)
+
 	if u.OpenID == "" && code == "" {
 		return 0, nil, erru.ErrWXLoginParam
 	}
@@ -334,7 +335,7 @@ func WXLogin(u *mdu.User, code string, address string) (int64, *mdu.User, error)
 	if err != nil {
 		return 0, nil, err
 	}
-	balance, _ := GetUserRealBalance(u.UserID)
+	balance, _ := bill.GetUserBalance(u.UserID)
 	return balance.Diamond, u, err
 }
 
@@ -344,15 +345,15 @@ func CreateUserByWX(u *mdu.User, atr *mdu.AccessTokenResponse) (*mdu.User, error
 		return nil, err
 	}
 	u.Rights = auth.RightsPlayer
+	u.Username = u.OpenID
 	f := func(tx *gorm.DB) error {
 		uid, err := dbu.AddUser(tx, u)
 		if err != nil {
 			return err
 		}
 		b := &mdbill.Balance{
-			Gold:    0,
+			Gold:    enum.NewUserGold,
 			Diamond: enum.NewUserDiamond,
-			Amount:  enum.RegisterBalance,
 		}
 		err = dbbill.CreateBalance(tx, uid, b)
 		if err != nil {
@@ -382,51 +383,91 @@ func UpdateUserFromWX(u *mdu.User, atr *mdu.AccessTokenResponse) (*mdu.User, err
 	u.UnionID = ui.UnionID
 	u.Sex = ui.Sex
 	u.Icon = ui.Headimgurl
-
 	return u, err
 }
 
-func GetUserRealBalance(uid int32)(*mdbill.UserBalance, error){
-	balance, err := bill.GetUserBalance(uid)
-	if err !=nil{
-		return nil,err
+//func GetUserRealBalance(uid int32) (*mdbill.UserBalance, error) {
+//	balance, err := bill.GetUserBalance(uid)
+//	if err != nil {
+//		return nil, err
+//	}
+//	if balance == nil {
+//		return nil, erru.ErrBillNotExisted
+//	}
+//	lockBalance, err := cacheuser.GetUserLockBalance(uid)
+//	if err != nil {
+//		return nil, err
+//	}
+//	if lockBalance != nil {
+//		balance.Diamond -= lockBalance.Diamond
+//		balance.Gold -= lockBalance.Gold
+//	}
+//	return balance, nil
+//}
+
+//func SetUserLockBalance(uid int32, balanceType int32, amount int64, rid int32) error {
+//	lb := &mdu.Balance{}
+//	if balanceType == enumbill.TypeGold {
+//		lb.Gold = amount
+//	} else if balanceType == enumbill.TypeDiamond {
+//		lb.Diamond = amount
+//	}
+//
+//	f := func() error {
+//		err := cacheuser.SetUserLockBalance(uid, lb)
+//		if err != nil {
+//			return err
+//		}
+//		return nil
+//	}
+//	lock := fmt.Sprintf("playcards.room.userbalance.lock:%s", uid)
+//	err := gsync.GlobalTransaction(lock, f)
+//	if err != nil {
+//		log.Err("%s enter room failed: %v", lock, err)
+//		return err
+//	}
+//	if err != nil {
+//		return err
+//	}
+//	log.Debug("SetUserLockBalance rid:%d,uid:%d,balanceType:%d,amount:%d", rid, uid, balanceType, amount)
+//	return nil
+//}
+
+func DayActiveUserList(page int32) ([]*mdu.User, *mdpage.PageReply) {
+	timeStr := time.Now().Format("2006-01-02")
+	nowData, _ := time.Parse("2006-01-02", timeStr)
+	sub8h, _ := time.ParseDuration("-1h")
+	nowData = nowData.Add(8 * sub8h)
+	f := func(u *mdu.User) bool {
+		if u.LastLoginAt.Unix() > nowData.Unix() {
+			return true
+		}
+		return false
 	}
-	lockBalance,err := cacheuser.GetUserLockBalance(uid)
-	if err !=nil{
-		return nil,err
+	us, count := cacheuser.GetUserList(f, page)
+	mpr := &mdpage.PageReply{
+		PageNow:   page,
+		PageTotal: count,
 	}
-	if lockBalance!=nil{
-		balance.Diamond -= lockBalance.Diamond
-		balance.Gold -= lockBalance.Gold
-	}
-	return balance,nil
+	return us, mpr
 }
 
-func SetUserLockBalance(uid int32,balanceType int32,amount int64,rid int32) error{
-	lb := &mdu.Balance{}
-	if balanceType == enumbill.TypeGold {
-		lb.Gold = amount
-	}else if balanceType == enumbill.TypeDiamond{
-		lb.Diamond = amount
-	}
-
-	f := func() error {
-		err := cacheuser.SetUserLockBalance(uid,lb)
-		if err !=nil{
-			return err
-		}
-		return nil
-	}
-	lock := fmt.Sprintf("playcards.room.userbalance.lock:%s", uid)
-	err := gsync.GlobalTransaction(lock, f)
+func GetUserOnlineCount() (int32, error) {
+	count, err := cacheuser.GetAllOnlineCount()
 	if err != nil {
-		log.Err("%s enter room failed: %v", lock, err)
+		return 0, err
+	}
+	return int32(count), nil
+}
+
+func SetLocation(user *mdu.User, Json string) error {
+	if len(Json) > 300 {
+		return erru.ErrParamTooLong
+	}
+	user.Location = Json
+	err := cacheuser.SimpleUpdateUser(user)
+	if err != nil {
 		return err
 	}
-	if err != nil{
-		return err
-	}
-	log.Debug("SetUserLockBalance rid:%d,uid:%d,balanceType:%d,amount:%d",rid,uid,balanceType,amount)
 	return nil
 }
-

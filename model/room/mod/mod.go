@@ -1,37 +1,43 @@
 package mod
 
 import (
+	"encoding/base64"
 	"encoding/json"
-	"fmt"
 	mdtime "playcards/model/time"
+	cacheuser "playcards/model/user/cache"
 	pbr "playcards/proto/room"
+	"playcards/utils/log"
 	utilproto "playcards/utils/proto"
 	"time"
-	"encoding/base64"
-	"playcards/utils/log"
+
 	"github.com/jinzhu/gorm"
 )
 
 type Room struct {
-	RoomID         int32             `gorm:"primary_key"`
-	Password       string            `reg:"required,min=6,max=32,excludesall= 	"`
+	RoomID         int32  `gorm:"primary_key"`
+	Password       string //`reg:"required,min=6,max=32,excludesall= 	"`
 	Status         int32
 	Giveup         int32
-	MaxNumber      int32             `reg:"required"`
-	RoundNumber    int32             `reg:"required"`
+	MaxNumber      int32 //`reg:"required"`
+	RoundNumber    int32 //`reg:"required"`
 	RoundNow       int32
 	UserList       string
-	RoomType       int32             `reg:"required"`
+	RoomType       int32 //`reg:"required"`
 	PayerID        int32
-	GameType       int32             `reg:"required"`
-	GameParam      string            `reg:"required,min=1,excludesall= 	"`
+	GameType       int32  //`reg:"required"`
+	GameParam      string //`reg:"required,min=1,excludesall= 	"`
 	GameUserResult string
 	CreatedAt      *time.Time
 	UpdatedAt      *time.Time
 	GiveupAt       *time.Time
+	Flag           int32
+	ClubID         int32
+	Cost           int64
+	CostType       int32
 	UserResults    []*GameUserResult `gorm:"-"`
 	Users          []*RoomUser       `gorm:"-"`
 	GiveupGame     GiveUpGameResult  `gorm:"-"`
+	HasNotice      bool              `gorm:"-"`
 	Ids            []int32           `gorm:"-"`
 }
 
@@ -54,6 +60,7 @@ type RoomUser struct {
 	Sex       int32
 	Role      int32
 	UpdatedAt *time.Time
+	Location  string
 }
 
 type GameUserResult struct {
@@ -103,10 +110,10 @@ type CheckRoomExist struct {
 	GameResult   RoomResults
 }
 
-func (r *Room) String() string {
-	return fmt.Sprintf("[roomid: %d pwd: %s status: %d gametype: %d]",
-		r.RoomID, r.Password, r.Status, r.GameType)
-}
+//func (r *Room) String() string {
+//	return fmt.Sprintf("[roomid: %d pwd: %s status: %d gametype: %d]",
+//		r.RoomID, r.Password, r.Status, r.GameType)
+//}
 
 func (us *UserState) ToProto() *pbr.UserState {
 	out := &pbr.UserState{
@@ -139,41 +146,73 @@ func (r *Room) ToProto() *pbr.Room {
 		GameType:    r.GameType,
 		RoundNumber: r.RoundNumber,
 		RoundNow:    r.RoundNow,
-		CreatedAt:   mdtime.TimeToProto(r.CreatedAt),
-		UpdatedAt:   mdtime.TimeToProto(r.UpdatedAt),
-		GameParam:   r.GameParam,
+		RoomType:    r.RoomType,
+		Flag:        r.Flag,
+		ClubID:      r.ClubID,
+		//GameUserResult:r.GameUserResult,
+		CreatedAt: mdtime.TimeToProto(r.CreatedAt),
+		UpdatedAt: mdtime.TimeToProto(r.UpdatedAt),
+		GameParam: r.GameParam,
 	}
 	utilproto.ProtoSlice(r.Users, &out.UserList)
 	return out
 }
 
+func RoomFromProto(r *pbr.Room) *Room {
+	out := &Room{
+		RoomID:      r.RoomID,
+		Password:    r.Password,
+		MaxNumber:   r.MaxNumber,
+		Status:      r.Status,
+		Giveup:      r.Giveup,
+		GameType:    r.GameType,
+		RoundNumber: r.RoundNumber,
+		RoundNow:    r.RoundNow,
+		RoomType:    r.RoomType,
+		ClubID:      r.ClubID,
+		CreatedAt:   mdtime.TimeFromProto(r.CreatedAt),
+		UpdatedAt:   mdtime.TimeFromProto(r.UpdatedAt),
+		GameParam:   r.GameParam,
+	}
+	return out
+}
+
 func (r *RoomUser) ToProto() *pbr.RoomUser {
-	return &pbr.RoomUser{
+	mRu := &pbr.RoomUser{
 		UserID:   r.UserID,
-		Nickname: r.Nickname, //DecodNickName(r.Nickname),
 		Ready:    r.Ready,
 		Position: r.Position,
-		Icon:     r.Icon,
-		Sex:      r.Sex,
 		Role:     r.Role,
 	}
+	_, u := cacheuser.GetUserByID(r.UserID)
+	if u != nil {
+		mRu.Nickname = u.Nickname
+		mRu.Icon = u.Icon
+		mRu.Sex = u.Sex
+		mRu.Location = u.Location
+	}
+	return mRu
 }
 
 func (r *RoomResults) ToProto() *pbr.RoomResults {
 	out := &pbr.RoomResults{
-		Password:    r.Password,
-		RoundNumber: r.RoundNumber,
-		RoundNow:    r.RoundNow,
-		CreatedAt:   mdtime.TimeToProto(r.CreatedAt),
-		Status:      r.Status,
-		GameType:    r.GameType,
+		RoomID:          r.RoomID,
+		Password:        r.Password,
+		RoundNumber:     r.RoundNumber,
+		RoundNow:        r.RoundNow,
+		CreatedAt:       mdtime.TimeToProto(r.CreatedAt),
+		Status:          r.Status,
+		GameType:        r.GameType,
+		GameParam:       r.GameParam,
+		MaxPlayerNumber: r.MaxPlayerNumber,
+		PlayerNumberNow: r.PlayerNumberNow,
 	}
 	utilproto.ProtoSlice(r.List, &out.List)
 	return out
 }
 
 func (ur *GameUserResult) ToProto() *pbr.GameUserResult {
-	return &pbr.GameUserResult{
+	mGur := &pbr.GameUserResult{
 		UserID:        ur.UserID,
 		Nickname:      ur.Nickname, //DecodNickName(ur.Nickname),
 		Win:           ur.Win,
@@ -182,6 +221,12 @@ func (ur *GameUserResult) ToProto() *pbr.GameUserResult {
 		Score:         ur.Score,
 		GameCardCount: ur.GameCardCount,
 	}
+	_, u := cacheuser.GetUserByID(ur.UserID)
+	if u != nil {
+		mGur.Nickname = u.Nickname
+		mGur.Icon = u.Icon
+	}
+	return mGur
 }
 
 func (cre *CheckRoomExist) ToProto() *pbr.CheckRoomExistReply {

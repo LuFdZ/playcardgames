@@ -1,16 +1,12 @@
 package room
 
 import (
-	cacheroom "playcards/model/room/cache"
 	pbroom "playcards/proto/room"
 	srvroom "playcards/service/room/handler"
 	"playcards/service/web/clients"
-	enum "playcards/service/web/enum"
 	"playcards/service/web/request"
 	"playcards/utils/auth"
 	gctx "playcards/utils/context"
-	//"playcards/utils/log"
-	"playcards/utils/log"
 )
 
 var RoomEvent = []string{
@@ -25,29 +21,12 @@ var RoomEvent = []string{
 	srvroom.TopicRoomRenewal,
 	srvroom.TopicRoomVoiceChat,
 	srvroom.TopicRoomExist,
+	srvroom.TopicRoomNotice,
 }
 
 func SubscribeRoomMessage(c *clients.Client, req *request.Request) error {
-	//var pwd string
-	//err := json.Unmarshal(req.Args, &pwd)
-	//if err != nil {
-	//	return err
-	//}
-	//room, err := cacheroom.GetRoom(pwd)
-	//if err != nil {
-	//	return err
-	//}
-	//if room == nil {
-	//	return errors.ErrRoomNotExisted
-	//}
-	err := cacheroom.UpdateRoomUserSocektStatus(c.User().UserID, enum.SocketAline, 0)
-	if err != nil {
-		log.Err("redis set user socket status aline err! userid:%d\n",c.User().UserID)
-		return err
-	}
-	//c.User().RoomID = room.RoomID
 	c.Subscribe(RoomEvent)
-	c.SendNewClientBackMessage()
+	c.SendNewClientBackMessage("SubscribeSuccess")
 	return nil
 }
 
@@ -56,7 +35,7 @@ func UnsubscribeRoomMessage(c *clients.Client, req *request.Request) error {
 	return nil
 }
 
-func ClinetHearbeatMessage(c *clients.Client,req *request.Request)error{
+func ClinetHearbeatMessage(c *clients.Client, req *request.Request) error {
 	c.SendHearbeatMessage()
 	return nil
 }

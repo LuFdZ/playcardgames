@@ -14,17 +14,20 @@ import (
 )
 
 var FuncRights = map[string]int32{
-	"UserSrv.Register":       auth.RightsNone,
-	"UserSrv.Login":          auth.RightsNone,
-	"UserSrv.WXLogin":        auth.RightsNone,
-	"UserSrv.GetProperty":    auth.RightsPlayer | auth.RightsUserView,
-	"UserSrv.UserInfo":       auth.RightsUserView,
-	"UserSrv.PageUserList":   auth.RightsUserView,
-	"UserSrv.GetToken":       auth.RightsUserView,
-	"UserSrv.CheckUser":      auth.RightsUserView,
-	"UserSrv.GetUser":        auth.RightsUserView,
-	"UserSrv.UpdateUser":     auth.RightsUserEdit,
-	"UserSrv.UpdateProperty": auth.RightsUserEdit,
+	"UserSrv.Register":           auth.RightsNone,
+	"UserSrv.Login":              auth.RightsNone,
+	"UserSrv.WXLogin":            auth.RightsNone,
+	"UserSrv.GetProperty":        auth.RightsPlayer | auth.RightsUserView,
+	"UserSrv.SetLocation":        auth.RightsPlayer,
+	"UserSrv.UserInfo":           auth.RightsUserView,
+	"UserSrv.PageUserList":       auth.RightsUserView,
+	"UserSrv.GetToken":           auth.RightsUserView,
+	"UserSrv.CheckUser":          auth.RightsUserView,
+	"UserSrv.GetUser":            auth.RightsUserView,
+	"UserSrv.DayActiveUserList":  auth.RightsUserView,
+	"UserSrv.GetUserOnlineCount": auth.RightsUserView,
+	"UserSrv.UpdateUser":         auth.RightsUserEdit,
+	"UserSrv.UpdateProperty":     auth.RightsUserEdit,
 }
 
 func main() {

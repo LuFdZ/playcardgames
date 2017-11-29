@@ -24,10 +24,10 @@ type Niuniu struct {
 	BankerID      int32
 	GetBankerList []*GetBanker `gorm:"-"`
 	BroStatus     int32        `gorm:"-"`
-	SubDateAt      *time.Time   `gorm:"-"`
-	HasNewBanker  bool `gorm:"-"`
-	RefreshDateAt *time.Time `gorm:"-"`
-	Ids           []int32 `gorm:"-"`
+	SubDateAt     *time.Time   `gorm:"-"`
+	HasNewBanker  bool         `gorm:"-"`
+	RefreshDateAt *time.Time   `gorm:"-"`
+	Ids           []int32      `gorm:"-"`
 }
 
 type GetBanker struct {

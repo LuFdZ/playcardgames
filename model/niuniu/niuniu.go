@@ -4,12 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"math/rand"
-	bill "playcards/model/bill"
-	muser "playcards/model/user"
-	enumbill "playcards/model/bill/enum"
-	mdbill "playcards/model/bill/mod"
 	cacheniu "playcards/model/niuniu/cache"
-	cacheuser "playcards/model/user/cache"
 	dbniu "playcards/model/niuniu/db"
 	enumniu "playcards/model/niuniu/enum"
 	errorsniu "playcards/model/niuniu/errors"
@@ -52,8 +47,8 @@ func CreateNiuniu() []*mdniu.Niuniu {
 			log.Err("niuniu logic do file %v", err)
 		}
 		ostimeA := time.Now().UnixNano()
-		ostimeB := ostimeA<<32|ostimeA>>32
-		if err := l.DoString(fmt.Sprintf("return Logic:new(%d)",ostimeB)); err != nil {
+		ostimeB := ostimeA<<32 | ostimeA>>32
+		if err := l.DoString(fmt.Sprintf("return Logic:new(%d)", ostimeB)); err != nil {
 			log.Err("niuniu logic do string %+v", err)
 			continue
 		}
@@ -207,19 +202,19 @@ func CreateNiuniu() []*mdniu.Niuniu {
 			}
 
 			if room.RoundNow == 1 {
-				billForeignKey := fmt.Sprintf("%d:%d:%d", room.GameType, room.RoomID, niuniu.GameID)
-				diamond := -int64(room.MaxNumber * room.RoundNumber * enumr.NiuniuGameCost)
-				_,u :=cacheuser.GetUserByID(room.PayerID)
-				err = muser.SetUserLockBalance(room.PayerID,enumbill.TypeDiamond,-diamond,room.RoomID)
-				if err != nil {
-					log.Err("room create set lock balance redis failed,%v | %v\n", room, err)
-					return err
-				}
-				_,err := bill.GainBalanceCondition(room.PayerID,u.Channel,u.Version,u.MobileOs,billForeignKey,
-					&mdbill.Balance{0, 0, diamond},enumbill.JournalTypeNiuniu)
-				if err != nil {
-					return err
-				}
+				//billForeignKey := fmt.Sprintf("%d:%d:%d", room.GameType, room.RoomID, niuniu.GameID)
+				//diamond := -int64(room.MaxNumber * room.RoundNumber * enumr.NiuniuGameCost)
+				//_,u :=cacheuser.GetUserByID(room.PayerID)
+				//err = muser.SetUserLockBalance(room.PayerID,enumbill.TypeDiamond,-diamond,room.RoomID)
+				//if err != nil {
+				//	log.Err("room create set lock balance redis failed,%v | %v\n", room, err)
+				//	return err
+				//}
+				//_,err := bill.GainBalanceCondition(room.PayerID,u.Channel,u.Version,u.MobileOs,billForeignKey,
+				//	&mdbill.Balance{0, 0, diamond},enumbill.JournalTypeNiuniu)
+				//if err != nil {
+				//	return err
+				//}
 
 				for _, user := range room.Users {
 					pr := &mdr.PlayerRoom{
@@ -326,7 +321,7 @@ func UpdateGame() []*mdniu.Niuniu {
 			room, err := cacher.GetRoom(pwd)
 			if err != nil {
 				//print(err)
-				log.Err("niuniu room get session failed, roomid:%d,pwd:%s,err:%v",niuniu.RoomID,pwd, err)
+				log.Err("niuniu room get session failed, roomid:%d,pwd:%s,err:%v", niuniu.RoomID, pwd, err)
 				continue
 			}
 			if room == nil {
@@ -343,7 +338,7 @@ func UpdateGame() []*mdniu.Niuniu {
 				continue
 			}
 
-			if err := l.DoString(fmt.Sprintf("return Logic:new(%d)",0)); err != nil {
+			if err := l.DoString(fmt.Sprintf("return Logic:new(%d)", 0)); err != nil {
 				log.Err("niuniu logic do string %+v", err)
 				continue
 			}
@@ -435,7 +430,7 @@ func UpdateGame() []*mdniu.Niuniu {
 			}
 			err = cacheniu.DeleteGame(niuniu.RoomID)
 			if err != nil {
-				log.Err("niuniu room del session failed, roomid:%d,pwd:%s,err:%v",niuniu.RoomID,pwd, err)
+				log.Err("niuniu room del session failed, roomid:%d,pwd:%s,err:%v", niuniu.RoomID, pwd, err)
 				continue
 			}
 
@@ -475,7 +470,7 @@ func UpdateNiuniu(niu *mdniu.Niuniu) error {
 //	return rooms, nil
 //}
 
-func GetBanker(uid int32, key int32,room *mdr.Room) error {
+func GetBanker(uid int32, key int32, room *mdr.Room) error {
 
 	//value, err := tools.Int2String(str)
 	var value int32
@@ -546,14 +541,13 @@ func GetBanker(uid int32, key int32,room *mdr.Room) error {
 
 }
 
-func SetBet(uid int32, key int32,room *mdr.Room) ([]int32, error) {
+func SetBet(uid int32, key int32, room *mdr.Room) ([]int32, error) {
 	var value int32
 	if v, ok := enumniu.BetScoreMap[key]; !ok {
 		return nil, errorsniu.ErrParam
 	} else {
 		value = v
 	}
-
 
 	if room.Status > enumr.RoomStatusStarted {
 
@@ -611,7 +605,7 @@ func SetBet(uid int32, key int32,room *mdr.Room) ([]int32, error) {
 	return niu.Ids, nil //
 }
 
-func SubmitCard(uid int32,room *mdr.Room) ([]int32, error) {
+func SubmitCard(uid int32, room *mdr.Room) ([]int32, error) {
 	if room.Status > enumr.RoomStatusStarted {
 		if room.Giveup == enumr.WaitGiveUp {
 			return nil, errors.ErrInGiveUp
@@ -796,7 +790,7 @@ func CleanGame() error {
 			continue
 		}
 		if game != nil {
-			log.Debug("clean niuniu game:%d|%d|%+v\n",game.GameID,game.RoomID,game.Ids)
+			log.Debug("clean niuniu game:%d|%d|%+v\n", game.GameID, game.RoomID, game.Ids)
 			gids = append(gids, game.GameID)
 			err = cacheniu.DeleteGame(rid)
 			if err != nil {
@@ -804,16 +798,16 @@ func CleanGame() error {
 					err)
 				continue
 			}
-			err = cacher.CleanDeleteRoom(enumniu.GameID,game.RoomID)
+			err = cacher.CleanDeleteRoom(enumniu.GameID, game.RoomID)
 			if err != nil {
-				log.Err(" delete niuniu delete room session failed,roomid:%d,err: %v",game.RoomID,
+				log.Err(" delete niuniu delete room session failed,roomid:%d,err: %v", game.RoomID,
 					err)
 				continue
 			}
-		}else{
-			err = cacher.CleanDeleteRoom(enumniu.GameID,rid)
+		} else {
+			err = cacher.CleanDeleteRoom(enumniu.GameID, rid)
 			if err != nil {
-				log.Err(" delete null game niuniu delete room session failed,roomid:%d,err: %v",rid,
+				log.Err(" delete null game niuniu delete room session failed,roomid:%d,err: %v", rid,
 					err)
 				continue
 			}

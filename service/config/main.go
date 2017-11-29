@@ -13,10 +13,11 @@ import (
 )
 
 var FuncRights = map[string]int32{
-	"ConfigSrv.UpdateConfig": auth.RightsConfigEdit,
-	"ConfigSrv.CreateConfig": auth.RightsConfigEdit,
-	"ConfigSrv.GetConfigs": auth.RightsPlayer,
-	"ConfigSrv.PageConfigs": auth.RightsConfigEdit,
+	"ConfigSrv.UpdateConfig":            auth.RightsConfigEdit,
+	"ConfigSrv.CreateConfig":            auth.RightsConfigEdit,
+	"ConfigSrv.GetConfigs":              auth.RightsPlayer,
+	"ConfigSrv.GetConfigsBeforeLogin":   auth.RightsNone,
+	"ConfigSrv.PageConfigs":             auth.RightsConfigEdit,
 	"ConfigSrv.RefreshAllConfigsFromDB": auth.RightsConfigEdit,
 }
 

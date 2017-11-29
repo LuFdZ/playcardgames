@@ -1,12 +1,12 @@
 package cache
 
 import (
-	"playcards/utils/log"
 	"encoding/json"
 	"fmt"
 	mdniu "playcards/model/niuniu/mod"
 	"playcards/utils/cache"
 	"playcards/utils/errors"
+	"playcards/utils/log"
 
 	redis "gopkg.in/redis.v5"
 )
@@ -116,7 +116,6 @@ func GetRoomPaawordRoomID(rid int32) string {
 	return pwd
 }
 
-
 func GetAllNiuKey() ([]string, error) {
 	var curson uint64
 	var nks []string
@@ -150,7 +149,7 @@ func GetAllNiu(f func(*mdniu.Niuniu) bool) []*mdniu.Niuniu {
 		if err != nil {
 			log.Err("redis get niuniu err: %v", err)
 		}
-		if niuniu == nil{
+		if niuniu == nil {
 			continue
 		}
 		if f != nil && !f(niuniu) {

@@ -1,13 +1,13 @@
 package mod
 
 import (
-	pbconf "playcards/proto/config"
 	mdtime "playcards/model/time"
+	pbconf "playcards/proto/config"
 	"time"
 )
 
 type Config struct {
-	ConfigID      int32 `gorm:"primary_key"`
+	ConfigID    int32 `gorm:"primary_key"`
 	Channel     string
 	Version     string
 	MobileOs    string
@@ -20,10 +20,9 @@ type Config struct {
 	Hkey        string `gorm:"-"`
 }
 
-
 func (co *Config) ToProto() *pbconf.Config {
 	return &pbconf.Config{
-		ConfigID:      co.ConfigID,
+		ConfigID:    co.ConfigID,
 		Channel:     co.Channel,
 		Version:     co.Version,
 		MobileOs:    co.MobileOs,
@@ -31,13 +30,13 @@ func (co *Config) ToProto() *pbconf.Config {
 		ItemValue:   co.ItemValue,
 		Status:      co.Status,
 		Description: co.Description,
-		CreatedAt:     mdtime.TimeToProto(co.CreatedAt),
-		UpdatedAt:     mdtime.TimeToProto(co.UpdatedAt),
+		CreatedAt:   mdtime.TimeToProto(co.CreatedAt),
+		UpdatedAt:   mdtime.TimeToProto(co.UpdatedAt),
 	}
 }
 
 func ConfigFromProto(co *pbconf.Config) *Config {
-	if co == nil{
+	if co == nil {
 		return &Config{}
 	}
 	return &Config{

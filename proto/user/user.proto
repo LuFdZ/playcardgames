@@ -5,34 +5,36 @@ import "playcards/proto/page/page.proto";
 package user;
 
 message User {
-    int32  UserID = 1;
+    int32 UserID = 1;
     string Username = 2;
     string Password = 3;
     string Nickname = 4;
     string Mobile = 5;
     string Email = 6;
     string Avatar = 7;
-    int32  Status = 8;
+    int32 Status = 8;
     string Channel = 9;
-    int64  CreatedAt = 10;
-    int64  UpdatedAt = 11;
-    int64  LastLoginAt = 12;
-    int32  Rights = 13;
-    int32  Sex = 14;
+    int64 CreatedAt = 10;
+    int64 UpdatedAt = 11;
+    int64 LastLoginAt = 12;
+    int32 Rights = 13;
+    int32 Sex = 14;
     string Icon = 15;
-    int32  PlayTimes    = 16;
-    int32  InviteUserID = 17;
-    string MobileUuID   = 18;
-    string MobileModel   = 19;
-    string MobileNetWork= 20;
-    string MobileOs     = 21;
-    string LastLoginIP  = 22;
-    string RegIP        = 23;
+    int32 PlayTimes = 16;
+    int32 InviteUserID = 17;
+    string MobileUuID = 18;
+    string MobileModel = 19;
+    string MobileNetWork = 20;
+    string MobileOs = 21;
+    string LastLoginIP = 22;
+    string RegIP = 23;
     string OpenID = 24;
     string UnionID = 25;
-    int64  Diamond = 26;
-    int64  InviteNumber = 27;
+    int64 Diamond = 26;
+    int64 InviteNumber = 27;
     string Version = 28;
+    string Location = 29;
+    int32 ClubID = 30;
 }
 
 message RegisterReply {
@@ -66,63 +68,99 @@ message PageUserListReply {
     int64 Count = 4;
 }
 
-message UserInfo{
+message GetUserDayActiveRequest {
+    int32 page = 1;
+}
+
+message UserInfo {
     int32 UserID = 1;
     string Username = 2;
     string Nickname = 3;
     string Icon = 4;
-    int32 Sex =5;
+    int32 Sex = 5;
 }
 
-message GetTokenRequest{
+message GetTokenRequest {
     int32 UserID = 1;
 }
 
-message GetTokenReply{
+message GetTokenReply {
     int32 Result = 1; //1请求成功  2请求失败
-    int32 Code = 2;// 0查询到token 101 uid对应的 token不存在
+    int32 Code = 2; // 0查询到token 101 uid对应的 token不存在
     string Token = 3;
 }
 
-message CheckUserRequest{
+message CheckUserRequest {
     int32 UserID = 1;
     string Token = 2;
 }
 
-message CheckUserReply{
+message CheckUserReply {
     int32 Result = 1;
     int32 Code = 2;
 }
 
-message WXLoginRequest{
+message WXLoginRequest {
     string Code = 1;
     string Channel = 2;
-    string MobileUuID   = 3;
-    string MobileModel   = 4;
-    string MobileNetWork= 6;
-    string MobileOs     = 5;
+    string MobileUuID = 3;
+    string MobileModel = 4;
+    string MobileNetWork = 6;
+    string MobileOs = 5;
     string OpenID = 7;
     string Mobile = 8;
     string Version = 9;
 }
 
-message WXLoginRsply{
+message WXLoginRsply {
     int32 Result = 1;
-    User  User =2;
+    User User = 2;
     string OpenID = 3;
     string Token = 4;
 }
 
+message GetUserDayActiveRsply {
+    repeated User List = 1;
+    page.PageReply PageReply = 2;
+}
+
+message AlineConutRsply {
+    int32 Count = 1;
+}
+
+message SetLocationRequest {
+    string Json = 1;
+}
+
+message UserRsply {
+    int32 Result = 1;
+}
 
 service UserSrv {
-    rpc Register(User) returns (RegisterReply) {}
-    rpc Login(User) returns (User) {}
-    rpc UserInfo(UserInfoReq) returns (User) {}
-    rpc PageUserList(PageUserListRequest) returns (PageUserListReply) {}
-    rpc UpdateUser(User) returns (User) {}
-    rpc AddUser(User) returns (RegisterReply) {}
-    rpc GetToken(GetTokenRequest) returns (GetTokenReply) {}
-    rpc CheckUser(CheckUserRequest) returns (CheckUserReply) {}
-    rpc GetUser(User) returns (User) {}
-    rpc WXLogin(WXLoginRequest) returns (User) {}
+    rpc Register (User) returns (RegisterReply) {
+    }
+    rpc Login (User) returns (User) {
+    }
+    rpc UserInfo (UserInfoReq) returns (User) {
+    }
+    rpc PageUserList (PageUserListRequest) returns (PageUserListReply) {
+    }
+    rpc UpdateUser (User) returns (User) {
+    }
+    rpc AddUser (User) returns (RegisterReply) {
+    }
+    rpc GetToken (GetTokenRequest) returns (GetTokenReply) {
+    }
+    rpc CheckUser (CheckUserRequest) returns (CheckUserReply) {
+    }
+    rpc GetUser (User) returns (User) {
+    }
+    rpc WXLogin (WXLoginRequest) returns (User) {
+    }
+    rpc DayActiveUserList (GetUserDayActiveRequest) returns (GetUserDayActiveRsply) {
+    }
+    rpc GetUserOnlineCount (User) returns (AlineConutRsply) {
+    }
+    rpc SetLocation (SetLocationRequest) returns (UserRsply) {
+    }
 }

@@ -1,0 +1,91 @@
+syntax = "proto3";
+
+package common;
+import "playcards/proto/page/page.proto";
+
+//***********************************************结构体***********************************************
+
+//黑名单结构体
+message BlackList {
+    int32 BlackID = 1;
+    int32 Type = 2; // 1 俱乐部 ...
+    int32 OriginID = 4; //发起对象id（如俱乐部id）
+    int32 TargetID = 5; //拉黑对象id（如俱乐部某个成员）
+    int32 Status = 6;//1 生效 2失效
+    int32 OpID = 7; //操作人id
+    int64 CreatedAt = 8;
+    int64 UpdatedAt = 9;
+    string Nickname = 10;
+    string Icon = 11;
+}
+
+//审核表结构体
+message Examine {
+    int32 ExamineID = 1;
+    int32 Type = 2; // 1 俱乐部 ...
+    int32 ApplicantID = 3; //申请对象id (如想加入俱乐部的玩家id)
+    int32 AuditorID = 4; //审核对象id （如俱乐部id）
+    int32 Status = 5; // -1 未处理 1同意 2拒绝
+    int32 OpID = 6; //操作人id
+    int64 CreatedAt = 7;
+    int64 UpdatedAt = 8;
+    string Nickname = 9;
+    string Icon = 10;
+}
+
+//***********************************************请求***********************************************
+
+message PageBlackListRequest {
+    page.PageOption Page = 1;
+    BlackList BlackList = 2;
+}
+
+message PageExamineRequest {
+    page.PageOption Page = 1;
+    Examine Examine = 2;
+}
+
+//***********************************************回应***********************************************
+
+//通用回复
+message CommonReply {
+    int32 Result = 1; //1 成功 //失败返回通用报错结构
+    int32 Code = 2;
+}
+
+message PageBlackListReply {
+    int32 Result = 1; //1 成功 //失败返回通用报错结构
+    repeated BlackList List = 3;
+    int64 Count = 4; //记录总数
+}
+
+message PageExamineReply {
+    int32 Result = 1; //1 成功 //失败返回通用报错结构
+    repeated Examine List = 3;
+    int64 Count = 4; //记录总数
+}
+
+//***********************************************广播***********************************************
+
+service CommonSrv {
+    //创建黑名单
+    //必要参数 [Type、OriginID、TargetID]
+    rpc CreateBlackList (BlackList) returns (CommonReply) {
+    }
+    //移除黑名单
+    rpc CancelBlackList (BlackList) returns (CommonReply) {
+    }
+
+    rpc PageBlackList (PageBlackListRequest) returns (PageBlackListReply) {
+    }
+    //创建审核请求
+    //必要参数 [Type、ApplicantID、AuditorID]
+    rpc CreateExamine (Examine) returns (CommonReply) {
+    }
+    //更新审核请求
+    //必要参数 [Type,ApplicantID,AuditorID,Status]
+    rpc UpdateExamine (Examine) returns (CommonReply) {
+    }
+    rpc PageExamine (PageExamineRequest) returns (PageExamineReply) {
+    }
+}

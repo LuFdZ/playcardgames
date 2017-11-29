@@ -3,10 +3,14 @@ package cache
 import (
 	"encoding/json"
 	"fmt"
+	"math"
+	enumu "playcards/model/user/enum"
 	erru "playcards/model/user/errors"
 	mdu "playcards/model/user/mod"
 	"playcards/utils/cache"
 	"playcards/utils/errors"
+	"playcards/utils/log"
+	"sort"
 	"strconv"
 	"strings"
 
@@ -24,6 +28,10 @@ func UserHWXKey(openid string) string {
 
 func UserHKeySearch() string {
 	return cache.KeyPrefix("USER:*")
+}
+
+func UserOnlineHKey() string {
+	return cache.KeyPrefix("USERONLINE")
 }
 
 func UserToken(uid int32) string {
@@ -56,42 +64,42 @@ func GetRefreshToken(openid string) (string, error) {
 	return val, nil
 }
 
-func SetUserLockBalance(uid int32,lb *mdu.Balance)error{
-	key := UserHKey(uid)
-	f := func(tx *redis.Tx) error {
-		tx.Pipelined(func(p *redis.Pipeline) error {
-			b, _ := json.Marshal(lb)
-			tx.HSet(key, "lockbalance", string(b))
-			return nil
-		})
-		return nil
-	}
+//func SetUserLockBalance(uid int32, lb *mdu.Balance) error {
+//	key := UserHKey(uid)
+//	f := func(tx *redis.Tx) error {
+//		tx.Pipelined(func(p *redis.Pipeline) error {
+//			b, _ := json.Marshal(lb)
+//			tx.HSet(key, "lockbalance", string(b))
+//			return nil
+//		})
+//		return nil
+//	}
+//
+//	err := cache.KV().Watch(f, key)
+//	if err != nil {
+//		return errors.Internal("set user lock balance error", err)
+//	}
+//
+//	return nil
+//}
 
-	err := cache.KV().Watch(f, key)
-	if err != nil {
-		return errors.Internal("set user lock balance error", err)
-	}
-
-	return nil
-}
-
-func GetUserLockBalance(uid int32) (*mdu.Balance, error) {
-	key := UserHKey(uid)
-	val, err := cache.KV().HGet(key, "lockbalance").Bytes()
-	if err == redis.Nil {
-		return nil, nil
-	}
-
-	if err != nil && err != redis.Nil {
-		return nil, errors.Internal("get lock balance failed", err)
-	}
-
-	lb := &mdu.Balance{}
-	if err := json.Unmarshal(val, lb); err != nil {
-		return nil, errors.Internal("get lock balance failed", err)
-	}
-	return lb, nil
-}
+//func GetUserLockBalance(uid int32) (*mdu.Balance, error) {
+//	key := UserHKey(uid)
+//	val, err := cache.KV().HGet(key, "lockbalance").Bytes()
+//	if err == redis.Nil {
+//		return nil, nil
+//	}
+//
+//	if err != nil && err != redis.Nil {
+//		return nil, errors.Internal("get lock balance failed", err)
+//	}
+//
+//	lb := &mdu.Balance{}
+//	if err := json.Unmarshal(val, lb); err != nil {
+//		return nil, errors.Internal("get lock balance failed", err)
+//	}
+//	return lb, nil
+//}
 
 func SetUserWXInfo(openid string, accesstoken string, refreshtoken string) error {
 	key := UserHWXKey(openid)
@@ -146,6 +154,7 @@ func SetUser(u *mdu.User) (string, error) {
 func UpdateUser(token string, u *mdu.User) error {
 	key := UserHKey(u.UserID)
 	//u.EncodNickName()
+
 	f := func(tx *redis.Tx) error {
 		orig, _ := tx.HGet(key, "token").Bytes()
 		tx.Pipelined(func(p *redis.Pipeline) error {
@@ -162,7 +171,29 @@ func UpdateUser(token string, u *mdu.User) error {
 	if err != nil {
 		return errors.Internal("set user error", err)
 	}
+	return nil
+}
 
+func SimpleUpdateUser(u *mdu.User) error {
+	key := UserHKey(u.UserID)
+	val := cache.KV().HGetAll(key).Val()
+	token, ok := val["token"]
+	if !ok {
+		return nil
+	}
+	f := func(tx *redis.Tx) error {
+		tx.Pipelined(func(p *redis.Pipeline) error {
+			b, _ := json.Marshal(u)
+			tx.HSet(key, token, string(b))
+			return nil
+		})
+		return nil
+	}
+
+	err := cache.KV().Watch(f, key)
+	if err != nil {
+		return errors.Internal("set simple user error", err)
+	}
 	return nil
 }
 
@@ -222,7 +253,8 @@ func ListUserHKeys() ([]string, error) {
 			break
 		}
 	}
-
+	sort.Strings(uks)
+	//fmt.Printf("ListUserHKeys:%v\n",uks)
 	return uks, nil
 }
 
@@ -259,4 +291,100 @@ func ListUsers() ([]*mdu.User, error) {
 		}
 	}
 	return us, nil
+}
+
+func GetUserList(f func(*mdu.User) bool, page int32) ([]*mdu.User, int32) {
+	var us []*mdu.User
+	keys, err := ListUserHKeys()
+	if err != nil {
+		log.Err("redis get all user err: %v", err)
+	}
+	//fmt.Printf("GetUserList:%v\n",keys)
+
+	for _, k := range keys {
+		//index := i+1
+		//if index <= pageStart || index > pageEnd {
+		//	continue
+		//}
+		cols := strings.Split(k, ":")
+		if len(cols) != 3 {
+			log.Err("redis get all user token err: %+v", cols)
+			continue
+		}
+		uid, err := strconv.Atoi(cols[2])
+		if err != nil {
+			log.Err("list online users failed,err:%v", err)
+			continue
+		}
+		_, u := GetUserByID(int32(uid))
+		if u == nil {
+			continue
+		}
+		if f != nil && !f(u) {
+			continue
+		}
+		us = append(us, u)
+	}
+
+	var pageList []*mdu.User
+	count := float64(len(us)) / float64(enumu.MaxUserRecordCount)
+	count = math.Ceil(count)
+	if count == 0 {
+		count = 1
+	}
+	pageStart := 0
+	pageStart = int((page - 1) * enumu.MaxUserRecordCount)
+	pageEnd := int(pageStart + enumu.MaxUserRecordCount)
+	if pageStart > int(count) {
+		return nil, int32(count)
+	}
+
+	for i, u := range us {
+		index := i + 1
+		if index <= pageStart || index > pageEnd {
+			continue
+		}
+		pageList = append(pageList, u)
+	}
+	return pageList, int32(count)
+}
+
+func SetUserOnlineStatus(uid int32, status int) error {
+	key := UserOnlineHKey()
+	f := func(tx *redis.Tx) error {
+		tx.Pipelined(func(p *redis.Pipeline) error {
+			index := uid - 100000 - 1
+			tx.SetBit(key, int64(index), status)
+			return nil
+		})
+		return nil
+	}
+	err := cache.KV().Watch(f, key)
+	if err != nil {
+		return errors.Internal("set user wx info error", err)
+	}
+	return nil
+}
+
+func GetUserOnlineStatus(uid int32) int32 {
+	key := UserOnlineHKey()
+	index := uid - 100000 - 1
+	status := cache.KV().GetBit(key, int64(index))
+	online := enumu.UserOnline
+	if int32(status.Val()) == 0 {
+		online = enumu.UserUnline
+	}
+	//fmt.Printf("GetUserOnlineStatus:%d|%d\n",uid,online)
+	return int32(online)
+}
+
+func GetAllOnlineCount() (int32, error) {
+	key := UserOnlineHKey()
+	userNumber, err := CountUserHKeys()
+	if err != nil {
+		return 0, err
+	}
+	bc := redis.BitCount{0, int64(userNumber)}
+	count := cache.KV().BitCount(key, &bc).Val()
+	return int32(count), nil
 }

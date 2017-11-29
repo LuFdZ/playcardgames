@@ -2,19 +2,20 @@ package handler
 
 import (
 	"context"
+	"fmt"
 	"playcards/model/niuniu"
 	cacheniu "playcards/model/niuniu/cache"
 	enumniu "playcards/model/niuniu/enum"
+	"playcards/model/room"
 	enumr "playcards/model/room/enum"
 	pbniu "playcards/proto/niuniu"
 	"playcards/utils/auth"
 	"playcards/utils/log"
 	utilproto "playcards/utils/proto"
 	gsync "playcards/utils/sync"
-	"playcards/model/room"
 	"playcards/utils/topic"
 	"time"
-	"fmt"
+
 	"github.com/jinzhu/gorm"
 	"github.com/micro/go-micro/broker"
 	"github.com/micro/go-micro/server"
@@ -28,7 +29,6 @@ type NiuniuSrv struct {
 func RoomLockKey(pwd string) string {
 	return fmt.Sprintf("playcards.room.op.lock:%s", pwd)
 }
-
 
 func NewHandler(s server.Server, gt *gsync.GlobalTimer) *NiuniuSrv {
 	n := &NiuniuSrv{
@@ -49,11 +49,10 @@ func (ns *NiuniuSrv) Update(gt *gsync.GlobalTimer) {
 		if newGames != nil {
 			for _, game := range newGames {
 				for _, UserResult := range game.Result.List {
-					//fmt.Printf("Update Game New Game:%v", game)
 					cardlist := UserResult.Cards.
 						CardList[:len(UserResult.Cards.CardList)-1]
 					msg := &pbniu.NiuniuGameStart{
-						Role:       0, //UserResult.Info.Role
+						Role:       0,
 						UserID:     UserResult.UserID,
 						BankerID:   game.BankerID,
 						RoomStatus: enumr.RoomStatusStarted,
@@ -90,7 +89,7 @@ func (ns *NiuniuSrv) Update(gt *gsync.GlobalTimer) {
 							msg := &pbniu.CountDown{
 								//RoomID: game.RoomID,
 								//Status: enumniu.ToBetScoreMap[game.Status],
-								Ids:game.Ids,
+								Ids:  game.Ids,
 								Time: int32(countDown),
 							}
 							topic.Publish(ns.broker, msg, TopicNiuniuCountDown)
@@ -155,13 +154,12 @@ func (ns *NiuniuSrv) GetBanker(ctx context.Context, req *pbniu.GetBankerRequest,
 	reply := &pbniu.DefaultReply{
 		Result: enumniu.Success,
 	}
-	r,err :=room.GetRoomByUserID(u.UserID)
+	r, err := room.GetRoomByUserID(u.UserID)
 	f := func() error {
-		err = niuniu.GetBanker(u.UserID, req.Key,r)
+		err = niuniu.GetBanker(u.UserID, req.Key, r)
 		if err != nil {
 			return err
 		}
-		*rsp = *reply
 		return nil
 	}
 	lock := RoomLockKey(r.Password)
@@ -170,6 +168,7 @@ func (ns *NiuniuSrv) GetBanker(ctx context.Context, req *pbniu.GetBankerRequest,
 		log.Err("%s get banker failed: %v", lock, err)
 		return err
 	}
+	*rsp = *reply
 	return nil
 }
 
@@ -183,19 +182,13 @@ func (ns *NiuniuSrv) SetBet(ctx context.Context, req *pbniu.SetBetRequest,
 	reply := &pbniu.DefaultReply{
 		Result: enumniu.Success,
 	}
-	r,err :=room.GetRoomByUserID(u.UserID)
-	f := func()error {
-		ids, err := niuniu.SetBet(u.UserID, req.Key,r)
+	r, err := room.GetRoomByUserID(u.UserID)
+	var ids []int32
+	f := func() error {
+		ids, err = niuniu.SetBet(u.UserID, req.Key, r)
 		if err != nil {
 			return err
 		}
-		*rsp = *reply
-		msg := &pbniu.SetBet{
-			UserID: u.UserID,
-			Key:    req.Key,
-			Ids:ids,
-		}
-		topic.Publish(ns.broker, msg, TopicNiuniuSetBet)
 		return nil
 	}
 	lock := RoomLockKey(r.Password)
@@ -204,6 +197,13 @@ func (ns *NiuniuSrv) SetBet(ctx context.Context, req *pbniu.SetBetRequest,
 		log.Err("%s set banker failed: %v", lock, err)
 		return err
 	}
+	*rsp = *reply
+	msg := &pbniu.SetBet{
+		UserID: u.UserID,
+		Key:    req.Key,
+		Ids:    ids,
+	}
+	topic.Publish(ns.broker, msg, TopicNiuniuSetBet)
 	return nil
 }
 
@@ -217,18 +217,13 @@ func (ns *NiuniuSrv) SubmitCard(ctx context.Context, req *pbniu.SubmitCardReques
 	reply := &pbniu.DefaultReply{
 		Result: enumniu.Success,
 	}
-	r,err :=room.GetRoomByUserID(u.UserID)
-	f := func()error {
-		ids, err := niuniu.SubmitCard(u.UserID,r)
+	r, err := room.GetRoomByUserID(u.UserID)
+	var ids []int32
+	f := func() error {
+		ids, err = niuniu.SubmitCard(u.UserID, r)
 		if err != nil {
 			return err
 		}
-		*rsp = *reply
-		msg := &pbniu.GameReady{
-			UserID: u.UserID,
-			Ids:    ids,
-		}
-		topic.Publish(ns.broker, msg, TopicNiuniuGameReady)
 		return nil
 	}
 	lock := RoomLockKey(r.Password)
@@ -237,6 +232,12 @@ func (ns *NiuniuSrv) SubmitCard(ctx context.Context, req *pbniu.SubmitCardReques
 		log.Err("%s set banker failed: %v", lock, err)
 		return err
 	}
+	*rsp = *reply
+	msg := &pbniu.GameReady{
+		UserID: u.UserID,
+		Ids:    ids,
+	}
+	topic.Publish(ns.broker, msg, TopicNiuniuGameReady)
 	return nil
 }
 

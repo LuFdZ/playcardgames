@@ -1,23 +1,14 @@
 package mod
 
 import (
+	"encoding/base64"
 	"fmt"
 	mdtime "playcards/model/time"
 	pbu "playcards/proto/user"
-	"time"
-	//"github.com/jinzhu/gorm"
-	//"regexp"
-	"encoding/base64"
 	"playcards/utils/log"
-	//"github.com/jinzhu/gorm"
+	"time"
 	"unicode/utf8"
 )
-
-type Balance struct {
-	Amount  int64
-	Gold    int64
-	Diamond int64
-}
 
 type User struct {
 	UserID        int32  `gorm:"primary_key"`
@@ -37,6 +28,7 @@ type User struct {
 	UpdatedAt     *time.Time
 	LastLoginAt   *time.Time
 	InviteUserID  int32
+	ClubID        int32
 	MobileUuID    string
 	MobileModel   string
 	MobileNetWork string
@@ -46,6 +38,7 @@ type User struct {
 	OpenID        string
 	UnionID       string
 	AccessToken   string `gorm:"-"`
+	Location      string `gorm:"-"`
 }
 
 type UserInfo struct {
@@ -109,6 +102,7 @@ func (u *User) ToProto() *pbu.User {
 		Sex:           u.Sex,
 		OpenID:        u.OpenID,
 		UnionID:       u.UnionID,
+		ClubID:        u.ClubID,
 	}
 }
 func (u *UserInfo) ToProto() *pbu.UserInfo {

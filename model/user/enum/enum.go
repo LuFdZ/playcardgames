@@ -1,10 +1,12 @@
 package enum
 
 const (
-	ErrUID          = -1
-	Salt            = "mChkzskxqc7biVQtLvPjyQkha4c"
-	RegisterBalance = 1000
-	NewUserDiamond  = 5000 //100
+	ErrUID             = -1
+	Salt               = "mChkzskxqc7biVQtLvPjyQkha4c"
+	RegisterBalance    = 0
+	NewUserDiamond     = 100
+	NewUserGold        = 0
+	MaxUserRecordCount = 20
 )
 
 const (
@@ -24,4 +26,9 @@ const (
 const (
 	ResultStatusSuccess = 1
 	ResultStatusFail    = 2
+)
+
+const (
+	UserOnline = 1
+	UserUnline = 2
 )

@@ -2,7 +2,6 @@ package db
 
 import (
 	mdpage "playcards/model/page"
-	//errr "playcards/model/notic/errors"
 
 	enum "playcards/model/notice/enum"
 	mdn "playcards/model/notice/mod"
