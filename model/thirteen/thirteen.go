@@ -14,6 +14,10 @@ import (
 	errorst "playcards/model/thirteen/errors"
 	mdt "playcards/model/thirteen/mod"
 	pbt "playcards/proto/thirteen"
+	enumbill "playcards/model/bill/enum"
+	mdbill "playcards/model/bill/mod"
+	"playcards/utils/env"
+	"playcards/model/bill"
 	"playcards/utils/db"
 	"playcards/utils/log"
 	"strconv"
@@ -52,14 +56,15 @@ func CreateThirteen() []*mdt.Thirteen {
 		var bankerID int32
 		l := lua.NewState()
 		defer l.Close()
-		if err := l.DoFile("lua/thirteenlua/Logic.lua"); err != nil {
+		filePath := env.GetCurrentDirectory() + "/lua/thirteenlua/Logic.lua"
+		if err := l.DoFile(filePath); err != nil {
 			log.Err("thirteen logic do file %+v", err)
 			continue
 		}
 		ostimeA := time.Now().UnixNano()
 		ostimeB := ostimeA<<32 | ostimeA>>32
 		//fmt.Printf("ostime:%d|%d\n",ostimeA,ostimeB)
-		log.Err("create thirteen seed:%d|%d\n", ostimeA, ostimeB)
+		//log.Err("create thirteen seed:%d|%d\n", ostimeA, ostimeB)
 		if err := l.DoString(fmt.Sprintf("return Logic:new(%d)", ostimeB)); err != nil {
 			log.Err("thirteen logic do string %+v", err)
 			continue
@@ -134,8 +139,28 @@ func CreateThirteen() []*mdt.Thirteen {
 			Ids:   room.Ids,
 		}
 		room.Status = enumr.RoomStatusStarted
-
 		f := func(tx *gorm.DB) error {
+			if room.RoundNow == 1 {
+				if room.RoomType != enumr.RoomTypeClub && room.Cost != 0 {
+					err := bill.GainGameBalance(room.PayerID, room.RoomID, enumbill.JournalTypeThirteen,
+						enumbill.JournalTypeThirteenUnFreeze, &mdbill.Balance{Amount: -room.Cost, CoinType: room.CostType})
+					if err != nil {
+						log.Err("thirteen create user balance failed,%v | %+v", room.PayerID, err)
+						return err
+					}
+				}
+
+				for _, user := range room.Users {
+					pr := &mdr.PlayerRoom{
+						UserID:    user.UserID,
+						RoomID:    room.RoomID,
+						GameType:  room.GameType,
+						PlayTimes: 0,
+					}
+					dbr.CreatePlayerRoom(tx, pr)
+				}
+			}
+
 			_, err := dbr.UpdateRoom(tx, room)
 			if err != nil {
 				log.Err("thirten room update set session failed, roomid:%d,err:%+v", room.RoomID, err)
@@ -165,33 +190,6 @@ func CreateThirteen() []*mdt.Thirteen {
 				if err != nil {
 					log.Err("thirteen create set game user redis failed,%v | %+v", room, err)
 					return err
-				}
-			}
-
-			if room.RoundNow == 1 {
-				//billForeignKey := fmt.Sprintf("%d:%d:%d", room.GameType, room.RoomID, thirteen.GameID)
-				//diamond := -int64(room.MaxNumber * room.RoundNumber * enumr.ThirteenGameCost)
-				//
-				//_,u :=cacheuser.GetUserByID(room.PayerID)
-				//err = muser.SetUserLockBalance(room.PayerID,enumbill.TypeDiamond,-diamond,room.RoomID)
-				//if err != nil {
-				//	log.Err("room create set lock balance redis failed,%v | %v\n", room, err)
-				//	return err
-				//}
-				//_,err := bill.GainBalanceCondition(room.PayerID,u.Channel,u.Version,u.MobileOs,billForeignKey,
-				//	&mdbill.Balance{0, 0, diamond},enumbill.JournalTypeThirteen)
-				//if err != nil {
-				//	return err
-				//}
-
-				for _, user := range room.Users {
-					pr := &mdr.PlayerRoom{
-						UserID:    user.UserID,
-						RoomID:    room.RoomID,
-						GameType:  room.GameType,
-						PlayTimes: 0,
-					}
-					dbr.CreatePlayerRoom(tx, pr)
 				}
 			}
 
@@ -261,7 +259,8 @@ func UpdateGame() []*mdt.Thirteen { //[]*mdt.GameResultList
 		var results []*mdt.ThirteenResult
 		l := lua.NewState()
 		defer l.Close()
-		if err := l.DoFile("lua/thirteenlua/Logic.lua"); err != nil {
+		filePath := env.GetCurrentDirectory() + "/lua/thirteenlua/Logic.lua"
+		if err := l.DoFile(filePath); err != nil {
 			log.Err("thirteen clean logic do file %v", err)
 			continue
 		}
@@ -337,10 +336,13 @@ func UpdateGame() []*mdt.Thirteen { //[]*mdt.GameResultList
 			log.Err("thirteen clean unmarshal room param failed, %v", err)
 			continue
 		}
+		if roomparam.BankerType == 0 {
+			roomparam.BankerType = 1
+		}
 
-		if roomparam.BankerAddScore > 0 {
+		if roomparam.BankerAddScore > 0 && roomparam.BankerType == enumt.BankerNom {
 			for i := 0; i < len(room.Users); i++ {
-				room.Users[i].Ready = enumr.UserUnready
+				//room.Users[i].Ready = enumr.UserUnready
 				//十三张一局结束后 轮庄
 				if room.Users[i].Role == enumr.UserRoleMaster {
 					if bankerScore <= 0 {

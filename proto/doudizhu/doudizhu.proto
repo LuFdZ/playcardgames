@@ -1,0 +1,119 @@
+syntax = "proto3";
+
+package niuniu;
+
+//结构体
+message BankerAndBet {
+    string BankerScore = 1;
+    string BetScore = 2;
+    string Role = 3;
+}
+
+message UserCard {
+    string CardType = 1;
+    repeated string CardList = 2;
+}
+
+message NiuniuUserResult{
+    int32 UserID = 1;
+    BankerAndBet Info =2;
+    UserCard Cards = 3;
+    string Score = 4;
+    int32 Status = 5;
+}
+
+message NiuniuRoomResult {
+    int32 RoomID = 1;
+    int32 Status = 2;
+    repeated NiuniuUserResult List= 3;
+    repeated int32 Ids = 4;
+}
+
+message GameResultListReply {
+    repeated NiuniuRoomResult List= 1;
+}
+
+message NiuniuRequest{
+    int32 RoomID = 1;
+}
+
+message NiuniuReply {
+    int32 Status = 1;
+    NiuniuRoomResult Result  =2;
+}
+
+message GetBanker{
+    int32 UserID = 1;
+    int32 Key = 2;
+}
+
+//请求
+message GetBankerRequest{
+    int32 Key = 1;
+}
+
+message SetBetRequest{
+    int32 Key = 1;
+}
+
+message SubmitCardRequest {
+    
+}
+
+message GameResultListRequest {
+    int32 RoomID = 1;
+} 
+
+//回应
+message DefaultReply{
+    int32 Result = 1;
+}
+
+
+//广播
+message NiuniuGameStart {
+    int32 Role = 1;
+    repeated string CardList = 2;
+    int32 BankerID = 3;
+    int32 UserID = 4;
+    int32 RoomStatus = 5;
+    int32 GameStatus = 6;
+}
+
+message BeBanker{
+    int32 BankerID = 1;
+    int32 GameStatus = 2;
+    repeated GetBanker List = 3;
+    repeated int32 Ids = 4;
+}
+
+message AllBet{
+    int32 Status = 1;
+    int32 UserID = 2;
+    string Card = 3;
+}
+
+message SetBet{
+    int32 UserID = 1;
+    int32 Key = 2;
+    repeated int32 Ids = 3;
+}
+
+message GameReady{
+    int32 UserID = 1;
+    repeated int32 Ids = 2;
+}
+
+message CountDown{
+    int32 Time = 1;
+    int32 Status = 2;
+    repeated int32 Ids = 3;
+}
+
+service NiuniuSrv {
+    rpc GetBanker(GetBankerRequest) returns (DefaultReply) {}
+    rpc SetBet(SetBetRequest) returns (DefaultReply) {}
+    rpc Submit(SubmitCardRequest) returns (DefaultReply) {}
+    rpc GameResultList(GameResultListRequest) returns (GameResultListReply) {}
+    rpc NiuniuRecovery(NiuniuRequest) returns (NiuniuReply) {}
+}

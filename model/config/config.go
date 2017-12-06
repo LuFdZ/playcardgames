@@ -10,6 +10,7 @@ import (
 	"playcards/utils/errors"
 
 	"github.com/jinzhu/gorm"
+	"strconv"
 )
 
 func UpdateConfig(co *mdconf.Config) error {
@@ -80,4 +81,16 @@ func RefreshAllConfigsFromDB() error {
 func PageConfigs(page *mdpage.PageOption, c *mdconf.Config) (
 	[]*mdconf.Config, int64, error) {
 	return dbconf.PageConfigs(db.DB(), page, c)
+}
+
+func CheckConfigCondition(channel string, version string, mobileOs string) float64 {
+	rate := 1.00
+	cm := GetConfigs(channel, version, mobileOs)
+	for itemID, co := range cm {
+		if itemID == enumc.ConsumeOpen {
+			value, _ := strconv.Atoi(co.ItemValue)
+			rate = float64(value) / 100
+		}
+	}
+	return rate
 }

@@ -8,8 +8,10 @@ const (
 	JournalTypeShare
 	JournalTypeThirteen
 	JournalTypeNiuniu
-	JournalTypeThirteenRefund
-	JournalTypeNiuniuRefund
+	JournalTypeThirteenFreeze
+	JournalTypeThirteenUnFreeze
+	JournalTypeNiuniuFreeze
+	JournalTypeNiuniuUnFreeze
 	JournalTypeClubRecharge
 )
 

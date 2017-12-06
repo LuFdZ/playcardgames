@@ -231,10 +231,6 @@ func SetAllClub(mclubs []*mdclub.Club) error {
 }
 
 func SetAllClubMember(mcms []*mdclub.ClubMember) error {
-	err := DeleteAll(ClubMemberHKeySearch())
-	if err != nil {
-		return err
-	}
 	for _, mCm := range mcms {
 		SetClubMember(mCm)
 	}

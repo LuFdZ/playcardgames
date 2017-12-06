@@ -15,6 +15,10 @@ import (
 	"playcards/model/room/errors"
 	mdr "playcards/model/room/mod"
 	pbniu "playcards/proto/niuniu"
+	enumbill "playcards/model/bill/enum"
+	mdbill "playcards/model/bill/mod"
+	"playcards/utils/env"
+	"playcards/model/bill"
 	"playcards/utils/db"
 	"playcards/utils/log"
 	"time"
@@ -43,7 +47,8 @@ func CreateNiuniu() []*mdniu.Niuniu {
 		var userResults []*mdr.GameUserResult
 		l := lua.NewState()
 		defer l.Close()
-		if err := l.DoFile("lua/niuniulua/Logic.lua"); err != nil {
+		filePath := env.GetCurrentDirectory()+"/lua/niuniulua/Logic.lua"
+		if err := l.DoFile(filePath); err != nil {
 			log.Err("niuniu logic do file %v", err)
 		}
 		ostimeA := time.Now().UnixNano()
@@ -176,6 +181,29 @@ func CreateNiuniu() []*mdniu.Niuniu {
 		}
 
 		f := func(tx *gorm.DB) error {
+			if room.RoundNow == 1 {
+				if  room.RoomType != enumr.RoomTypeClub && room.Cost != 0{
+					err := bill.GainGameBalance(room.PayerID, room.RoomID, enumbill.JournalTypeNiuniu,
+						enumbill.JournalTypeNiuniuUnFreeze, &mdbill.Balance{Amount: room.Cost, CoinType: room.CostType})
+					if err != nil {
+						return err
+					}
+				}
+
+				for _, user := range room.Users {
+					pr := &mdr.PlayerRoom{
+						UserID:    user.UserID,
+						RoomID:    room.RoomID,
+						GameType:  room.GameType,
+						PlayTimes: 0,
+					}
+					err := dbr.CreatePlayerRoom(tx, pr)
+					if err != nil {
+						log.Err("niuniu create player room err:%v|%v\n", user, err)
+						continue
+					}
+				}
+			}
 			room.Status = enumr.RoomStatusStarted
 			_, err := dbr.UpdateRoom(tx, room)
 			if err != nil {
@@ -201,35 +229,7 @@ func CreateNiuniu() []*mdniu.Niuniu {
 				return err
 			}
 
-			if room.RoundNow == 1 {
-				//billForeignKey := fmt.Sprintf("%d:%d:%d", room.GameType, room.RoomID, niuniu.GameID)
-				//diamond := -int64(room.MaxNumber * room.RoundNumber * enumr.NiuniuGameCost)
-				//_,u :=cacheuser.GetUserByID(room.PayerID)
-				//err = muser.SetUserLockBalance(room.PayerID,enumbill.TypeDiamond,-diamond,room.RoomID)
-				//if err != nil {
-				//	log.Err("room create set lock balance redis failed,%v | %v\n", room, err)
-				//	return err
-				//}
-				//_,err := bill.GainBalanceCondition(room.PayerID,u.Channel,u.Version,u.MobileOs,billForeignKey,
-				//	&mdbill.Balance{0, 0, diamond},enumbill.JournalTypeNiuniu)
-				//if err != nil {
-				//	return err
-				//}
 
-				for _, user := range room.Users {
-					pr := &mdr.PlayerRoom{
-						UserID:    user.UserID,
-						RoomID:    room.RoomID,
-						GameType:  room.GameType,
-						PlayTimes: 0,
-					}
-					err := dbr.CreatePlayerRoom(tx, pr)
-					if err != nil {
-						log.Err("niuniu create player room err:%v|%v\n", user, err)
-						continue
-					}
-				}
-			}
 			return nil
 		}
 		//go db.Transaction(f)
@@ -279,7 +279,7 @@ func UpdateGame() []*mdniu.Niuniu {
 				if userResult.UserID == niuniu.BankerID {
 					userResult.Info.Role = enumniu.Banker
 					userResult.Status = enumniu.
-						UserStatusSetBet
+					UserStatusSetBet
 				}
 			}
 			niuniu.GetBankerList = getBankers
@@ -333,7 +333,8 @@ func UpdateGame() []*mdniu.Niuniu {
 
 			l := lua.NewState()
 			defer l.Close()
-			if err := l.DoFile("lua/niuniulua/Logic.lua"); err != nil {
+			filePath := env.GetCurrentDirectory()+"/lua/niuniulua/Logic.lua"
+			if err := l.DoFile(filePath); err != nil {
 				log.Err("niuniu clean logic do file %v\n", err)
 				continue
 			}
@@ -345,8 +346,8 @@ func UpdateGame() []*mdniu.Niuniu {
 			niuniu.MarshalNiuniuRoomResult()
 			//room.MarshalGameUserResult()
 			if err := l.DoString(fmt.
-				Sprintf("return Logic:CalculateRes('%s','%s')",
-					niuniu.GameResults, room.GameParam)); err != nil {
+			Sprintf("return Logic:CalculateRes('%s','%s')",
+				niuniu.GameResults, room.GameParam)); err != nil {
 				log.Err("niuniu return logic calculateres %v|\n%v|\n%v\n",
 					niuniu.GameResults, room.GameParam, err)
 				continue

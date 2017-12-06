@@ -1,3 +1,4 @@
+package.path = os.getenv("PWD") .. '/?.lua;'
 require "lua/niuniulua/Card"
 require "lua/niuniulua/Tools"
 require "../../lua/niuniulua/json"

@@ -83,6 +83,8 @@ func (rs *RoomSrv) update(gt *gsync.GlobalTimer) {
 			msg.Ids = room.Ids
 			topic.Publish(rs.broker, msg, TopicRoomResult)
 		}
+		//e := time.Now().Sub(s).Nanoseconds()/100000
+		//log.Info("RoomTimesReInitUpdate:%d\n", e)
 
 		giveups := room.GiveUpRoomDestroy()
 		for _, giveup := range giveups {
@@ -100,14 +102,23 @@ func (rs *RoomSrv) update(gt *gsync.GlobalTimer) {
 			}
 		}
 
+		//s = time.Now()
 		room.DelayRoomDestroy()
+		//e = time.Now().Sub(s).Nanoseconds()/100000
+		//log.Info("RoomTimesGiveUpRoomDestroy:%d\n", e)
+
 		room.DeadRoomDestroy()
+
+		//s = time.Now()
 		RoomUserSocket := room.RoomUserStatusCheck()
 		for _, msg := range RoomUserSocket {
 			topic.Publish(rs.broker, msg, TopicRoomUserConnection)
 		}
-		//e := time.Now().Sub(s).Nanoseconds()
-		//fmt.Printf("Update times :%d\n", e)
+		//e = time.Now().Sub(s).Nanoseconds()/100000
+		//log.Info("RoomTimesUserStatusCheck:%d\n", e)
+
+		roomCount,_:= room.GetLiveRoomCount()
+		log.Info("RoomTimesRoomNumber:%d\n", roomCount)
 		return nil
 
 	}

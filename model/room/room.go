@@ -15,6 +15,8 @@ import (
 	cacheu "playcards/model/user/cache"
 	mdu "playcards/model/user/mod"
 	pbr "playcards/proto/room"
+	enumcom "playcards/model/common/enum"
+	"playcards/model/config"
 	"playcards/utils/db"
 	"playcards/utils/log"
 	"strconv"
@@ -122,25 +124,7 @@ func CreateRoom(rtype int32, gtype int32, maxNum int32, roundNum int32,
 			return nil, errors.ErrRoomAgentLimit
 		}
 	}
-	diamond := GetRoomCost(gtype, maxNum, roundNum, user,rtype)
-
-	if rtype == enumr.RoomTypeClub {
-		mclub, err := club.GetClubInfo(user)
-		if err != nil {
-			return nil, err
-		}
-		if mclub.Diamond < diamond {
-			return nil, errors.ErrNotEnoughDiamond
-		}
-	} else {
-		balance, err := bill.GetUserBalance(user.UserID)
-		if err != nil {
-			return nil, err
-		}
-		if balance.Diamond < diamond {
-			return nil, errors.ErrNotEnoughDiamond
-		}
-	}
+	cost := GetRoomCost(gtype, maxNum, roundNum, user, rtype)
 
 	if len(pwd) == 0 {
 		pwd, err = GetPassWord()
@@ -149,7 +133,7 @@ func CreateRoom(rtype int32, gtype int32, maxNum int32, roundNum int32,
 		}
 	}
 	now := gorm.NowFunc()
-	cost := -diamond
+	//cost := -diamond
 	mr := &mdr.Room{
 		Password:    pwd,
 		GameType:    gtype,
@@ -175,6 +159,19 @@ func CreateRoom(rtype int32, gtype int32, maxNum int32, roundNum int32,
 	}
 	jType := GetRoomJournalType(mr.GameType)
 	f := func(tx *gorm.DB) error {
+		if cost != 0 {
+			if rtype == enumr.RoomTypeClub {
+				err = club.SetClubBalance(-cost, enumb.TypeDiamond, clubID, jType, int64(mr.RoomID), int64(user.UserID))
+				if err != nil {
+					return err
+				}
+			} else {
+				_, err = bill.SetBalanceFreeze(user.UserID, int64(mr.RoomID), &mbill.Balance{Amount: cost, CoinType: enumcom.Diamond}, jType)
+				if err != nil {
+					return err
+				}
+			}
+		}
 		err := dbr.CreateRoom(tx, mr)
 		if err != nil {
 			log.Err("room create failed,%v | %v", mr, err)
@@ -192,31 +189,6 @@ func CreateRoom(rtype int32, gtype int32, maxNum int32, roundNum int32,
 				return err
 			}
 		}
-		//err = muser.SetUserLockBalance(mr.PayerID, enumb.TypeDiamond, needDiamond, mr.RoomID)
-		//if err != nil {
-		//	log.Err("room create set lock balance redis failed,%v | %v\n", mr, err)
-		//	return err
-		//}
-		//err = cacher.SetAgentRoom(mr.PayerID, mr.GameType, mr.RoomID, mr.Password)
-		//if err != nil {
-		//	log.Err("agent room set redis failed,%v | %v\n", mr, err)
-		//	return err
-		//}
-		if rtype == enumr.RoomTypeClub {
-			err = club.SetClubBalance(cost, enumb.TypeDiamond, clubID, jType, int64(mr.RoomID), int64(user.UserID))
-			if err != nil {
-				return err
-			}
-		} else {
-			//_, err = bill.GainBalanceCondition(mr.PayerID, user.Channel, user.Version, user.MobileOs, int64(mr.RoomID),
-			//	&mbill.Balance{0, cost}, jType)
-			//uid int32, aid int64, balance *mdbill.Balance, balanceType int32
-			_, err = bill.GainBalanceType(user.UserID,int64(mr.RoomID),&mbill.Balance{0, cost}, jType)
-			if err != nil {
-				return err
-			}
-		}
-
 		return nil
 	}
 	err = db.Transaction(f)
@@ -239,7 +211,7 @@ func GetPassWord() (string, error) {
 	return pwdNew, nil
 }
 
-func GetRoomCost(gType int32, maxNumber int32, roundNumber int32, user *mdu.User,roomtype int32) int64 {
+func GetRoomCost(gType int32, maxNumber int32, roundNumber int32, user *mdu.User, roomtype int32) int64 {
 	var diamond int64
 	if gType == enumr.ThirteenGameType {
 		if maxNumber == 0 {
@@ -255,7 +227,7 @@ func GetRoomCost(gType int32, maxNumber int32, roundNumber int32, user *mdu.User
 		}
 	}
 	if user != nil && roomtype == enumr.RoomTypeNom {
-		rate := bill.CheckConfigCondition(user.Channel, user.Version, user.MobileOs)
+		rate := config.CheckConfigCondition(user.Channel, user.Version, user.MobileOs)
 		diamond = int64(rate * float64(diamond))
 	}
 	return diamond
@@ -264,9 +236,9 @@ func GetRoomCost(gType int32, maxNumber int32, roundNumber int32, user *mdu.User
 func GetRoomJournalType(gameType int32) int32 {
 	var jType int32
 	if gameType == enumr.ThirteenGameType {
-		jType = enumb.JournalTypeThirteen
+		jType = enumb.JournalTypeThirteenFreeze
 	} else if gameType == enumr.ThirteenGameType {
-		jType = enumb.JournalTypeNiuniu
+		jType = enumb.JournalTypeNiuniuFreeze
 	}
 	return jType
 }
@@ -315,12 +287,12 @@ func JoinRoom(pwd string, user *mdu.User) (*mdr.RoomUser, *mdr.Room, error) {
 			p = n
 		}
 	}
-	role := enumr.UserRoleSlave
-	if mr.RoomType == enumr.RoomTypeAgent && num == 0 {
-		role = enumr.UserRoleMaster
-	}
+	//role := enumr.UserRoleSlave
+	//if mr.RoomType == enumr.RoomTypeAgent && num == 0 {
+	//	role = enumr.UserRoleMaster
+	//}
 	roomUser := GetRoomUser(user, enumr.UserUnready, int32(p+1),
-		int32(role))
+		enumr.UserRoleSlave)
 	newUsers := append(mr.Users, roomUser)
 	mr.Users = newUsers
 	mr.Ids = append(mr.Ids, user.UserID)
@@ -384,7 +356,7 @@ func LeaveRoom(user *mdu.User) (*mdr.RoomUser, *mdr.Room, error) {
 	newUsers := []*mdr.RoomUser{}
 	roomUser := &mdr.RoomUser{}
 	handle := 0
-	isDestroy := 0
+	masterLeave := false
 	for _, u := range mr.Users {
 		if u.UserID == user.UserID {
 			handle = 1
@@ -393,7 +365,7 @@ func LeaveRoom(user *mdu.User) (*mdr.RoomUser, *mdr.Room, error) {
 				(mr.RoomType == enumr.RoomTypeNom) {
 				log.Info("delete room cause master leave.user:%d,room:%d\n",
 					user.UserID, mr.RoomID)
-				isDestroy = 1
+				masterLeave = true
 
 			}
 		} else {
@@ -410,7 +382,11 @@ func LeaveRoom(user *mdu.User) (*mdr.RoomUser, *mdr.Room, error) {
 	if handle == 0 {
 		return nil, nil, errors.ErrUserNotInRoom
 	}
-	if len(newUsers) == 0 || (isDestroy == 1 && mr.RoomType == enumr.RoomTypeNom) { //|| mr.RoomType == enumr.RoomTypeClub
+	//RoomTypeNom 普通开房解散条件 人员全部退出 || 房主退出
+	//RoomTypeAgent 代开房解散条件 代开房者主动解散
+	//RoomTypeClub 俱乐部开房解散条件 人员全部退出
+	if (len(newUsers) == 0 && mr.RoomType != enumr.RoomTypeAgent) ||
+		(masterLeave && mr.RoomType == enumr.RoomTypeNom) {
 		mr.Users = nil
 		mr.Status = enumr.RoomStatusDestroy
 		err = cacher.DeleteAllRoomUser(mr.Password, "LeaveRoom")
@@ -446,22 +422,22 @@ func LeaveRoom(user *mdu.User) (*mdr.RoomUser, *mdr.Room, error) {
 }
 
 func RoomRefund(mr *mdr.Room) {
-	if mr.Cost*-1 > 0 {
+	if mr.Cost != 0 {
 		var jType int32
 		if mr.GameType == enumr.ThirteenGameType {
-			jType = enumb.JournalTypeThirteenRefund
+			jType = enumb.JournalTypeThirteenUnFreeze
 		} else if mr.GameType == enumr.NiuniuGameType {
-			jType = enumb.JournalTypeNiuniuRefund
+			jType = enumb.JournalTypeNiuniuUnFreeze
 		}
 		f := func(tx *gorm.DB) error {
 			if mr.RoomType == enumr.RoomTypeClub {
-				err := club.SetClubBalance(-mr.Cost, enumb.TypeDiamond, mr.ClubID, jType, int64(mr.RoomID), int64(mr.PayerID))
+				err := club.SetClubBalance(mr.Cost, enumb.TypeDiamond, mr.ClubID, jType, int64(mr.RoomID), int64(mr.PayerID))
 				if err != nil {
 					return err
 				}
 			} else {
-				_, err := bill.GainBalanceType(mr.PayerID, int64(mr.RoomID),
-					&mbill.Balance{0, -mr.Cost}, jType)
+				_, err := bill.SetBalanceFreeze(mr.PayerID, int64(mr.RoomID),
+					&mbill.Balance{Amount: -mr.Cost, CoinType: enumcom.Diamond}, jType)
 				if err != nil {
 					log.Err("BackRoomCostErr roomid:%d,payerid:%d,cost:%d,constype:%d", mr.RoomID, mr.PayerID, mr.Cost, mr.CostType)
 					return err
@@ -505,6 +481,9 @@ func GetReady(pwd string, uid int32) (*mdr.RoomUser, []int32, error) {
 		}
 	}
 	if allReady && num == mr.MaxNumber {
+		if mr.RoundNow == 1 {
+			mr.Users[0].Role = enumr.UserRoleMaster
+		}
 		mr.Status = enumr.RoomStatusAllReady
 	}
 	err = cacher.UpdateRoom(mr)
@@ -764,7 +743,7 @@ func PageFeedbackList(page *mdpage.PageOption, fb *mdr.Feedback) (
 	return dbr.PageFeedbackList(db.DB(), page, fb)
 }
 
-func CreateFeedback(fb *mdr.Feedback,uid int32,ip string) (*mdr.Feedback, error) {
+func CreateFeedback(fb *mdr.Feedback, uid int32, ip string) (*mdr.Feedback, error) {
 	fb.UserID = uid
 	fb.LoginIP = ip
 	return dbr.CreateFeedback(db.DB(), fb)
@@ -786,6 +765,7 @@ func RoomResultList(page *mdpage.PageOption, uid int32, gtype int32) (*pbr.RoomR
 			Password:  mr.Password,
 			GameType:  mr.GameType,
 			CreatedAt: mr.CreatedAt,
+			RoundNow:  mr.RoundNow,
 			List:      mr.UserResults,
 		}
 		list = append(list, result.ToProto())
@@ -1027,6 +1007,20 @@ func UpdateRoom(room *mdr.Room) error {
 	return nil
 }
 
+func GetLiveRoomCount() (int, error) {
+	f := func(r *mdr.Room) bool {
+		if r.Status >= enumr.RoomStatusInit && r.Status < enumr.RoomStatusDelay {
+			return true
+		}
+		return false
+	}
+	rooms := cacher.GetAllRoom(f)
+	if rooms == nil && len(rooms) == 0 {
+		return 0, nil
+	}
+	return len(rooms), nil
+}
+
 func ReInit() []*mdr.Room {
 
 	f := func(r *mdr.Room) bool {
@@ -1259,7 +1253,10 @@ func DeadRoomDestroy() error {
 			log.Err("room dead room destroy delete room users redis err, %v", err)
 			return err
 		}
-		RoomRefund(room)
+		if room.Status < enumr.RoomStatusStarted {
+			RoomRefund(room)
+		}
+
 	}
 
 	return nil

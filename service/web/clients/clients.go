@@ -5,7 +5,6 @@ import (
 	"playcards/utils/log"
 	"sync"
 	"fmt"
-
 )
 
 var waitGroup = new(sync.WaitGroup)
@@ -92,6 +91,7 @@ func SendToNoLog(uid int32,topic, typ string, msg interface{}) error {
 
 func SendWhere(topic, typ string, msg interface{},
 	f func(*Client) bool) error {
+	//s := time.Now()
 	cs := GetLockClients(topic)
 	defer Done()
 	str := fmt.Sprintf("SendWhere:%s,",topic)
@@ -103,7 +103,8 @@ func SendWhere(topic, typ string, msg interface{},
 		str+=fmt.Sprintf("### %d ###",c.UserID())
 		c.SendMessage(topic, typ, msg)
 	}
-	//fmt.Printf(str)
+	//e := time.Now().Sub(s).Nanoseconds()/1000
+	//log.Info("SendTimes:%s|%d\n", topic,e)
 	log.Debug(str)
 	return nil
 }

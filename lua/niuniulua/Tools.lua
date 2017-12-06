@@ -2,6 +2,7 @@
 -- Author: KGD
 -- Date: 2017-08-13 23:36:02
 --
+package.path = os.getenv("PWD") .. '/?.lua;'
 require("lua/niuniulua/functions")
 
 function CreateEnumTable(tbl, index)

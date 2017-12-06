@@ -5,7 +5,6 @@ package bill;
 //结构体
 message Balance {
     int32 UserID = 1;
-    int64 Amount = 2;
     int64 Gold = 3;
     int64 Diamond = 4;
     int64 CreatedAt = 5;
@@ -15,7 +14,6 @@ message Balance {
 //请求
 message GetBalanceRequest {
     int32 UserID = 1;
-    string Username = 2;
 }
 
 message RechargeRequest {
@@ -35,6 +33,7 @@ message RechargeReply {
 message BalanceChange {
     int32 UserID = 1;
     int64 Diamond = 2;
+    int64 Gold = 3;
 }
 
 service BillSrv {

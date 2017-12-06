@@ -27,7 +27,7 @@ func (*ActivitySrv) Invite(ctx context.Context, req *pba.InviteRequest,
 	}
 	var diamond int64
 	if len(balances) > 1 {
-		diamond = balances[0].Diamond
+		diamond = balances[0].Balance
 	}
 	*rsp = pba.InviteReply{
 		Result:  result,
@@ -49,7 +49,7 @@ func (*ActivitySrv) Share(ctx context.Context, req *pba.ShareRequest,
 		return err
 	}
 	if balance != nil {
-		diamond = balance.Diamond
+		diamond = balance.Balance
 	}
 	*rsp = pba.ShareReply{
 		Result:  1,

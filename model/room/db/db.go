@@ -149,7 +149,7 @@ func PageRoomResultList(tx *gorm.DB, uid int32, gtype int32, page *mdpage.PageOp
 	//if rtx.Error != nil {
 	//	return nil, 0, errors.Internal("page notice failed", rtx.Error)
 	//}
-	sqlstr := " game_type =? and room_id in (select room_id from player_rooms where user_id = ?)"
+	sqlstr := " game_type =? and round_now >1 and room_id in (select room_id from player_rooms where user_id = ?)"
 	rows, rtx := page.Find(tx.Where(sqlstr, gtype, uid).
 		Order("created_at desc").Find(&out), &out)
 	if rtx.Error != nil {

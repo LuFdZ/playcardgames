@@ -157,7 +157,7 @@ func SetRoomUser(rid int32, password string, uid int32) error {
 	key := UserHKey(uid)
 	f := func(tx *redis.Tx) error {
 		tx.Pipelined(func(p *redis.Pipeline) error {
-			tx.HSet(key, "userid", rid)
+			tx.HSet(key, "userid", uid)
 			tx.HSet(key, "roomid", rid)
 			tx.HSet(key, "password", password)
 			tx.HSet(key, "socketstatus", 1) //scoket连接状态 1在线 2掉线

@@ -7,7 +7,7 @@ var (
 	ErrAlreadyInClub    = errors.Conflict(14002, "已有俱乐部，不能重复加入！")
 	ErrStatusNoINNormal = errors.NotFound(14003, "俱乐部不在活动状态，不能操作！")
 	ErrClubMemberLimit  = errors.NotFound(14004, "该俱乐部已满！")
-	ErrInBlackList      = errors.NotFound(14005, "您在该俱乐部的黑名单中，不能加入！")
+	ErrInBlackList      = errors.NotFound(14005, "用戶在该俱乐部的黑名单中，不能加入！")
 	ErrNotJoinAnyClub   = errors.Conflict(14006, "未加入任何俱乐部！")
 	ErrNotInClub        = errors.Conflict(14007, "未加入这个俱乐部！")
 	ErrClubNameLen      = errors.Forbidden(14008, "俱乐部名称必须在1到20个汉字或3到60字母之间！")

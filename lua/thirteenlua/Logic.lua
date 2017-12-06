@@ -1,7 +1,10 @@
+
+package.path = os.getenv("PWD") ..'/?.lua;'
 require "lua/thirteenlua/CardGroup"
 require "lua/thirteenlua/Card"
 require "lua/thirteenlua/Tools"
-require "../../lua/thirteenlua/json"
+require "lua/thirteenlua/json"
+
 
 Logic = {cards = {}, cardNum = 52, existKing = false}
 Logic.__index = Logic
@@ -172,269 +175,273 @@ function Logic:GetResult( data, roomData )
 
     --取一个和其他的做对比
     for key, value in pairs(ThirteenResultList) do
-        for key1, value1 in pairs(ThirteenResultList) do
-            --value和temp对比
-            local Settle = {}
-            local addScore = 0
+        if roomData.BankerType == 1 or (roomData.BankerType == 2 and value.Banker) then
+            for key1, value1 in pairs(ThirteenResultList) do
+                --value和temp对比
+                local Settle = {}
+                local addScore = 0
 
-            if value.UserID ~= value1.UserID then
-                local tempHead = 1
-                local tempMiddle = 2
-                local tempTail = 3
+                if value.UserID ~= value1.UserID then
+                    local tempHead = 1
+                    local tempMiddle = 2
+                    local tempTail = 3
 
-                --对比大小
-                local resHead = self:CompareGroup(value.Result.Head, value1.Result.Head)
-                -- print("resHead: " .. resHead)
-                --大于0的标记
-                local temp = 1
-                if resHead < 0 then
-                    --小于0
-                    temp = -1
-                    --addScore = roomData.BankerAddScore * -1 + addScore
-                else
-                    --addScore = roomData.BankerAddScore + addScore
-                end
+                    --对比大小
+                    local resHead = self:CompareGroup(value.Result.Head, value1.Result.Head)
+                    -- print("resHead: " .. resHead)
+                    --大于0的标记
+                    local temp = 1
+                    if resHead < 0 then
+                        --小于0
+                        temp = -1
+                        --addScore = roomData.BankerAddScore * -1 + addScore
+                    else
+                        --addScore = roomData.BankerAddScore + addScore
+                    end
 
-                --计分
-                if 	math.abs(resHead) == GroupType.Three + 1 then
-                    Settle.Head = 3
-                    tempHead = 3
-                elseif resHead ~= 0 then
-                    Settle.Head = 1
-                else
-                    Settle.Head = 0
-                end
-                --乘于大于0的标记，如果标记小于0，value输，分数为负
+                    --计分
+                    if 	math.abs(resHead) == GroupType.Three + 1 then
+                        Settle.Head = 3
+                        tempHead = 3
+                    elseif resHead ~= 0 then
+                        Settle.Head = 1
+                    else
+                        Settle.Head = 0
+                    end
+                    --乘于大于0的标记，如果标记小于0，value输，分数为负
 
-                Settle.Head = Settle.Head * temp
+                    Settle.Head = Settle.Head * temp
 
-                --对比大小
-                local resMiddle = self:CompareGroup(value.Result.Middle, value1.Result.Middle)
-                --大于0的标记
-                temp = 1
-                if resMiddle < 0 then
-                    temp = -1
-                    resMiddle = resMiddle * temp
-                end
+                    --对比大小
+                    local resMiddle = self:CompareGroup(value.Result.Middle, value1.Result.Middle)
+                    --大于0的标记
+                    temp = 1
+                    if resMiddle < 0 then
+                        temp = -1
+                        resMiddle = resMiddle * temp
+                    end
 
-                if math.abs(resMiddle) == GroupType.Four + 1 then
-                    Settle.Middle = 7
-                    tempMiddle = 7
-                elseif math.abs(resMiddle) == GroupType.FlushStraight + 1 then
-                    Settle.Middle = 8
-                    tempMiddle = 8
-                elseif resMiddle ~= 0 then
-                    Settle.Middle = 2
-                else
-                    Settle.Middle = 0
-                end
+                    if math.abs(resMiddle) == GroupType.Four + 1 then
+                        Settle.Middle = 7
+                        tempMiddle = 7
+                    elseif math.abs(resMiddle) == GroupType.FlushStraight + 1 then
+                        Settle.Middle = 8
+                        tempMiddle = 8
+                    elseif resMiddle ~= 0 then
+                        Settle.Middle = 2
+                    else
+                        Settle.Middle = 0
+                    end
 
-                Settle.Middle = Settle.Middle * temp
+                    Settle.Middle = Settle.Middle * temp
 
-                local resTail = self:CompareGroup(value.Result.Tail, value1.Result.Tail)
-                --print("resTail:" .. resTail)
+                    local resTail = self:CompareGroup(value.Result.Tail, value1.Result.Tail)
+                    --print("resTail:" .. resTail)
 
-                --print("GroupType.Four + 1:" .. (GroupType.Four + 1))
-                temp = 1
-                if resTail < 0 then
-                    temp = -1
-                    resTail = resTail * temp
-                end
-                if math.abs(resTail) == GroupType.Four + 1 then
-                    Settle.Tail = 7
-                    tempTail = 7
-                elseif math.abs(resTail) == GroupType.FlushStraight + 1 then
-                    Settle.Tail = 8
-                    tempTail = 8
-                elseif resTail ~= 0 then
-                    Settle.Tail = 3
-                else
-                    Settle.Tail = 0
-                end
+                    --print("GroupType.Four + 1:" .. (GroupType.Four + 1))
+                    temp = 1
+                    if resTail < 0 then
+                        temp = -1
+                        resTail = resTail * temp
+                    end
+                    if math.abs(resTail) == GroupType.Four + 1 then
+                        Settle.Tail = 7
+                        tempTail = 7
+                    elseif math.abs(resTail) == GroupType.FlushStraight + 1 then
+                        Settle.Tail = 8
+                        tempTail = 8
+                    elseif resTail ~= 0 then
+                        Settle.Tail = 3
+                    else
+                        Settle.Tail = 0
+                    end
 
-                Settle.Tail = Settle.Tail * temp
+                    Settle.Tail = Settle.Tail * temp
 
-                if Settle.Head == 0 then--头道相等
-                    if Settle.Tail == 0 then --根据尾道大小
-                        if Settle.Middle == 0 then--尾道相等，根据中道大小
-                            --三道一样，平分
-                            Settle.Head = 0
-                            Settle.Middle = 0
-                            Settle.Tail = 0
-                        elseif Settle.Middle > 0 then
-                            --中道大,计算得分，中道大，尾道也大，尾道大，头道大
-                            Settle.Tail = tempTail
+                    if Settle.Head == 0 then--头道相等
+                        if Settle.Tail == 0 then --根据尾道大小
+                            if Settle.Middle == 0 then--尾道相等，根据中道大小
+                                --三道一样，平分
+                                Settle.Head = 0
+                                Settle.Middle = 0
+                                Settle.Tail = 0
+                            elseif Settle.Middle > 0 then
+                                --中道大,计算得分，中道大，尾道也大，尾道大，头道大
+                                Settle.Tail = tempTail
+                                Settle.Head = tempHead
+                            else
+                                --中道大，计算得分，中道小，尾道小，头道小
+                                Settle.Tail = tempTail * -1
+                                Settle.Head = tempHead * -1
+                            end
+                        elseif Settle.Tail > 0 then --尾道大，头道也大
                             Settle.Head = tempHead
-                        else
-                            --中道大，计算得分，中道小，尾道小，头道小
-                            Settle.Tail = tempTail * -1
+                        else--尾道小，头道也小
                             Settle.Head = tempHead * -1
                         end
-                    elseif Settle.Tail > 0 then --尾道大，头道也大
-                        Settle.Head = tempHead
-                    else--尾道小，头道也小
-                        Settle.Head = tempHead * -1
                     end
-                end
 
-                if Settle.Middle == 0 then--中道等
-                    if Settle.Tail == 0 then--按尾道比大小，尾道等，接头道比大小
-                        if Settle.Head > 0 then--头道大，尾道也大，尾道大，中道也大
-                            --尾
-                            Settle.Tail = tempTail
+                    if Settle.Middle == 0 then--中道等
+                        if Settle.Tail == 0 then--按尾道比大小，尾道等，接头道比大小
+                            if Settle.Head > 0 then--头道大，尾道也大，尾道大，中道也大
+                                --尾
+                                Settle.Tail = tempTail
+                                Settle.Middle = tempMiddle
+                            else --如果头道小，尾道和中道都小
+                                --尾道
+                                Settle.Tail = tempTail * -1
+                                Settle.Middle = tempMiddle * -1
+                            end
+                        elseif Settle.Tail > 0 then--尾道大，中道大
+                            --中
                             Settle.Middle = tempMiddle
-                        else --如果头道小，尾道和中道都小
-                            --尾道
-                            Settle.Tail = tempTail * -1
+                        else --尾道小，中道小
+                            --中道
                             Settle.Middle = tempMiddle * -1
                         end
-                    elseif Settle.Tail > 0 then--尾道大，中道大
-                        --中
-                        Settle.Middle = tempMiddle
-                    else --尾道小，中道小
-                        --中道
-                        Settle.Middle = tempMiddle * -1
                     end
-                end
 
 
-                if Settle.Tail == 0 then
-                    --尾道相等，按中道比
-                    if Settle.Middle == 0 then
-                        --中道相等，按头道
-                        if Settle.Head == 0 then
-                            --三个都相待，平局
-                            Settle.Head = 0
-                            Settle.Middle = 0
-                            Settle.Tail = 0
-                        elseif Settle.Head > 0 then
+                    if Settle.Tail == 0 then
+                        --尾道相等，按中道比
+                        if Settle.Middle == 0 then
+                            --中道相等，按头道
+                            if Settle.Head == 0 then
+                                --三个都相待，平局
+                                Settle.Head = 0
+                                Settle.Middle = 0
+                                Settle.Tail = 0
+                            elseif Settle.Head > 0 then
+                                --尾
+                                Settle.Middle = tempMiddle
+                                Settle.Tail = tempTail
+                            else
+                                Settle.Middle = tempMiddle * -1
+                                Settle.Tail = tempTail * -1
+                            end
+                        elseif Settle.Middle > 0 then
+                            --中道大，尾道也大
                             --尾
-                            Settle.Middle = tempMiddle
                             Settle.Tail = tempTail
                         else
-                            Settle.Middle = tempMiddle * -1
+                            --中道小，尾道也小
+                            --尾
                             Settle.Tail = tempTail * -1
                         end
-                    elseif Settle.Middle > 0 then
-                        --中道大，尾道也大
-                        --尾
-                        Settle.Tail = tempTail
-                    else
-                        --中道小，尾道也小
-                        --尾
-                        Settle.Tail = tempTail * -1
                     end
+
+
+                    --计算结果完成
+                    if Settle.Head > 0 and Settle.Middle > 0 and Settle.Tail > 0 then
+                        --打枪，value 打 value1
+
+                        table.insert( value.Result.Shoot, value1.UserID )
+                    end
+
+                    if Settle.Head < 0 and Settle.Middle < 0 and Settle.Tail < 0 then
+
+                        --打枪
+                        table.insert( value.Result.BeShoot, value1.UserID )
+                        --MyLog(value1.UserID .. "--------> beshoot: ")
+                        --dump(value1.Result.BeShoot)
+                    end
+
+                    value.Settle.Head = value.Settle.Head + Settle.Head
+                    value.Settle.Middle = value.Settle.Middle + Settle.Middle
+                    value.Settle.Tail = value.Settle.Tail + Settle.Tail
+                    --value.Settle.AddScore = addScore
+                    local otherScore = {}
+                    otherScore.ID = value1.UserID
+                    otherScore.Score = (Settle.Head + Settle.Middle + Settle.Tail)
+                    table.insert( value.otherScoreList, otherScore )
                 end
-
-
-                --计算结果完成
-                if Settle.Head > 0 and Settle.Middle > 0 and Settle.Tail > 0 then
-                    --打枪，value 打 value1
-
-                    table.insert( value.Result.Shoot, value1.UserID )
-                end
-
-                if Settle.Head < 0 and Settle.Middle < 0 and Settle.Tail < 0 then
-
-                    --打枪
-                    table.insert( value.Result.BeShoot, value1.UserID )
-                    --MyLog(value1.UserID .. "--------> beshoot: ")
-                    --dump(value1.Result.BeShoot)
-                end
-
-                value.Settle.Head = value.Settle.Head + Settle.Head
-                value.Settle.Middle = value.Settle.Middle + Settle.Middle
-                value.Settle.Tail = value.Settle.Tail + Settle.Tail
-                --value.Settle.AddScore = addScore
-                local otherScore = {}
-                otherScore.ID = value1.UserID
-                otherScore.Score = (Settle.Head + Settle.Middle + Settle.Tail)
-                table.insert( value.otherScoreList, otherScore )
             end
         end
     end
 
     for k, value in pairs(ThirteenResultList) do
         --玩家对其他玩家的比分
-        for kk, value1 in pairs(value.otherScoreList) do
-            local times = 1
-            if value1.Score > 0 then
-                --如果是赢的
-                --查打是否有打他的枪
-                local beShoot = false;--add by zbh
-                for i, shootid in pairs(value.Result.Shoot)do
-                    if shootid == value1.ID then
-                        --打枪
-                        beShoot = true;
-                        --print("gun")
-                        times = 2
-                        break
+        if roomData.BankerType == 1 or (roomData.BankerType == 2 and value.Banker) then
+            for kk, value1 in pairs(value.otherScoreList) do
+                local times = 1
+                if value1.Score > 0 then
+                    --如果是赢的
+                    --查打是否有打他的枪
+                    local beShoot = false;--add by zbh
+                    for i, shootid in pairs(value.Result.Shoot)do
+                        if shootid == value1.ID then
+                            --打枪
+                            beShoot = true;
+                            --print("gun")
+                            times = 2
+                            break
+                        end
                     end
-                end
 
-                --查看是否3翻模式
-                if beShoot then  --add by zbh
-                    if roomData.Times == 3 then
-                        --3翻模式-没有全垒打
-                        times = math.pow(2,#value.Result.Shoot)
-                        --print("gun:"..tostring(#value.Result.Shoot))
-                    elseif #value.Result.Shoot == (#ThirteenResultList - 1)  and #ThirteenResultList ~= 2 then
-                        times = 4
-                    end
-                end
-                --计算分数
-                value.Settle.TotalScore = value.Settle.TotalScore + times * value1.Score
-            else
-                --输给他
-                --查看是否被他打枪
-                --dump(value.Result.BeShoot)
-                local beShoot  =false;--add by zbh
-                for i, shootid in pairs(value.Result.BeShoot)do
-                    -- MyLog("all be shoot: " .. shootid)
-
-                    if shootid == value1.ID then
-                        --打枪
-                        -- MyLog("be shoot: " .. shootid .. "shoot ->" .. value.UserID)
-                        beShoot = true;
-                        times = 2
-                        break
-                    end
-                end
-
-                --根据value1的id找到value对应的值
-                local tempValue = self:GetUserResult(value1.ID, ThirteenResultList)
-                if beShoot then--add by zbh
                     --查看是否3翻模式
-                    if roomData.Times == 3 then
-                        --3翻模式-没有全垒打
-                        times = math.pow(2,#tempValue.Result.Shoot)
-                    elseif #tempValue.Result.Shoot == (#ThirteenResultList-1) and #ThirteenResultList ~= 2 then
-                        times = 4
+                    if beShoot then  --add by zbh
+                        if roomData.Times == 3 then
+                            --3翻模式-没有全垒打
+                            times = math.pow(2,#value.Result.Shoot)
+                            --print("gun:"..tostring(#value.Result.Shoot))
+                        elseif #value.Result.Shoot == (#ThirteenResultList - 1)  and #ThirteenResultList ~= 2 then
+                            times = 4
+                        end
                     end
+                    --计算分数
+                    value.Settle.TotalScore = value.Settle.TotalScore + times * value1.Score
+                else
+                    --输给他
+                    --查看是否被他打枪
+                    --dump(value.Result.BeShoot)
+                    local beShoot  =false;--add by zbh
+                    for i, shootid in pairs(value.Result.BeShoot)do
+                        -- MyLog("all be shoot: " .. shootid)
+
+                        if shootid == value1.ID then
+                            --打枪
+                            -- MyLog("be shoot: " .. shootid .. "shoot ->" .. value.UserID)
+                            beShoot = true;
+                            times = 2
+                            break
+                        end
+                    end
+
+                    --根据value1的id找到value对应的值
+                    local tempValue = self:GetUserResult(value1.ID, ThirteenResultList)
+                    if beShoot then--add by zbh
+                        --查看是否3翻模式
+                        if roomData.Times == 3 then
+                            --3翻模式-没有全垒打
+                            times = math.pow(2,#tempValue.Result.Shoot)
+                        elseif #tempValue.Result.Shoot == (#ThirteenResultList-1) and #ThirteenResultList ~= 2 then
+                            times = 4
+                        end
+                    end
+                    --MyLog("times: " .. times .. " win score: " .. value1.Score)
+                    --计算分数
+                    value.Settle.TotalScore = value.Settle.TotalScore + times * value1.Score
+
                 end
-                --MyLog("times: " .. times .. " win score: " .. value1.Score)
-                --计算分数
-                value.Settle.TotalScore = value.Settle.TotalScore + times * value1.Score
+                -- print("times:"..times)
+                --如果一方是庄家，则+庄家分
+                if roomData.BankerAddScore ~= 0 then
+                    --取到跟value对比的玩家结果信息
+                    local last = value.Settle.TotalScore
+                    local winUser = self:GetUserResult(value1.ID, ThirteenResultList)
+                    if value.Banker or winUser.Banker then
+                        --当前比牌有一个是庄家
+                        local bankerAddScore = 0
+                        if value1.Score > 0 then
+                            bankerAddScore = roomData.BankerAddScore
+                        elseif value1.Score < 0 then
+                            bankerAddScore = roomData.BankerAddScore * -1
+                        end
+                        value.Settle.AddScore = bankerAddScore + value.Settle.AddScore
+                        value.Settle.TotalScore = value.Settle.TotalScore + bankerAddScore
 
-            end
-            -- print("times:"..times)
-            --如果一方是庄家，则+庄家分
-            if roomData.BankerAddScore ~= 0 then
-                --取到跟value对比的玩家结果信息
-                local last = value.Settle.TotalScore
-                local winUser = self:GetUserResult(value1.ID, ThirteenResultList)
-                if value.Banker or winUser.Banker then
-                    --当前比牌有一个是庄家
-                    local bankerAddScore = 0
-                    if value1.Score > 0 then
-                        bankerAddScore = roomData.BankerAddScore
-                    elseif value1.Score < 0 then
-                        bankerAddScore = roomData.BankerAddScore * -1
+                        --print("id:" .. value.UserID .. " score:" .. value1.Score .. " addscore: " .. bankerAddScore .. " lasttotal: " .. last .. " totalscore:" .. value.Settle.TotalScore)
                     end
-                    value.Settle.AddScore = bankerAddScore + value.Settle.AddScore
-                    value.Settle.TotalScore = value.Settle.TotalScore + bankerAddScore
-
-                    --print("id:" .. value.UserID .. " score:" .. value1.Score .. " addscore: " .. bankerAddScore .. " lasttotal: " .. last .. " totalscore:" .. value.Settle.TotalScore)
                 end
             end
         end

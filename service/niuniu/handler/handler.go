@@ -137,8 +137,8 @@ func (ns *NiuniuSrv) Update(gt *gsync.GlobalTimer) {
 		if err != nil {
 			log.Err("clean give up game loop err:%v", err)
 		}
-		//e := time.Now().Sub(s).Nanoseconds()
-		//fmt.Printf("Update times :%d", e)
+		//e := time.Now().Sub(s).Nanoseconds()/1000000
+		//fmt.Printf("niuniu Update times :%d\n", e)
 		return nil
 	}
 	gt.Register(lock, time.Millisecond*enumniu.LoopTime, f)

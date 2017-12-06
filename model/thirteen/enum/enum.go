@@ -26,4 +26,10 @@ const (
 	RecoveryGameStart   = 3 //游戏结算
 )
 
+const (
+	BankerNom = 1//当庄模式 普通上庄
+	BankerDefault = 2//当庄模式 固定上庄
+
+)
+
 var GroupTypeName = [...]string{"Single", "Couple", "TwoCouple", "Three", "Straight", "Flush", "ThreeCouple", "Four", "FlushStraight", "Shoot", "AllShoot"}

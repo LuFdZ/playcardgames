@@ -2,7 +2,8 @@
 -- Author: KGD
 -- Date: 2017-08-13 23:36:02
 --
-require("lua/niuniulua/functions")
+package.path = os.getenv("PWD") .. '/?.lua;'
+require ("lua/thirteenlua/functions")
 
 function CreateEnumTable(tbl, index)
     local enumtbl = {}

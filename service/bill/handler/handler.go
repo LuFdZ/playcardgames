@@ -38,12 +38,12 @@ func (b *BillSrv) GetBalance(ctx context.Context,
 	if err != nil || uid <= 0 {
 		uid = u.UserID
 	}
-	balance, err := bill.GetUserBalance(uid)
+	balance, err := bill.GetAllUserBalance(uid)
 	if err != nil {
 		return err
 	}
 
-	*rsp = *balance.ToProto()
+	*rsp = *balance
 	return nil
 }
 
@@ -54,12 +54,11 @@ func (b *BillSrv) GetUserBalance(ctx context.Context,
 		return err
 	}
 
-	balance, err := bill.GetUserBalance(u.UserID)
+	balance, err := bill.GetAllUserBalance(u.UserID)
 	if err != nil {
 		return err
 	}
-
-	*rsp = *balance.ToProto()
+	*rsp = *balance
 	return nil
 }
 
@@ -104,7 +103,7 @@ func (b *BillSrv) Recharge(ctx context.Context, req *pbbill.RechargeRequest,
 
 		msg := &pbbill.BalanceChange{
 			UserID:  req.UserID,
-			Diamond: ub.Diamond,
+			Diamond: ub.Amount,
 		}
 		topic.Publish(b.broker, msg, TopicBillChange)
 	}

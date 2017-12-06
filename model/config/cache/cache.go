@@ -57,7 +57,7 @@ func SetConfigs(cos []*mdc.Config) error {
 	if err := cache.KV().Watch(f, key); err != nil {
 		return errors.Internal("set config list failed", err)
 	}
-	log.Err("redis reset all configs")
+	log.Info("redis reset all configs")
 	return nil
 }
 

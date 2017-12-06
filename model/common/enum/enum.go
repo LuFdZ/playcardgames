@@ -5,6 +5,11 @@ const (
 )
 
 const (
+	NewUserDiamond     = 100
+	NewUserGold        = 0
+)
+
+const (
 	Gold = 1
 	Diamond =2
 )

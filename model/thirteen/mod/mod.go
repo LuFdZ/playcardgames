@@ -96,6 +96,7 @@ type ThirteenRecovery struct {
 
 type ThirteenRoomParam struct {
 	BankerAddScore int32
+	BankerType     int32
 	Time           int32
 	Joke           int32
 	Times          int32

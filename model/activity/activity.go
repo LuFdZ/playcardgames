@@ -6,6 +6,7 @@ import (
 	"playcards/model/activity/errors"
 	"playcards/model/bill"
 	enumbill "playcards/model/bill/enum"
+	enumcom "playcards/model/common/enum"
 	mbill "playcards/model/bill/mod"
 	dbu "playcards/model/user/db"
 	mdu "playcards/model/user/mod"
@@ -16,10 +17,10 @@ import (
 	"github.com/jinzhu/gorm"
 )
 
-func Invite(u *mdu.User, inviterID int32) (int32, []*mbill.UserBalance, error) {
+func Invite(u *mdu.User, inviterID int32) (int32, []*mbill.Balance, error) {
 	var (
 		isBalance = true
-		balances  []*mbill.UserBalance
+		balances  []*mbill.Balance
 		err       error
 	)
 	err = nil
@@ -90,17 +91,17 @@ func Invite(u *mdu.User, inviterID int32) (int32, []*mbill.UserBalance, error) {
 
 	if isBalance {
 		//JournalTypeInvite	JournalTypeShate
-		invite, err := bill.GainBalanceType(u.UserID, time.Now().Unix(),
-			&mbill.Balance{Diamond: enum.InviteDiamond},
-			enumbill.JournalTypeInvite)
+		invite, err := bill.GainBalance(u.UserID, time.Now().Unix(),enumbill.JournalTypeInvite,
+			&mbill.Balance{Amount: enum.InviteDiamond, CoinType: enumcom.Diamond},
+			)
 		if err != nil {
 			return 0, nil, err
 		}
 		balances = append(balances, invite)
 
-		invited, err := bill.GainBalanceType(inviterID, time.Now().Unix(),
-			&mbill.Balance{Diamond: enum.InviteDiamond},
-			enumbill.JournalTypeInvited)
+		invited, err := bill.GainBalance(inviterID, time.Now().Unix(),enumbill.JournalTypeInvited,
+			&mbill.Balance{Amount: enum.InviteDiamond, CoinType: enumcom.Diamond},
+			)
 		if err != nil {
 			return 0, nil, err
 		}
@@ -111,7 +112,7 @@ func Invite(u *mdu.User, inviterID int32) (int32, []*mbill.UserBalance, error) {
 
 }
 
-func Share(uid int32) (*mbill.UserBalance, error) { //*mda.PlayerShare,
+func Share(uid int32) (*mbill.Balance, error) { //*mda.PlayerShare,
 	ps, err := dba.GetPlayerShare(db.DB(), uid)
 	if err != nil {
 		return nil, err
@@ -136,8 +137,8 @@ func Share(uid int32) (*mbill.UserBalance, error) { //*mda.PlayerShare,
 		return nil, nil //errors.ErrShareNoDiamonds
 	}
 
-	ub, err := bill.GainBalanceType(uid, time.Now().Unix(),
-		&mbill.Balance{Diamond: enum.ShareDiamond}, enumbill.JournalTypeShare)
+	ub, err := bill.GainBalance(uid, time.Now().Unix(),enumbill.JournalTypeShare,
+		&mbill.Balance{Amount: enum.ShareDiamond, CoinType: enumcom.Diamond})
 	if err != nil {
 		return nil, err
 	}

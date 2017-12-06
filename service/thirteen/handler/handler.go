@@ -51,7 +51,10 @@ func (ts *ThirteenSrv) update(gt *gsync.GlobalTimer) {
 				}
 			}
 		}
+		//e := time.Now().Sub(s).Nanoseconds()/100000
+		//log.Info("ThirteenTimesCreate:%d\n", e)
 
+		//s = time.Now()
 		games := thirteen.UpdateGame()
 		if games != nil {
 			for _, game := range games {
@@ -60,13 +63,17 @@ func (ts *ThirteenSrv) update(gt *gsync.GlobalTimer) {
 				topic.Publish(ts.broker, msg, TopicThirteenGameResult)
 			}
 		}
+		//e = time.Now().Sub(s).Nanoseconds()/100000
+		//log.Info("ThirteenTimesUpdate:%d\n", e)
 
+		//s = time.Now()
 		err := thirteen.CleanGame()
 		if err != nil {
 			log.Err("clean game loop err:%v", err)
 		}
-		//e := time.Now().Sub(s).Nanoseconds()
-		//fmt.Printf("Update times :%d", e)
+		//e = time.Now().Sub(s).Nanoseconds()/100000
+		//log.Info("ThirteenTimesClean:%d\n", e)
+
 		return nil
 	}
 	gt.Register(lock, time.Millisecond*enum.LoopTime, f)
