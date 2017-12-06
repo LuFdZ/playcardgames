@@ -45,4 +45,4 @@ type UserCard struct {
 	CardRemain []string
 
 }
-}
+
