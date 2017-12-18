@@ -33,35 +33,9 @@ func NewHandler(s server.Server, gt *gsync.GlobalTimer, gl *lua.LState) *Doudizh
 		server: s,
 		broker: s.Options().Broker,
 	}
-	Init()
 	doudizhu.InitGoLua(gl)
 	n.update(gt)
-	Init()
 	return n
-}
-
-func Init(brk broker.Broker) error {
-	brok = brk
-	if err := SubscribeAlldoudizhuMessage(brk); err != nil {
-		return err
-	}
-	return nil
-}
-
-func SubscribeAlldoudizhuMessage(brk broker.Broker) error {
-	subscribe.SrvSubscribe(brk, topic.Topic(srvddz.TopicDDZGameStart),
-		DoudizhuGameStartHandler,
-	)
-	subscribe.SrvSubscribe(brk, topic.Topic(srvddz.TopicDDZBeBanker),
-		DoudizhuBeBankerHandler,
-	)
-	subscribe.SrvSubscribe(brk, topic.Topic(srvddz.TopicDDZSubmitCard),
-		DoudizhuSubmitCardHandler,
-	)
-	subscribe.SrvSubscribe(brk, topic.Topic(srvddz.TopicDDZGameResult),
-		DoudizhuGameResultHandler,
-	)
-	return nil
 }
 
 func (ds *DoudizhuSrv) update(gt *gsync.GlobalTimer) {
