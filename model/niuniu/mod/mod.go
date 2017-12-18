@@ -63,11 +63,11 @@ type NiuniuRoomResultList struct {
 	List []*NiuniuRoomResult
 }
 
-type NiuniuRoomParam struct {
-	Times       int32
-	BankerType  int32
-	PreBankerID int32
-}
+//type NiuniuRoomParam struct {
+//	Times       int32
+//	BankerType  int32
+//	PreBankerID int32
+//}
 
 func (bab *BankerAndBet) ToProto() *pbniu.BankerAndBet {
 	return &pbniu.BankerAndBet{
@@ -123,13 +123,13 @@ func (gb *GetBanker) ToProto() *pbniu.GetBanker {
 
 func (n *Niuniu) BeforeUpdate(scope *gorm.Scope) error {
 	n.MarshalNiuniuRoomResult()
-	scope.SetColumn("GameResults", n.GameResults)
+	scope.SetColumn("game_results", n.GameResults)
 	return nil
 }
 
 func (n *Niuniu) BeforeCreate(scope *gorm.Scope) error {
 	n.MarshalNiuniuRoomResult()
-	scope.SetColumn("GameResults", n.GameResults)
+	scope.SetColumn("game_results", n.GameResults)
 	return nil
 }
 

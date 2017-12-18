@@ -12,12 +12,11 @@ import (
 	cacher "playcards/model/room/cache"
 	dbr "playcards/model/room/db"
 	enumr "playcards/model/room/enum"
-	"playcards/model/room/errors"
+	errroom "playcards/model/room/errors"
 	mdr "playcards/model/room/mod"
 	pbniu "playcards/proto/niuniu"
 	enumbill "playcards/model/bill/enum"
 	mdbill "playcards/model/bill/mod"
-	"playcards/utils/env"
 	"playcards/model/bill"
 	"playcards/utils/db"
 	"playcards/utils/log"
@@ -27,9 +26,14 @@ import (
 	"github.com/yuin/gopher-lua"
 )
 
+var GoLua *lua.LState
+
+func InitGoLua(gl *lua.LState) {
+	GoLua = gl
+}
 func CreateNiuniu() []*mdniu.Niuniu {
 	f := func(r *mdr.Room) bool {
-		if r.Status == enumr.RoomStatusAllReady && r.GameType == enumniu.GameID {
+		if r.Status == enumr.RoomStatusAllReady && r.GameType == enumr.NiuniuGameType {
 			return true
 		}
 		return false
@@ -44,22 +48,22 @@ func CreateNiuniu() []*mdniu.Niuniu {
 	var newGames []*mdniu.Niuniu
 
 	for _, room := range rooms {
-		var userResults []*mdr.GameUserResult
-		l := lua.NewState()
-		defer l.Close()
-		filePath := env.GetCurrentDirectory()+"/lua/niuniulua/Logic.lua"
-		if err := l.DoFile(filePath); err != nil {
-			log.Err("niuniu logic do file %v", err)
-		}
-		ostimeA := time.Now().UnixNano()
-		ostimeB := ostimeA<<32 | ostimeA>>32
-		if err := l.DoString(fmt.Sprintf("return Logic:new(%d)", ostimeB)); err != nil {
-			log.Err("niuniu logic do string %+v", err)
-			continue
-		}
-		l.Pop(1)
 
-		var roomparam *mdniu.NiuniuRoomParam
+		//l := lua.NewState()
+		//defer l.Close()
+		//filePath := env.GetCurrentDirectory()+"/lua/niuniulua/Logic.lua"
+		//if err := l.DoFile(filePath); err != nil {
+		//	log.Err("niuniu logic do file %v", err)
+		//}
+		//ostimeA := time.Now().UnixNano()
+		//ostimeB := ostimeA<<32 | ostimeA>>32
+		//if err := l.DoString(fmt.Sprintf("return Logic:new(%d)", ostimeB)); err != nil {
+		//	log.Err("niuniu logic do string %+v", err)
+		//	continue
+		//}
+		//l.Pop(1)
+
+		var roomparam *mdr.NiuniuRoomParam
 
 		if err := json.Unmarshal([]byte(room.GameParam), &roomparam); err != nil {
 			log.Err("niuniu unmarshal room param failed, %v", err)
@@ -89,74 +93,12 @@ func CreateNiuniu() []*mdniu.Niuniu {
 			hasNewBanker = false
 		}
 
+		var userResults []*mdr.GameUserResult
 		var niuUsers []*mdniu.NiuniuUserResult
-
-		for _, user := range room.Users {
-			if room.RoundNow == 1 {
-				userResult := &mdr.GameUserResult{
-					UserID:   user.UserID,
-					Nickname: user.Nickname,
-					Win:      0,
-					Lost:     0,
-					Tie:      0,
-					Score:    0,
-				}
-				userResults = append(userResults, userResult)
-			}
-			if err := l.DoString("return Logic:GetCards()"); err != nil {
-				log.Err("niuniu logic do string %v", err)
-				continue
-			}
-			getCards := l.Get(1)
-			l.Pop(1)
-			var cardList []string
-			ctype := "0"
-			if cardsMap, ok := getCards.(*lua.LTable); ok {
-				cardsMap.ForEach(func(key lua.LValue, value lua.LValue) {
-					if cards, ok := value.(*lua.LTable); ok {
-						var cardType string
-						var cardValue string
-						cards.ForEach(func(k lua.LValue,
-							v lua.LValue) {
-							if k.String() == "_type" {
-								cardType = v.String()
-							} else if k.String() ==
-								"_value" {
-								cardValue = v.String()
-							}
-						})
-						cardList = append(cardList,
-							cardType+"_"+cardValue)
-					} else {
-						log.Err("niuniu cardsMap value err %v",
-							value)
-					}
-				})
-				userCard := &mdniu.UserCard{
-					CardList: cardList,
-					CardType: ctype,
-				}
-
-				userRole := enumniu.Player
-				if user.UserID == bankerID {
-					userRole = enumniu.Banker
-				}
-				userInfo := &mdniu.BankerAndBet{
-					BankerScore: 0,
-					BetScore:    0,
-					Role:        int32(userRole),
-				}
-
-				niuUser := &mdniu.NiuniuUserResult{
-					UserID: user.UserID,
-					Status: enumniu.UserStatusInit,
-					Cards:  userCard,
-					Info:   userInfo,
-				}
-				niuUsers = append(niuUsers, niuUser)
-			} else {
-				log.Err("niuniu cardsMap err %v", cardsMap)
-			}
+		userResults,niuUsers,err := InitUserCard(room,bankerID,userResults,niuUsers)
+		fmt.Printf("CreateNiuniu:%v|%v|%v\n",userResults,niuUsers,err)
+		if err != nil{
+			continue
 		}
 		if room.RoundNow == 1 {
 			room.UserResults = userResults
@@ -182,7 +124,7 @@ func CreateNiuniu() []*mdniu.Niuniu {
 
 		f := func(tx *gorm.DB) error {
 			if room.RoundNow == 1 {
-				if  room.RoomType != enumr.RoomTypeClub && room.Cost != 0{
+				if room.RoomType != enumr.RoomTypeClub && room.Cost != 0 {
 					err := bill.GainGameBalance(room.PayerID, room.RoomID, enumbill.JournalTypeNiuniu,
 						enumbill.JournalTypeNiuniuUnFreeze, &mdbill.Balance{Amount: room.Cost, CoinType: room.CostType})
 					if err != nil {
@@ -229,12 +171,11 @@ func CreateNiuniu() []*mdniu.Niuniu {
 				return err
 			}
 
-
 			return nil
 		}
 		//go db.Transaction(f)
 
-		err := db.Transaction(f)
+		err = db.Transaction(f)
 		if err != nil {
 			log.Err("niuniu create failed,%v | %v", niuniu, err)
 			continue
@@ -242,6 +183,87 @@ func CreateNiuniu() []*mdniu.Niuniu {
 		newGames = append(newGames, niuniu)
 	}
 	return newGames
+}
+
+func InitUserCard(room *mdr.Room, bankerID int32, userResults []*mdr.GameUserResult, niuUsers []*mdniu.NiuniuUserResult) ([]*mdr.GameUserResult,[]*mdniu.NiuniuUserResult,error) {
+	for _, user := range room.Users {
+		if room.RoundNow == 1 {
+			userResult := &mdr.GameUserResult{
+				UserID:   user.UserID,
+				Nickname: user.Nickname,
+				Win:      0,
+				Lost:     0,
+				Tie:      0,
+				Score:    0,
+			}
+			userResults = append(userResults, userResult)
+		}
+		if err := GoLua.DoString("return G_Reset()"); err != nil {
+			log.Err("niuniu G_Reset %+v", err)
+			return nil,nil,errorsniu.ErrGoLua
+		}
+		if err := GoLua.DoString("return G_GetCards()"); err != nil {
+			log.Err("niuniu G_GetCards err %v", err)
+			return nil,nil,errorsniu.ErrGoLua
+		}
+		getCards := GoLua.Get(1)
+		GoLua.Pop(1)
+		var cardList []string
+		ctype := "0"
+		if cardsMap, ok := getCards.(*lua.LTable); ok {
+			cardsMap.ForEach(func(key lua.LValue, value lua.LValue) {
+				if cards, ok := value.(*lua.LTable); ok {
+					var cardType string
+					var cardValue string
+					cards.ForEach(func(k lua.LValue,
+						v lua.LValue) {
+						if k.String() == "_type" {
+							cardType = v.String()
+						} else if k.String() ==
+							"_value" {
+							cardValue = v.String()
+						}
+					})
+					cardList = append(cardList,
+						cardType+"_"+cardValue)
+				} else {
+					log.Err("niuniu cardsMap value err %v",
+						value)
+				}
+			})
+			fmt.Printf("InitUserCard:%v|%v\n",cardList,cardsMap)
+			if len(cardList) == 0 {
+				log.Err("niuniu cardList nil err %v", cardsMap)
+				return nil,nil,errorsniu.ErrGoLua
+			}
+			userCard := &mdniu.UserCard{
+				CardList: cardList,
+				CardType: ctype,
+			}
+
+			userRole := enumniu.Player
+			if user.UserID == bankerID {
+				userRole = enumniu.Banker
+			}
+			userInfo := &mdniu.BankerAndBet{
+				BankerScore: 0,
+				BetScore:    0,
+				Role:        int32(userRole),
+			}
+
+			niuUser := &mdniu.NiuniuUserResult{
+				UserID: user.UserID,
+				Status: enumniu.UserStatusInit,
+				Cards:  userCard,
+				Info:   userInfo,
+			}
+			niuUsers = append(niuUsers, niuUser)
+		} else {
+			log.Err("niuniu cardsMap err %v", cardsMap)
+			return nil,nil,errorsniu.ErrGoLua
+		}
+	}
+	return userResults,niuUsers,nil
 }
 
 func UpdateGame() []*mdniu.Niuniu {
@@ -331,29 +353,29 @@ func UpdateGame() []*mdniu.Niuniu {
 
 			//fmt.Printf("Check Room Param:%v|%s \n", room, pwd)
 
-			l := lua.NewState()
-			defer l.Close()
-			filePath := env.GetCurrentDirectory()+"/lua/niuniulua/Logic.lua"
-			if err := l.DoFile(filePath); err != nil {
-				log.Err("niuniu clean logic do file %v\n", err)
-				continue
-			}
-
-			if err := l.DoString(fmt.Sprintf("return Logic:new(%d)", 0)); err != nil {
-				log.Err("niuniu logic do string %+v", err)
-				continue
-			}
+			//l := lua.NewState()
+			//defer l.Close()
+			//filePath := env.GetCurrentDirectory()+"/lua/niuniulua/Logic.lua"
+			//if err := l.DoFile(filePath); err != nil {
+			//	log.Err("niuniu clean logic do file %v\n", err)
+			//	continue
+			//}
+			//
+			//if err := l.DoString(fmt.Sprintf("return Logic:new(%d)", 0)); err != nil {
+			//	log.Err("niuniu logic do string %+v", err)
+			//	continue
+			//}
 			niuniu.MarshalNiuniuRoomResult()
 			//room.MarshalGameUserResult()
-			if err := l.DoString(fmt.
-			Sprintf("return Logic:CalculateRes('%s','%s')",
+			if err := GoLua.DoString(fmt.
+			Sprintf("return G_CalculateRes('%s','%s')",
 				niuniu.GameResults, room.GameParam)); err != nil {
-				log.Err("niuniu return logic calculateres %v|\n%v|\n%v\n",
+				log.Err("niuniu G_CalculateRes %v|\n%v|\n%v\n",
 					niuniu.GameResults, room.GameParam, err)
 				continue
 			}
 
-			luaResult := l.Get(-1)
+			luaResult := GoLua.Get(-1)
 			var results *mdniu.NiuniuRoomResult
 			//fmt.Printf("niuniu lua result %v: \n", luaResult)
 			if err := json.Unmarshal([]byte(luaResult.String()),
@@ -361,7 +383,7 @@ func UpdateGame() []*mdniu.Niuniu {
 				log.Err("niuniu lua str do struct %v", err)
 			}
 			niuniu.Result = results
-			var roomparam *mdniu.NiuniuRoomParam
+			var roomparam *mdr.NiuniuRoomParam
 			if err := json.Unmarshal([]byte(room.GameParam),
 				&roomparam); err != nil {
 				log.Err("niuniu unmarshal room param failed, %v",
@@ -488,11 +510,11 @@ func GetBanker(uid int32, key int32, room *mdr.Room) error {
 	// }
 
 	if room.Status > enumr.RoomStatusStarted {
-		return errors.ErrGameIsDone
+		return errroom.ErrGameIsDone
 	}
 
 	if room.Giveup == enumr.WaitGiveUp {
-		return errors.ErrInGiveUp
+		return errroom.ErrInGiveUp
 	}
 
 	niu, err := cacheniu.GetGame(room.RoomID)
@@ -552,10 +574,10 @@ func SetBet(uid int32, key int32, room *mdr.Room) ([]int32, error) {
 
 	if room.Status > enumr.RoomStatusStarted {
 
-		return nil, errors.ErrGameIsDone
+		return nil, errroom.ErrGameIsDone
 	}
 	if room.Giveup == enumr.WaitGiveUp {
-		return nil, errors.ErrInGiveUp
+		return nil, errroom.ErrInGiveUp
 	}
 	niu, err := cacheniu.GetGame(room.RoomID)
 
@@ -609,9 +631,9 @@ func SetBet(uid int32, key int32, room *mdr.Room) ([]int32, error) {
 func SubmitCard(uid int32, room *mdr.Room) ([]int32, error) {
 	if room.Status > enumr.RoomStatusStarted {
 		if room.Giveup == enumr.WaitGiveUp {
-			return nil, errors.ErrInGiveUp
+			return nil, errroom.ErrInGiveUp
 		}
-		return nil, errors.ErrGameIsDone
+		return nil, errroom.ErrGameIsDone
 	}
 
 	niu, err := cacheniu.GetGame(room.RoomID)

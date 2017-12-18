@@ -51,3 +51,10 @@ const (
 	MsgClubRoomUnJoin   = "ClubRoomUnJoin"
 	MsgClubRoomFinish   = "ClubRoomFinish"
 )
+
+const (
+	MsgDDZGameStart  = "DoudizhuGameStart"
+	MsgDDZBeBanker   = "DoudizhuBeBanker"
+	MsgDDZSubmitCard = "DoudizhuSubmitCard"
+	MsgDDZGameResult = "DoudizhuGameResult"
+)

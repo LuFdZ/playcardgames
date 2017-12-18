@@ -9,8 +9,11 @@ import (
 	"playcards/utils/env"
 	"playcards/utils/log"
 	"playcards/utils/sync"
+	"time"
+	"fmt"
 
 	micro "github.com/micro/go-micro"
+	"github.com/yuin/gopher-lua"
 )
 
 var FuncRights = map[string]int32{
@@ -38,10 +41,23 @@ func main() {
 
 	server := service.Server()
 	gt := sync.NewGlobalTimer()
-	h := handler.NewHandler(server, gt)
+	l := lua.NewState()
+	defer l.Close()
+	var err error
+	filePath := env.GetCurrentDirectory()+"/lua/niuniulua/Logic.lua"
+	if err = l.DoFile(filePath); err != nil {
+		log.Err("niuniulua logic do file %+v", err)
+	}
+
+	ostime := time.Now().UnixNano()
+	if err = l.DoString(fmt.Sprintf("return G_Init(%d)", ostime)); err != nil {
+		log.Err("niuniulua G_Init error %+v", err)
+	}
+
+	h := handler.NewHandler(server, gt,l)
 	server.Handle(server.NewHandler(h))
 
-	err := service.Run()
+	err = service.Run()
 	gt.Stop()
 	env.ErrExit(err)
 }

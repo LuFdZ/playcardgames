@@ -1,7 +1,6 @@
 package handler
 
 import (
-	"fmt"
 	"playcards/model/activity"
 	"playcards/model/activity/errors"
 	pba "playcards/proto/activity"
@@ -18,7 +17,7 @@ func (*ActivitySrv) Invite(ctx context.Context, req *pba.InviteRequest,
 	rsp *pba.InviteReply) error {
 	u := gctx.GetUser(ctx)
 	result, balances, err := activity.Invite(u, req.UserID)
-	fmt.Printf("Invite Err:%+v", err)
+	//fmt.Printf("Invite Err:%+v", err)
 	if err != nil {
 		return err
 	}
@@ -32,6 +31,7 @@ func (*ActivitySrv) Invite(ctx context.Context, req *pba.InviteRequest,
 	*rsp = pba.InviteReply{
 		Result:  result,
 		Diamond: diamond,
+		InviteID:req.UserID,
 	}
 	return nil
 }
@@ -67,6 +67,7 @@ func (*ActivitySrv) InviteUserInfo(ctx context.Context, req *pba.InviteRequest,
 	}
 	count, err := activity.InviteUserInfo(u.UserID)
 	*rsp = pba.InviteUserInfoReply{
+		InviteUserID:u.InviteUserID,
 		Count: count,
 	}
 	return nil

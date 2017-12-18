@@ -11,6 +11,7 @@ import (
 	"playcards/service/web/request"
 	webroom "playcards/service/web/room"
 	webthirteen "playcards/service/web/thirteen"
+	webdoudizhu "playcards/service/web/doudizhu"
 	"playcards/utils/auth"
 	"playcards/utils/log"
 
@@ -40,6 +41,7 @@ func NewWebHandler(c client.Client) *Web {
 	webthirteen.Init(w.broker)
 	webniu.Init(w.broker)
 	webclub.Init(w.broker)
+	webdoudizhu.Init(w.broker)
 	return w
 }
 
@@ -66,7 +68,9 @@ func (w *Web) Subscribe(ws *websocket.Conn) {
 	webbill.SubscribeBillMessage(c, nil)
 	webthirteen.SubscribeThirteenMessage(c, nil)
 	webniu.SubscribeNiuniuMessage(c, nil)
+	webdoudizhu.SubscribeDoudizhuMessage(c,nil)
 	webclub.ClubOnlineNotice(c)
+
 	log.Debug("new client: %v", c)
 	f := func(msg []byte) error {
 		req := &request.Request{}

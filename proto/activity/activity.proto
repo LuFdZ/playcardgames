@@ -19,11 +19,13 @@ message ShareReply{
 
 message InviteReply{
     int32 Result = 1;
+    int32 InviteID = 2;
     int64 Diamond = 3;
 }
 
 message InviteUserInfoReply{
-    int32 Count = 1;
+    int32 InviteUserID = 1;
+    int32 Count = 2;
 }
 
 service ActicitySrv {

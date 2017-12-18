@@ -4,7 +4,6 @@ import (
 	"fmt"
 	_ "playcards/model/activity/errors"
 	_ "playcards/model/bill/errors"
-	_ "playcards/model/chat/errors"
 	_ "playcards/model/time/errors"
 	_ "playcards/model/user/errors"
 	_ "playcards/service/api/enum"

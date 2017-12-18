@@ -14,7 +14,7 @@ import (
 )
 
 type Room struct {
-	RoomID         int32  `gorm:"primary_key"`
+	RoomID         int32             `gorm:"primary_key"`
 	Password       string //`reg:"required,min=6,max=32,excludesall= 	"`
 	Status         int32
 	Giveup         int32
@@ -110,6 +110,25 @@ type CheckRoomExist struct {
 	GameResult   RoomResults
 }
 
+type ThirteenRoomParam struct {
+	BankerAddScore int32
+	Time           int32
+	Joke           int32
+	Times          int32
+}
+
+type NiuniuRoomParam struct {
+	Times       int32
+	BankerType  int32
+	PreBankerID int32
+}
+
+type DoudizhuRoomParam struct {
+	BaseScore      int32
+	PreBankerID    int32
+	PreBankerIndex int32
+}
+
 //func (r *Room) String() string {
 //	return fmt.Sprintf("[roomid: %d pwd: %s status: %d gametype: %d]",
 //		r.RoomID, r.Password, r.Status, r.GameType)
@@ -190,6 +209,16 @@ func (r *RoomUser) ToProto() *pbr.RoomUser {
 		mRu.Icon = u.Icon
 		mRu.Sex = u.Sex
 		mRu.Location = u.Location
+	}
+	return mRu
+}
+
+func (r *RoomUser) SimplyToProto() *pbr.RoomUser {
+	mRu := &pbr.RoomUser{
+		UserID:   r.UserID,
+		Ready:    r.Ready,
+		Position: r.Position,
+		Role:     r.Role,
 	}
 	return mRu
 }

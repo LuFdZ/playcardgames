@@ -10,6 +10,7 @@ import time
 import thread
 import threading
 import random
+
 from client import Client
 	
 # if __name__ == "__main__":
@@ -30,6 +31,15 @@ listHostLocal = ["http://192.168.1.76:8888", "http://192.168.1.76:8080", "http:/
                  "http://192.168.1.76:8080","http://192.168.1.76:8080","http://192.168.1.76:8080","http://192.168.1.76:8080"];
 listWSLocal = ["ws://192.168.1.76:8888/stream", "ws://192.168.1.76:8080/stream", "ws://192.168.1.76:8080/stream",
                "ws://192.168.1.76:8080/stream","ws://192.168.1.76:8080/stream","ws://192.168.1.76:8080/stream","ws://192.168.1.76:8080/stream"];
+
+# lh = "http://111.230.87.172:8888"
+# lw = "ws://111.230.87.172:8888/stream"
+
+lh = "http://192.168.1.76:8080"
+lw = "ws://192.168.1.76:8999/stream"
+
+# lh = "http://192.168.1.125:8080"
+# lw = "ws://192.168.1.125:8999/stream"
 
 def Init(account):
     account.Login()
@@ -63,18 +73,27 @@ class Test(object):
 
     def CreateRoom(self,index):
         if self.lock.acquire():
-            rd = random.randint(0,6)
             key = index *4
-            name = 'IPRANDOM%d' % rd
-            print(name)
+            #name = 'IPRANDOM%d' % rd
+            #print(name)
+            # ipindex = random.randint(0,6)
+            # idA = 'Tuser%d' % (key+1)
+            # userA = Client(idA,idA,idA,listHost[ipindex],listWS[ipindex])
+            # idB = 'Tuser%d' % (key+2)
+            # userB = Client(idB,idB,idB,listHost[ipindex],listWS[ipindex])
+            # idC = 'Tuser%d' % (key+3)
+            # userC = Client(idC,idC,idC,listHost[ipindex],listWS[ipindex])
+            # idD = 'Tuser%d' % (key+4)
+            # userD = Client(idD,idD,idD,listHost[ipindex],listWS[ipindex])
+
             idA = 'Tuser%d' % (key+1)
-            userA = Client(idA,idA,idA,listHost[rd],listWS[rd])
+            userA = Client(idA,idA,idA,lh,lw)
             idB = 'Tuser%d' % (key+2)
-            userB = Client(idB,idB,idB,listHost[rd],listWS[rd])
+            userB = Client(idB,idB,idB,lh,lw)
             idC = 'Tuser%d' % (key+3)
-            userC = Client(idC,idC,idC,listHost[rd],listWS[rd])
+            userC = Client(idC,idC,idC,lh,lw)
             idD = 'Tuser%d' % (key+4)
-            userD = Client(idD,idD,idD,listHost[rd],listWS[rd])
+            userD = Client(idD,idD,idD,lh,lw)
 
 
             Init(userA)

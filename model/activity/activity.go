@@ -2,7 +2,7 @@ package activity
 
 import (
 	dba "playcards/model/activity/db"
-	enum "playcards/model/activity/enum"
+	enumact "playcards/model/activity/enum"
 	"playcards/model/activity/errors"
 	"playcards/model/bill"
 	enumbill "playcards/model/bill/enum"
@@ -10,6 +10,7 @@ import (
 	mbill "playcards/model/bill/mod"
 	dbu "playcards/model/user/db"
 	mdu "playcards/model/user/mod"
+	cacheuser "playcards/model/user/cache"
 	"playcards/utils/date"
 	"playcards/utils/db"
 	"time"
@@ -24,12 +25,12 @@ func Invite(u *mdu.User, inviterID int32) (int32, []*mbill.Balance, error) {
 		err       error
 	)
 	err = nil
-	checktd, err := dbu.GetUser(db.DB(), &mdu.User{UserID: u.UserID})
-	if err != nil {
-		return 0, nil, err
-	}
+	//checktd, err := dbu.GetUser(db.DB(), &mdu.User{UserID: u.UserID})
+	//if err != nil {
+	//	return 0, nil, err
+	//}
 
-	if checktd.InviteUserID > 0 {
+	if u.InviteUserID > 0 {
 		return 0, nil, errors.ErrHadInviter
 	}
 	if u.UserID == inviterID {
@@ -58,7 +59,7 @@ func Invite(u *mdu.User, inviterID int32) (int32, []*mbill.Balance, error) {
 	result = 1
 
 	//fmt.Printf("Invite date Count:%d|%d|%v\n", date.TimeSubDays(time.Now(), *u.CreatedAt), u.UserID,u.CreatedAt)
-	if date.TimeSubDays(time.Now(), *u.CreatedAt) > enum.InviteCreateDaysLimit {
+	if date.TimeSubDays(time.Now(), *u.CreatedAt) > enumact.InviteCreateDaysLimit {
 		isBalance = false
 		result = 2
 	} else {
@@ -67,7 +68,7 @@ func Invite(u *mdu.User, inviterID int32) (int32, []*mbill.Balance, error) {
 			return 0, nil, err
 		}
 		//fmt.Printf("Invite Number:%v", number)
-		if len(number) > enum.InviteTimesLimit {
+		if len(number) > enumact.InviteTimesLimit {
 			isBalance = false
 			result = 3
 		}
@@ -82,6 +83,10 @@ func Invite(u *mdu.User, inviterID int32) (int32, []*mbill.Balance, error) {
 			return err
 		}
 		u = user
+		err = cacheuser.SimpleUpdateUser(u)
+		if err != nil {
+			return nil
+		}
 		return nil
 	}
 	err = db.Transaction(f)
@@ -92,7 +97,7 @@ func Invite(u *mdu.User, inviterID int32) (int32, []*mbill.Balance, error) {
 	if isBalance {
 		//JournalTypeInvite	JournalTypeShate
 		invite, err := bill.GainBalance(u.UserID, time.Now().Unix(),enumbill.JournalTypeInvite,
-			&mbill.Balance{Amount: enum.InviteDiamond, CoinType: enumcom.Diamond},
+			&mbill.Balance{Amount: enumact.InviteDiamond, CoinType: enumcom.Diamond},
 			)
 		if err != nil {
 			return 0, nil, err
@@ -100,7 +105,7 @@ func Invite(u *mdu.User, inviterID int32) (int32, []*mbill.Balance, error) {
 		balances = append(balances, invite)
 
 		invited, err := bill.GainBalance(inviterID, time.Now().Unix(),enumbill.JournalTypeInvited,
-			&mbill.Balance{Amount: enum.InviteDiamond, CoinType: enumcom.Diamond},
+			&mbill.Balance{Amount: enumact.InviteDiamond, CoinType: enumcom.Diamond},
 			)
 		if err != nil {
 			return 0, nil, err
@@ -133,16 +138,16 @@ func Share(uid int32) (*mbill.Balance, error) { //*mda.PlayerShare,
 		ps.ShareTimes = 0
 	}
 
-	if ps.ShareTimes >= enum.ShareLimitTimes || ps.TotalDiamonds >= enum.ShareLimitDiamond {
+	if ps.ShareTimes >= enumact.ShareLimitTimes || ps.TotalDiamonds >= enumact.ShareLimitDiamond {
 		return nil, nil //errors.ErrShareNoDiamonds
 	}
 
 	ub, err := bill.GainBalance(uid, time.Now().Unix(),enumbill.JournalTypeShare,
-		&mbill.Balance{Amount: enum.ShareDiamond, CoinType: enumcom.Diamond})
+		&mbill.Balance{Amount: enumact.ShareDiamond, CoinType: enumcom.Diamond})
 	if err != nil {
 		return nil, err
 	}
-	ps.TotalDiamonds += enum.ShareDiamond
+	ps.TotalDiamonds += enumact.ShareDiamond
 	ps.ShareTimes++
 	f := func(tx *gorm.DB) error {
 		err := dba.UpdatePlayerShare(tx, ps)

@@ -207,18 +207,22 @@ func (us *UserSrv) DayActiveUserList(ctx context.Context, req *pbu.GetUserDayAct
 	return nil
 }
 
-func (us *UserSrv) GetUserOnlineCount(ctx context.Context, req *pbu.User,
-	rsp *pbu.AlineConutRsply) error {
+func (us *UserSrv) GetUserCount(ctx context.Context, req *pbu.User,
+	rsp *pbu.ConutRsply) error {
 	_, err := auth.GetUser(ctx)
 	if err != nil {
 		return err
 	}
-	resply := &pbu.AlineConutRsply{}
+	resply := &pbu.ConutRsply{}
 	count, err := user.GetUserOnlineCount()
 	if err != nil {
 		return err
 	}
-	resply.Count = count
+	resply.OnlineCount = count
+	count = user.DayActiveUserCount()
+	resply.ActiveCount = count
+	count = user.DayNewUserCount()
+	resply.NewCount = count
 	*rsp = *resply
 	return nil
 }
@@ -237,6 +241,19 @@ func (us *UserSrv) SetLocation(ctx context.Context, req *pbu.SetLocationRequest,
 		return err
 	}
 
+	*rsp = *resply
+	return nil
+}
+
+func (us *UserSrv) RefreshUserCount(ctx context.Context, req *pbu.SetLocationRequest,
+	rsp *pbu.UserRsply) error {
+	resply := &pbu.UserRsply{
+		Result: 1,
+	}
+	err := user.RefreshUserCount()
+	if err != nil {
+		return err
+	}
 	*rsp = *resply
 	return nil
 }

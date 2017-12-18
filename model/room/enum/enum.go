@@ -4,6 +4,7 @@ package enum
 const (
 	ErrUID         = -1
 	AgentRoomLimit = 10
+	LogTime        = 20
 )
 
 //globle config
@@ -88,12 +89,17 @@ const (
 )
 
 const (
-	ThirteenGameType  = 1001
-	NiuniuGameType    = 1002
-	ThirteenGameCost  = 1.0
-	NiuniuGameCost    = 1.0
+	ThirteenGameType = 1001
+	NiuniuGameType   = 1002
+	DoudizhuGameType = 1003
+
+	ThirteenGameCost = 1.0
+	NiuniuGameCost   = 1.0
+	DoudizhuGameCost = 1.0
+
 	ThirteenMaxNumber = 4
 	NiuniuMaxNumber   = 5
+	DoudizhuMaxNumber = 4
 )
 
 // game recovery room status
@@ -116,6 +122,6 @@ const (
 )
 
 const (
-	RoomFlag    = 1
+	RoomFlag   = 1
 	RoomNoFlag = 2
 )

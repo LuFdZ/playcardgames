@@ -9,6 +9,7 @@ import (
 	enumcom "playcards/model/common/enum"
 	sq "github.com/Masterminds/squirrel"
 	"github.com/jinzhu/gorm"
+	"strconv"
 )
 
 func CreateAllBalance(tx *gorm.DB, uid int32) error {
@@ -42,7 +43,7 @@ func CreateBalance(tx *gorm.DB, uid int32, balance *mdbill.Balance) error {
 	}
 
 	err = InsertJournal(tx, uid, balance, &mdbill.Balance{UserID: uid}, enum.JournalTypeInitBalance,
-		int64(balance.UserID), balance.UserID, enum.DefaultChannel)
+		strconv.Itoa(int(balance.UserID)), balance.UserID, enum.DefaultChannel)
 	if err != nil {
 		return err
 	}
@@ -78,7 +79,7 @@ func GetLockUserBalance(tx *gorm.DB, uid int32, cointype int32) (*mdbill.Balance
 	return out, nil
 }
 
-func GetJournal(tx *gorm.DB, uid int32, orderid int64, cointype int32) int32 {
+func GetJournal(tx *gorm.DB, uid int32, orderid string, cointype int32) int32 {
 	out := &mdbill.Journal{}
 	if found, _ := db.FoundRecord(tx.Where("user_id = ? and `foreign` = ? coin_type = ?",
 		uid, orderid, cointype).Find(&out).Error); found {
@@ -92,7 +93,7 @@ func GetJournal(tx *gorm.DB, uid int32, orderid int64, cointype int32) int32 {
 // JournalTypeDeposit -> Foreign deposit.id
 // JournalTypeMap -> Foreign map_profits.id
 func InsertJournal(tx *gorm.DB, uid int32, b *mdbill.Balance, bbfore *mdbill.Balance,
-	typ int32, fid int64, opuid int32, channel string) error {
+	typ int32, fid string, opuid int32, channel string) error {
 	now := gorm.NowFunc()
 
 	//amount := bnow.Amount + bbfore.Amount
@@ -119,7 +120,7 @@ func InsertJournal(tx *gorm.DB, uid int32, b *mdbill.Balance, bbfore *mdbill.Bal
 }
 
 func GainBalance(tx *gorm.DB, uid int32, b *mdbill.Balance, typ int32,
-	fid int64, opuid int32, channel string) (*mdbill.Balance,error) {
+	fid string, opuid int32, channel string) (*mdbill.Balance,error) {
 	if b.Amount == 0 {
 		return nil,errbill.ErrNotAllowAmount
 	}
@@ -146,7 +147,7 @@ func GainBalance(tx *gorm.DB, uid int32, b *mdbill.Balance, typ int32,
 }
 
 func SetBalanceFreeze(tx *gorm.DB, uid int32, b *mdbill.Balance, typ int32,
-	fid int64, opuid int32) error {
+	fid string, opuid int32) error {
 	ub, err := GetLockUserBalance(tx, uid, b.CoinType)
 	if err != nil {
 		return err

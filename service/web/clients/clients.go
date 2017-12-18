@@ -93,17 +93,20 @@ func SendWhere(topic, typ string, msg interface{},
 	f func(*Client) bool) error {
 	//s := time.Now()
 	cs := GetLockClients(topic)
+	//e := time.Now().Sub(s).Nanoseconds()/1000000
+	//log.Info("SendTimesLock:%s|%d\n", topic,e)
 	defer Done()
 	str := fmt.Sprintf("SendWhere:%s,",topic)
+	//s = time.Now()
 	for c, _ := range cs {
 		if f != nil && !f(c) {
-			str+=fmt.Sprintf("@@@ %d @@@",c.UserID())
+			//str+=fmt.Sprintf("@@@ %d @@@",c.UserID())
 			continue
 		}
 		str+=fmt.Sprintf("### %d ###",c.UserID())
 		c.SendMessage(topic, typ, msg)
 	}
-	//e := time.Now().Sub(s).Nanoseconds()/1000
+	//e = time.Now().Sub(s).Nanoseconds()/1000000
 	//log.Info("SendTimes:%s|%d\n", topic,e)
 	log.Debug(str)
 	return nil

@@ -1,32 +1,91 @@
 package thirteen
 
 import (
+	pbthirteen "playcards/proto/thirteen"
 	srvthirteen "playcards/service/thirteen/handler"
 	"playcards/service/web/clients"
-	"playcards/service/web/request"
-	"playcards/utils/auth"
+	"playcards/service/web/enum"
+	"playcards/utils/subscribe"
+	"playcards/utils/topic"
+
+	"github.com/micro/go-micro/broker"
+	"github.com/micro/protobuf/proto"
 )
 
-var ThirteenEvent = []string{
-	srvthirteen.TopicThirteenGameResult,
-	srvthirteen.TopicThirteenSurrender,
-	srvthirteen.TopicThirteenGameStart,
-	srvthirteen.TopicThirteenGameReady,
-}
+var (
+	brok broker.Broker
+)
 
-func SubscribeThirteenMessage(c *clients.Client, req *request.Request) error {
-	c.Subscribe(ThirteenEvent)
+func Init(brk broker.Broker) error {
+	brok = brk
+	if err := SubscribeAllThirteenMessage(brk); err != nil {
+		return err
+	}
 	return nil
 }
 
-func UnsubscribeThirteenMessage(c *clients.Client, req *request.Request) error {
-	c.Unsubscribe(ThirteenEvent)
+func SubscribeAllThirteenMessage(brk broker.Broker) error {
+	subscribe.SrvSubscribe(brk, topic.Topic(srvthirteen.
+	TopicThirteenGameStart),
+		ThirteenGameStartHandler,
+	)
+	subscribe.SrvSubscribe(brk, topic.Topic(srvthirteen.
+	TopicThirteenGameResult),
+		ThirteenGameResultHandler,
+	)
+	subscribe.SrvSubscribe(brk, topic.Topic(srvthirteen.
+	TopicThirteenGameReady),
+		ThirteenReadyHandler,
+	)
 	return nil
 }
 
-func init() {
-	request.RegisterHandler("SubscribeThirteenMessage", auth.RightsPlayer,
-		SubscribeThirteenMessage)
-	request.RegisterHandler("UnsubscribeThirteenMessage", auth.RightsPlayer,
-		UnsubscribeThirteenMessage)
+func ThirteenGameStartHandler(p broker.Publication) error {
+	t := p.Topic()
+	msg := p.Message()
+	rs := &pbthirteen.GroupCard{}
+	err := proto.Unmarshal(msg.Body, rs)
+	if err != nil {
+		return err
+	}
+
+	err = clients.SendTo(rs.UserID, t, enum.MsgThireteenGameStart, rs)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func ThirteenGameResultHandler(p broker.Publication) error {
+	t := p.Topic()
+	msg := p.Message()
+	rs := &pbthirteen.GameResultList{}
+	err := proto.Unmarshal(msg.Body, rs)
+	if err != nil {
+		return err
+	}
+	ids := rs.Ids
+	rs.Ids = nil
+	err = clients.SendRoomUsers(ids, t, enum.MsgThireteenGameResult, rs)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func ThirteenReadyHandler(p broker.Publication) error {
+	t := p.Topic()
+	msg := p.Message()
+	rs := &pbthirteen.GameReady{}
+	err := proto.Unmarshal(msg.Body, rs)
+	if err != nil {
+		return err
+	}
+	ids := rs.Ids
+	rs.Ids = nil
+	err = clients.SendRoomUsers(ids, t, enum.MsgThireteenGameReady, rs)
+	if err != nil {
+		return err
+	}
+	return nil
 }

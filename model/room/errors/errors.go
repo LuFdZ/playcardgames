@@ -1,6 +1,8 @@
 package errors
 
-import "playcards/utils/errors"
+import (
+	"playcards/utils/errors"
+)
 
 const (
 	ErrDiamondNotEnough = 40000
@@ -30,4 +32,7 @@ var (
 	ErrRoomType          = errors.Forbidden(40021, "本房间不能续费操作！")
 	ErrNotClubMember     = errors.Forbidden(40022, "不是俱乐部成员！")
 	ErrClubCantRenewal   = errors.Forbidden(40023, "俱乐部房间不能续费！")
+	ErrGameParam         = errors.Forbidden(40024, "房间参数不正确！")
+	ErrRoomMaxNumber     = errors.Forbidden(40025, "房间局数不正确！")
+	ErrRoomMaxRound      = errors.Forbidden(40026, "房间轮数不正确！")
 )

@@ -2,7 +2,7 @@ package.path = os.getenv("PWD") .. '/?.lua;'
 require "lua/niuniulua/Card"
 require "lua/niuniulua/Tools"
 require "../../lua/niuniulua/json"
-Logic = {cards = {}, cardNum = 52, existKing = false}
+Logic = {cards = {}, cardNum = 52, existKing = false, instance = nil}
 Logic.__index = Logic
 
 --从无牛到五小牛的赔率
@@ -11,10 +11,32 @@ local global_win3 = {1, 1, 1,  1,  1,  1,  1,  1,  2,  2,  3,  3,     3,   3}
 local global_win5 = {1, 1, 1,  1,  1,  1,  1,  2,  3,  4,  5,  5,     5,   5}
 local global_win10= {1, 1, 2,  3,  4,  5,  6,  7,  8,  9, 10, 10,     10, 10}
 
-
-function Logic:new(s)
-    self = {}
+function G_Init(s)
     math.randomseed(s)
+end
+
+function G_Reset()
+    Logic:GetInstance():ReSet()
+end
+
+function G_GetCards()
+    return Logic:GetInstance():GetCards()
+end
+
+function G_CalculateRes(playerTbl, roomData)
+    return Logic:GetInstance():CalculateRes(playerTbl, roomData)
+end
+
+function Logic:GetInstance()
+    if Logic.instance == nil then
+        Logic.instance = Logic:new()
+    end
+
+    return Logic.instance
+end
+
+function Logic:new()
+    self = {}
     setmetatable(self, Logic)
 
     self:ReSet()

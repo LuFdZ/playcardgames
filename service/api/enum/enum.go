@@ -21,6 +21,7 @@ var (
 	NiuniuServiceName   = "playcards.srv.niuniu"
 	ClubServiceName     = "playcards.srv.club"
 	CommonServiceName   = "playcards.srv.common"
+	DoudizhuServiceName = "playcards.srv.doudizhu"
 )
 
 var (

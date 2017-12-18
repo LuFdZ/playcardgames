@@ -21,6 +21,7 @@ all:  api-srv           \
       niuniu-srv        \
       club-srv          \
       common-srv        \
+      doudizhu-srv      \
 
 dev:
 	-${GOGET} github.com/golang/lint
@@ -83,6 +84,7 @@ gen: dep
 	${PROTO_BUILD} ./proto/niuniu/niuniu.proto
 	${PROTO_BUILD} ./proto/club/club.proto
 	${PROTO_BUILD} ./proto/common/common.proto
+	${PROTO_BUILD} ./proto/doudizhu/doudizhu.proto
 
 api-srv: gen
 	${BUILD} -o ./bin/api-srv service/api/main.go
@@ -122,6 +124,9 @@ club-srv: gen
 
 common-srv: gen
 	${BUILD} -o ./bin/common-srv service/common/main.go
+
+doudizhu-srv: gen
+	${BUILD} -o ./bin/doudizhu-srv service/doudizhu/main.go
 
 
 db-reset-init:

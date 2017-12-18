@@ -27,7 +27,7 @@ type Journal struct {
 	AmountAfter  int64
 	UserID       int32
 	Type         int32
-	Foreign      int64
+	Foreign      string
 	OpUserID     int64
 	Channel      string
 	CreatedAt    *time.Time

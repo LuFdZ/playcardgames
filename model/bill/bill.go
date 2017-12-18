@@ -10,6 +10,7 @@ import (
 	"playcards/utils/db"
 
 	"github.com/jinzhu/gorm"
+	"strconv"
 )
 
 func GetUserBalance(uid int32, cointype int32) (*mdbill.Balance, error) {
@@ -36,7 +37,7 @@ func GainBalance(uid int32, aid int64, balanceType int32, balance *mdbill.Balanc
 	*mdbill.Balance, error) {
 	f := func(tx *gorm.DB) error {
 		ub, err := dbbill.GainBalance(tx, uid, balance, balanceType,
-			aid, enumbill.SystemOpUserID, enumbill.DefaultChannel)
+			strconv.Itoa(int(aid)), enumbill.SystemOpUserID, enumbill.DefaultChannel)
 		if err != nil {
 			return err
 		}
@@ -59,13 +60,14 @@ func GainBalance(uid int32, aid int64, balanceType int32, balance *mdbill.Balanc
 }
 
 func GainGameBalance(uid int32, aid int32, balanceType int32, FreezeType int32, balance *mdbill.Balance) error {
+	fid := strconv.Itoa(int(aid))
 	f := func(tx *gorm.DB) error {
-		err := dbbill.SetBalanceFreeze(tx, uid, balance, FreezeType, int64(aid), enumbill.SystemOpUserID)
+		err := dbbill.SetBalanceFreeze(tx, uid, balance, FreezeType, fid, enumbill.SystemOpUserID)
 		if err != nil {
 			return err
 		}
 		ub, err := dbbill.GainBalance(tx, uid, balance, balanceType,
-			int64(aid), enumbill.SystemOpUserID, enumbill.DefaultChannel)
+			fid, enumbill.SystemOpUserID, enumbill.DefaultChannel)
 		if err != nil {
 			return err
 		}
@@ -81,7 +83,7 @@ func GainGameBalance(uid int32, aid int32, balanceType int32, FreezeType int32, 
 	return nil
 }
 
-func Recharge(uid int32, aid int32, diamond int64, orderid int64,
+func Recharge(uid int32, aid int32, diamond int64, orderid string,
 	rechangeType int32, channel string) (int32, *mdbill.Balance, error) {
 	exist := CheckDiamondBalanceIsDone(uid, orderid)
 	if exist == enumbill.OrderExist {
@@ -111,7 +113,7 @@ func Recharge(uid int32, aid int32, diamond int64, orderid int64,
 	return enumbill.OrderSuccess, b, nil
 }
 
-func CheckDiamondBalanceIsDone(uid int32, orderid int64) int32 {
+func CheckDiamondBalanceIsDone(uid int32, orderid string) int32 {
 	return dbbill.GetJournal(db.DB(), uid, orderid, enumcom.Diamond)
 }
 
@@ -119,7 +121,7 @@ func SetBalanceFreeze(uid int32, aid int64, balance *mdbill.Balance, balanceType
 ) (*mdbill.Balance, error) {
 	f := func(tx *gorm.DB) error {
 		err := dbbill.SetBalanceFreeze(tx, uid, balance, balanceType,
-			int64(aid), enumbill.SystemOpUserID)
+			strconv.Itoa(int(aid)), enumbill.SystemOpUserID)
 		if err != nil {
 			return err
 		}

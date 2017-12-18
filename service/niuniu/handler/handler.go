@@ -19,30 +19,34 @@ import (
 	"github.com/jinzhu/gorm"
 	"github.com/micro/go-micro/broker"
 	"github.com/micro/go-micro/server"
+	"github.com/yuin/gopher-lua"
 )
 
 type NiuniuSrv struct {
 	server server.Server
 	broker broker.Broker
+	count  int32
 }
 
 func RoomLockKey(pwd string) string {
 	return fmt.Sprintf("playcards.room.op.lock:%s", pwd)
 }
 
-func NewHandler(s server.Server, gt *gsync.GlobalTimer) *NiuniuSrv {
+func NewHandler(s server.Server, gt *gsync.GlobalTimer,gl *lua.LState) *NiuniuSrv {
 	n := &NiuniuSrv{
 		server: s,
 		broker: s.Options().Broker,
 	}
-	n.Update(gt)
+	niuniu.InitGoLua(gl)
+	n.update(gt)
 	return n
 }
 
-func (ns *NiuniuSrv) Update(gt *gsync.GlobalTimer) {
+func (ns *NiuniuSrv) update(gt *gsync.GlobalTimer) {
 	lock := "playcards.niu.update.lock"
 
 	f := func() error {
+		ns.count ++
 		//s := time.Now()
 		//log.Debug("niuniu update loop... and has %d niunius")
 		newGames := niuniu.CreateNiuniu()
@@ -133,12 +137,16 @@ func (ns *NiuniuSrv) Update(gt *gsync.GlobalTimer) {
 				}
 			}
 		}
-		err := niuniu.CleanGame()
-		if err != nil {
-			log.Err("clean give up game loop err:%v", err)
+		if ns.count == 3{
+			err := niuniu.CleanGame()
+			if err != nil {
+				log.Err("clean give up game loop err:%v", err)
+			}
+			//e := time.Now().Sub(s).Nanoseconds()/1000000
+			//fmt.Printf("niuniu Update times :%d\n", e)
+			ns.count = 0
 		}
-		//e := time.Now().Sub(s).Nanoseconds()/1000000
-		//fmt.Printf("niuniu Update times :%d\n", e)
+
 		return nil
 	}
 	gt.Register(lock, time.Millisecond*enumniu.LoopTime, f)

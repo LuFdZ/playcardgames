@@ -8,7 +8,6 @@ import (
 	mdu "playcards/model/user/mod"
 	"playcards/utils/db"
 	"playcards/utils/errors"
-
 	"github.com/Masterminds/squirrel"
 	"github.com/jinzhu/gorm"
 )
@@ -55,6 +54,7 @@ func UpdateUser(tx *gorm.DB, u *mdu.User) (*mdu.User, error) {
 		Icon:         u.Icon,
 		InviteUserID: u.InviteUserID,
 		LastLoginIP:  u.LastLoginIP,
+		LastLoginAt:  u.LastLoginAt,
 		ClubID:       u.ClubID,
 	}
 	if err := tx.Model(u).Updates(user).Error; err != nil {
@@ -105,7 +105,7 @@ func PageUserList(tx *gorm.DB, page *mdpage.PageOption, u *mdu.User) (
 		if len(str) > 0 {
 			str += " and"
 		}
-		str += fmt.Sprintf(" end_at < %s", page.EndAt.Unix())
+		str += fmt.Sprintf(" created_at < %s", page.EndAt.Unix())
 	}
 
 	if u.UserID != 0 {
@@ -139,7 +139,7 @@ func GetInvitedUserCount(tx *gorm.DB, uid int32) ([]mdu.User, error) {
 		out []mdu.User
 	)
 	sql, param, err := squirrel.
-		Select(" user_id,icon "). //
+	Select(" user_id,icon "). //
 		From(enumu.UserTableName).
 		Where(" invite_user_id = ? ", uid).ToSql()
 
@@ -165,4 +165,22 @@ func FindAndGetUser(tx *gorm.DB, u *mdu.User) (*mdu.User, error) {
 	}
 	//fmt.Printf("FindAndGetUser UserInfo:%s|%s|%s\n", u.MobileOs, u.Version, u.Channel)
 	return u, nil
+}
+
+func GetNewUserConut() (int32) {
+	var count int32
+	db.DB().Model(&mdu.User{}).Where("created_at>=date(now()) and created_at<DATE_ADD(date(now()),INTERVAL 1 DAY)").Count(&count)
+	return count
+}
+
+func GetDayActiveUserConut() (int32) {
+	var count int32
+	db.DB().Model(&mdu.User{}).Where("last_login_at>=date(now()) and last_login_at<DATE_ADD(date(now()),INTERVAL 1 DAY)").Count(&count)
+	return count
+}
+
+func GetUserConut() (int32) {
+	var count int32
+	db.DB().Model(&mdu.User{}).Count(&count)
+	return count
 }

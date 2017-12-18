@@ -16,16 +16,20 @@ import (
 	pbt "playcards/proto/thirteen"
 	enumbill "playcards/model/bill/enum"
 	mdbill "playcards/model/bill/mod"
-	"playcards/utils/env"
+	//"playcards/utils/env"
 	"playcards/model/bill"
 	"playcards/utils/db"
 	"playcards/utils/log"
 	"strconv"
-	"time"
-
 	"github.com/jinzhu/gorm"
 	"github.com/yuin/gopher-lua"
 )
+
+var GoLua *lua.LState
+
+func InitGoLua(gl *lua.LState) {
+	GoLua = gl
+}
 
 func CreateThirteen() []*mdt.Thirteen {
 	//rooms, err := GetRoomsByStatusAndGameType()
@@ -54,27 +58,32 @@ func CreateThirteen() []*mdt.Thirteen {
 		var userResults []*mdr.GameUserResult
 		var groupCards []*mdt.GroupCard
 		var bankerID int32
-		l := lua.NewState()
-		defer l.Close()
-		filePath := env.GetCurrentDirectory() + "/lua/thirteenlua/Logic.lua"
-		if err := l.DoFile(filePath); err != nil {
-			log.Err("thirteen logic do file %+v", err)
-			continue
-		}
-		ostimeA := time.Now().UnixNano()
-		ostimeB := ostimeA<<32 | ostimeA>>32
+		//l := lua.NewState()
+		//defer l.Close()
+		//filePath := env.GetCurrentDirectory() + "/lua/thirteenlua/Logic.lua"
+		//if err := l.DoFile(filePath); err != nil {
+		//	log.Err("thirteen logic do file %+v", err)
+		//	continue
+		//}
+		//ostimeA := time.Now().UnixNano()
+		//ostimeB := ostimeA<<32 | ostimeA>>32
 		//fmt.Printf("ostime:%d|%d\n",ostimeA,ostimeB)
 		//log.Err("create thirteen seed:%d|%d\n", ostimeA, ostimeB)
-		if err := l.DoString(fmt.Sprintf("return Logic:new(%d)", ostimeB)); err != nil {
-			log.Err("thirteen logic do string %+v", err)
-			continue
-		}
+		//if err := GoLuaCreate.DoString(fmt.Sprintf("return Logic:new(%d)", ostimeB)); err != nil {
+		//	log.Err("thirteen logic do string %+v", err)
+		//	continue
+		//}
 		//if err := l.DoString("return Logic:new()"); err != nil {
 		//	log.Err("thirteen logic do string %+v", err)
 		//	continue
 		//}
 		//logic := l.Get(1)
-		l.Pop(1)
+
+		if err := GoLua.DoString("return G_Reset()"); err != nil {
+			log.Err("thirteen G_Reset %+v", err)
+			continue
+		}
+		//GoLuaCreate.Pop(1)
 
 		for _, user := range room.Users {
 			if room.RoundNow == 1 {
@@ -89,11 +98,11 @@ func CreateThirteen() []*mdt.Thirteen {
 				}
 				userResults = append(userResults, userResult)
 			}
-			if err := l.DoString("return Logic:GetCards()"); err != nil {
-				log.Err("thirteen logic do string %+v", err)
+			if err := GoLua.DoString("return G_GetCards()"); err != nil {
+				log.Err("thirteen G_GetCards %+v", err)
 			}
-			getCards := l.Get(1)
-			l.Pop(1)
+			getCards := GoLua.Get(-1)
+			GoLua.Pop(1)
 			var cardList []string
 			if cardsMap, ok := getCards.(*lua.LTable); ok {
 				cardsMap.ForEach(func(key lua.LValue, value lua.LValue) {
@@ -257,25 +266,26 @@ func UpdateGame() []*mdt.Thirteen { //[]*mdt.GameResultList
 		}
 
 		var results []*mdt.ThirteenResult
-		l := lua.NewState()
-		defer l.Close()
-		filePath := env.GetCurrentDirectory() + "/lua/thirteenlua/Logic.lua"
-		if err := l.DoFile(filePath); err != nil {
-			log.Err("thirteen clean logic do file %v", err)
-			continue
-		}
-		if err := l.DoString(fmt.Sprintf("return Logic:new(%d)", 0)); err != nil {
-			log.Err("thirteen logic do string %+v", err)
-			continue
-		}
+		//l := lua.NewState()
+		//defer l.Close()
+		//filePath := env.GetCurrentDirectory() + "/lua/thirteenlua/Logic.lua"
+		//if err := l.DoFile(filePath); err != nil {
+		//	log.Err("thirteen clean logic do file %v", err)
+		//	continue
+		//}
+		//if err := GoLuaUpdate.DoString(fmt.Sprintf("return Logic:new(%d)", 0)); err != nil {
+		//	log.Err("thirteen logic do string %+v", err)
+		//	continue
+		//}
 		thirteen.MarshalUserSubmitCards()
-		if err := l.DoString(fmt.Sprintf("return Logic:GetResult('%s','%s')",
+		//fmt.Printf("GameParam:%v\n%v\n",thirteen.UserSubmitCards,room.GameParam)
+		if err := GoLua.DoString(fmt.Sprintf("return G_GetResult('%s','%s')",
 			thirteen.UserSubmitCards, room.GameParam)); err != nil {
-			log.Err("thirteen return logic get result %v", err)
+			log.Err("thirteen G_GetResult %v", err)
 			continue
 		}
 
-		luaResult := l.Get(-1)
+		luaResult := GoLua.Get(-1)
 		if err := json.Unmarshal([]byte(luaResult.String()), &results); err != nil {
 			log.Err("thirteen lua str do struct %v", err)
 			continue
@@ -286,7 +296,7 @@ func UpdateGame() []*mdt.Thirteen { //[]*mdt.GameResultList
 		var resultArray []*mdr.GameUserResult
 		for _, result := range resultList.Result {
 			for _, userResult := range room.UserResults {
-				m := InitThirteenGameTypeMap()
+				m := initThirteenGameTypeMap()
 				if userResult.UserID == result.UserID {
 					if len(userResult.GameCardCount) > 0 {
 						if err := json.Unmarshal([]byte(userResult.GameCardCount), &m); err != nil {
@@ -331,16 +341,13 @@ func UpdateGame() []*mdt.Thirteen { //[]*mdt.GameResultList
 		thirteen.Result = resultList
 		room.Status = enumr.RoomStatusReInit
 
-		var roomparam *mdt.ThirteenRoomParam
+		var roomparam *mdr.ThirteenRoomParam
 		if err := json.Unmarshal([]byte(room.GameParam), &roomparam); err != nil {
 			log.Err("thirteen clean unmarshal room param failed, %v", err)
 			continue
 		}
-		if roomparam.BankerType == 0 {
-			roomparam.BankerType = 1
-		}
 
-		if roomparam.BankerAddScore > 0 && roomparam.BankerType == enumt.BankerNom {
+		if roomparam.BankerAddScore > 0 && roomparam.Times != enumt.TimesDefault {
 			for i := 0; i < len(room.Users); i++ {
 				//room.Users[i].Ready = enumr.UserUnready
 				//十三张一局结束后 轮庄
@@ -394,7 +401,7 @@ func UpdateGame() []*mdt.Thirteen { //[]*mdt.GameResultList
 	return thirteenList
 }
 
-func InitThirteenGameTypeMap() map[string]int32 {
+func initThirteenGameTypeMap() map[string]int32 {
 	m := make(map[string]int32)
 	for _, value := range enumt.GroupTypeName {
 		m[value] = 0
@@ -422,17 +429,17 @@ func SubmitCard(uid int32, submitCard *mdt.SubmitCard, room *mdr.Room) ([]int32,
 		return nil, err
 	}
 
-	//var checkCards []string
-	//for _, cardGroup := range thirteen.Cards {
-	//	if cardGroup.UserID == uid {
-	//		checkCards = cardGroup.CardList
-	//	}
-	//}
-	//
-	//checkHasCard := CheckHasCards(submitCard, checkCards)
-	//if !checkHasCard {
-	//	return nil,errorst.ErrCardNotExist
-	//}
+	var checkCards []string
+	for _, cardGroup := range thirteen.Cards {
+		if cardGroup.UserID == uid {
+			checkCards = cardGroup.CardList
+		}
+	}
+
+	checkHasCard := checkHasCards(submitCard, checkCards)
+	if !checkHasCard {
+		return nil, errorst.ErrCardNotExist
+	}
 
 	for _, user := range room.Users {
 		if user.UserID == uid {
@@ -605,7 +612,7 @@ func ThirteenRecovery(rid int32, uid int32) (*mdt.ThirteenRecovery, error) {
 	return recovery, nil
 }
 
-func CheckHasCards(submitCards *mdt.SubmitCard, cardList []string) bool {
+func checkHasCards(submitCards *mdt.SubmitCard, cardList []string) bool {
 	var submitCardStr []string
 	for _, sc := range submitCards.Head {
 		submitCardStr = append(submitCardStr, sc)

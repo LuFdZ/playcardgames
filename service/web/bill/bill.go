@@ -26,7 +26,7 @@ func Init(brk broker.Broker) error {
 
 func SubscribeAllBillMessage(brk broker.Broker) error {
 	subscribe.SrvSubscribe(brk, topic.Topic(srvbill.
-		TopicBillChange),
+	TopicBillChange),
 		BillChangeHandler,
 	)
 	return nil

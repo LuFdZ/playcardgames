@@ -1,119 +1,127 @@
 syntax = "proto3";
 
-package niuniu;
+package doudizhu;
 
-//结构体
-message BankerAndBet {
-    string BankerScore = 1;
-    string BetScore = 2;
-    string Role = 3;
+//***********************************************结构体***********************************************
+
+//斗地主结构体
+message Doudizhu {
+    int32 GameID = 1;
+    int32 RoomID = 2;
+    int32 Index = 3;//当前游戏轮数
+    int32 BankerID = 4;
+    int32 Status = 5; //游戏状态
+    int32 BombTimes = 6; //炸弹分倍数
+    GetBanker GetBanker = 7; //抢地主信息
+    SubmitCard SubmitCard = 8; //当前出牌玩家出牌信息
+    UserResult Result = 9; //玩家结算信息
+    CountDown CountDown = 10; //倒计时信息
+    repeated string DuzhuCardList = 11; //地主牌
+    repeated UserInfo UserInfo = 12; //玩家牌组信息
 }
 
-message UserCard {
-    string CardType = 1;
-    repeated string CardList = 2;
+//倒计时结构体
+message CountDown {
+    int64 ServerTime = 1; //服务器时间
+    int32 Count = 2; //倒计时秒数
 }
 
-message NiuniuUserResult{
+//抢地主结构体
+message GetBanker {
     int32 UserID = 1;
-    BankerAndBet Info =2;
-    UserCard Cards = 3;
-    string Score = 4;
-    int32 Status = 5;
+    int32 Type = 2; //抢地主类型 1叫地主 2抢地主
 }
 
-message NiuniuRoomResult {
-    int32 RoomID = 1;
-    int32 Status = 2;
-    repeated NiuniuUserResult List= 3;
-    repeated int32 Ids = 4;
+//玩家牌组结构体
+message UserInfo {
+    int32 GameID = 1;
+    int32 UserID = 2;
+    int32 CardRemainNumber = 3; //玩家剩余牌数量
+    repeated string LastCard = 4; //上次出牌
+    repeated string CardList = 5; //玩家总牌组
+    repeated string CardRemain = 6; //玩家剩余牌组
 }
 
-message GameResultListReply {
-    repeated NiuniuRoomResult List= 1;
-}
-
-message NiuniuRequest{
-    int32 RoomID = 1;
-}
-
-message NiuniuReply {
-    int32 Status = 1;
-    NiuniuRoomResult Result  =2;
-}
-
-message GetBanker{
+//玩家结算结构体
+message UserResult {
     int32 UserID = 1;
-    int32 Key = 2;
+    int32 Score = 2;
+    repeated string CardRemain = 3; //玩家剩余牌组
 }
 
-//请求
-message GetBankerRequest{
-    int32 Key = 1;
-}
-
-message SetBetRequest{
-    int32 Key = 1;
+//***********************************************请求***********************************************
+message GetBankerRequest {
+    int32 GameID = 1;
+    int32 GetBanker = 2; //1抢 2不抢
 }
 
 message SubmitCardRequest {
-    
-}
-
-message GameResultListRequest {
-    int32 RoomID = 1;
-} 
-
-//回应
-message DefaultReply{
-    int32 Result = 1;
-}
-
-
-//广播
-message NiuniuGameStart {
-    int32 Role = 1;
+    int32 GameID = 1;
     repeated string CardList = 2;
-    int32 BankerID = 3;
-    int32 UserID = 4;
-    int32 RoomStatus = 5;
-    int32 GameStatus = 6;
 }
 
-message BeBanker{
-    int32 BankerID = 1;
-    int32 GameStatus = 2;
-    repeated GetBanker List = 3;
-    repeated int32 Ids = 4;
+//***********************************************回应***********************************************
+
+//通用回复
+message DefaultReply {
+    int32 GameID = 1;
+    int32 Result = 2; //1 成功 //失败返回通用报错结构
+    int32 Code = 3;
 }
 
-message AllBet{
-    int32 Status = 1;
+//***********************************************广播***********************************************
+
+//开始游戏广播
+message DDZGameStart {
+    int32 GameID = 1;
     int32 UserID = 2;
-    string Card = 3;
+    int32 Status = 3;
+    CountDown CountDown = 4;
+    int32 GetBankerID = 5;//抢庄人id
+    repeated string CardList = 6; //玩家总牌组
 }
 
-message SetBet{
-    int32 UserID = 1;
-    int32 Key = 2;
+//抢庄叫庄广播
+message BeBanker {
+    int32 GameID = 1;
+    int32 BankerStatus = 2; //1 为重新发牌 2 为继续抢庄 3抢庄结束 选出地主
+    int32 BankerID = 3; //庄家id 抢庄结束时使用
+    int32 NextID = 4; //下一个操作的玩家id 继续抢庄时使用
+    int32 UserID = 5; //当前操作玩家id
+    int32 BankerType = 6; //1 叫庄 2抢庄
+    CountDown CountDown = 7;
+    repeated string DuzhuCardList = 8; //地主牌 抢庄结束时使用
+    repeated string DizhuCardList = 9;
+    repeated int32 Ids = 10;
+}
+
+//玩家出牌广播
+message SubmitCard {
+    int32 GameID = 1;
+    int32 UserID = 2;
+    int32 SubmitID = 3;
+    int32 CardType = 4; //牌组类型
+    int32 NextID = 5;
+    int32 CardRemainNumber = 6; //玩家剩余牌数
+    int32 BombTimes = 7; //倍数
+    int32 BombScore = 8; //倍数
+    int32 Status = 9;//游戏状态
+    CountDown CountDown = 10;
+    repeated string CardList = 11;
+    repeated string CardRemain = 12; //玩家剩余牌组
+    repeated int32 Ids = 13;
+}
+
+//结算广播
+message DDZGameResult {
+    int32 GameID = 1;
+    repeated UserResult ResultList = 2;
     repeated int32 Ids = 3;
 }
 
-message GameReady{
-    int32 UserID = 1;
-    repeated int32 Ids = 2;
-}
-
-message CountDown{
-    int32 Time = 1;
-    int32 Status = 2;
-    repeated int32 Ids = 3;
-}
-
-service NiuniuSrv {
-    rpc GetBanker(GetBankerRequest) returns (DefaultReply) {}
-    rpc SetBet(SetBetRequest) returns (DefaultReply) {}
-    rpc Submit(SubmitCardRequest) returns (DefaultReply) {}
-    rpc GameResultList(GameResultListRequest) returns (GameResultListReply) {}
-    rpc NiuniuRecovery(NiuniuRequest) returns (NiuniuReply) {}
+service DoudizhuSrv {
+    rpc GetBanker (GetBankerRequest) returns (DefaultReply) {
+    }
+    rpc SubmitCard (SubmitCardRequest) returns (DefaultReply) {
+    }
 }

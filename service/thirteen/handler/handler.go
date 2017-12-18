@@ -16,22 +16,26 @@ import (
 
 	"github.com/micro/go-micro/broker"
 	"github.com/micro/go-micro/server"
+	"github.com/yuin/gopher-lua"
 )
 
 type ThirteenSrv struct {
 	server server.Server
 	broker broker.Broker
+	count  int32
 }
 
 func RoomLockKey(pwd string) string {
 	return fmt.Sprintf("playcards.room.op.lock:%s", pwd)
 }
 
-func NewHandler(s server.Server, gt *gsync.GlobalTimer) *ThirteenSrv {
+func NewHandler(s server.Server, gt *gsync.GlobalTimer, gl *lua.LState) *ThirteenSrv {
 	b := &ThirteenSrv{
 		server: s,
 		broker: s.Options().Broker,
 	}
+	thirteen.InitGoLua(gl)
+
 	b.update(gt)
 	return b
 }
@@ -39,8 +43,7 @@ func NewHandler(s server.Server, gt *gsync.GlobalTimer) *ThirteenSrv {
 func (ts *ThirteenSrv) update(gt *gsync.GlobalTimer) {
 	lock := "playcards.thirteen.update.lock"
 	f := func() error {
-		//s := time.Now()
-		//log.Debug("thirteen update loop... and has %d thirteens")≤
+		ts.count ++
 		newGames := thirteen.CreateThirteen()
 		if newGames != nil {
 			for _, game := range newGames {
@@ -51,10 +54,6 @@ func (ts *ThirteenSrv) update(gt *gsync.GlobalTimer) {
 				}
 			}
 		}
-		//e := time.Now().Sub(s).Nanoseconds()/100000
-		//log.Info("ThirteenTimesCreate:%d\n", e)
-
-		//s = time.Now()
 		games := thirteen.UpdateGame()
 		if games != nil {
 			for _, game := range games {
@@ -63,17 +62,13 @@ func (ts *ThirteenSrv) update(gt *gsync.GlobalTimer) {
 				topic.Publish(ts.broker, msg, TopicThirteenGameResult)
 			}
 		}
-		//e = time.Now().Sub(s).Nanoseconds()/100000
-		//log.Info("ThirteenTimesUpdate:%d\n", e)
-
-		//s = time.Now()
-		err := thirteen.CleanGame()
-		if err != nil {
-			log.Err("clean game loop err:%v", err)
+		if ts.count == 3 {
+			err := thirteen.CleanGame()
+			if err != nil {
+				log.Err("clean game loop err:%v", err)
+			}
+			ts.count = 0
 		}
-		//e = time.Now().Sub(s).Nanoseconds()/100000
-		//log.Info("ThirteenTimesClean:%d\n", e)
-
 		return nil
 	}
 	gt.Register(lock, time.Millisecond*enum.LoopTime, f)
@@ -81,6 +76,7 @@ func (ts *ThirteenSrv) update(gt *gsync.GlobalTimer) {
 
 func (ts *ThirteenSrv) SubmitCard(ctx context.Context, req *pbt.SubmitCard,
 	rsp *pbt.ThirteenReply) error {
+	//s := time.Now()
 	u, err := auth.GetUser(ctx)
 	if err != nil {
 		return err
@@ -113,7 +109,8 @@ func (ts *ThirteenSrv) SubmitCard(ctx context.Context, req *pbt.SubmitCard,
 	//if len(pwd) == 0{
 	//	return
 	//}
-
+	//e := time.Now().Sub(s).Nanoseconds()/1000000
+	//log.Info("ThirteenOpSubmitCard:%d\n", e)
 	return nil
 }
 

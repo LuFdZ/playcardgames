@@ -60,7 +60,7 @@ CREATE TABLE `journals` (
   `amount_before` BIGINT      NOT NULL DEFAULT '0',
   `amount_after`  BIGINT      NOT NULL DEFAULT '0',
   `type`          INT         NOT NULL,
-  `foreign`       BIGINT      NOT NULL DEFAULT '0',
+  `foreign`       VARCHAR(64) NOT NULL DEFAULT '0',
   `channel`       VARCHAR(64) NOT NULL,
   `created_at`    DATETIME    NOT NULL,
   `updated_at`    DATETIME    NOT NULL,
@@ -114,7 +114,7 @@ CREATE TABLE `thirteens` (
   `room_id`           INT           NOT NULL DEFAULT '0',
   `banker_id`         INT           NOT NULL DEFAULT '0',
   `index`             INT           NOT NULL DEFAULT '0',
-  `user_cards`        VARCHAR(600) NOT NULL DEFAULT '',
+  `user_cards`        VARCHAR(600)  NOT NULL DEFAULT '',
   `user_submit_cards` VARCHAR(600)  NOT NULL DEFAULT '',
   `game_results`      VARCHAR(1500) NOT NULL DEFAULT '',
   `status`            INT           NOT NULL DEFAULT '0',
@@ -212,7 +212,7 @@ CREATE TABLE `niunius` (
   `index`        INT           NOT NULL DEFAULT '0',
   `banker_type`  INT           NOT NULL DEFAULT '0',
   `banker_id`    INT           NOT NULL DEFAULT '0',
-  `user_cards`   VARCHAR(600) NOT NULL DEFAULT '',
+  `user_cards`   VARCHAR(600)  NOT NULL DEFAULT '',
   `game_results` VARCHAR(1500) NOT NULL DEFAULT '',
   `status`       INT           NOT NULL DEFAULT '0',
   `op_date_at`   DATETIME      NOT NULL,
@@ -364,7 +364,7 @@ CREATE TABLE `examines` (
 INSERT INTO users VALUES
   (0, "admin@xnhd", "67bad3e758b4d324381586f209fee08bca0701396a606f12029425f31cd29ce8", "YWRtaW5AeG5oZA==", "", "", "",
       0, "", "", 0, now(), now(), now(), 2097151, 1, "", 0, 0, "", "", "", "", "", "", "", "");
-INSERT INTO balances VALUES (0,100000, 0, 0, 1, 100000000, 100000000, now(), now());
-INSERT INTO balances VALUES (0,100000, 0, 0, 2, 100000000, 100000000, now(), now());
+INSERT INTO balances VALUES (0, 100000, 0, 0, 1, 100000000, 100000000, now(), now());
+INSERT INTO balances VALUES (0, 100000, 0, 0, 2, 100000000, 100000000, now(), now());
 INSERT INTO configs VALUES (0, "", "", "", 100001, "1", 1, "全局默认充值开关", now(), now());
 INSERT INTO configs VALUES (0, "", "", "", 110001, "100", 1, "全局默认消费开关", now(), now());

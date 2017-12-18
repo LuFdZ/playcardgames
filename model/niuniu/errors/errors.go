@@ -18,3 +18,7 @@ var (
 	ErrSubmitCardDone = errors.Conflict(60013, "不是开牌阶段！")
 	ErrParam          = errors.Conflict(60014, "参数不符合要求！")
 )
+
+var (
+	ErrGoLua = errors.Conflict(60015, "go-lua 操作异常！")
+)

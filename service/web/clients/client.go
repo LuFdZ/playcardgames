@@ -36,8 +36,6 @@ func NewClient(token string, u *mdu.User, ws *websocket.Conn) *Client {
 
 	Lock()
 	defer Unlock()
-
-
 	cs, ok := clients[u.UserID]
 	if !ok {
 		cs = make(map[*Client]bool)

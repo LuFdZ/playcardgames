@@ -124,8 +124,10 @@ message GetUserDayActiveRsply {
     page.PageReply PageReply = 2;
 }
 
-message AlineConutRsply {
-    int32 Count = 1;
+message ConutRsply {
+    int32 OnlineCount = 1;
+    int32 ActiveCount = 2;
+    int32 NewCount = 3;
 }
 
 message SetLocationRequest {
@@ -159,8 +161,10 @@ service UserSrv {
     }
     rpc DayActiveUserList (GetUserDayActiveRequest) returns (GetUserDayActiveRsply) {
     }
-    rpc GetUserOnlineCount (User) returns (AlineConutRsply) {
+    rpc GetUserCount (User) returns (ConutRsply) {
     }
     rpc SetLocation (SetLocationRequest) returns (UserRsply) {
+    }
+    rpc RefreshUserCount (User) returns (UserRsply) {
     }
 }

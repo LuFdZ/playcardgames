@@ -87,10 +87,9 @@ func Register(u *mdu.User) (int32, error) {
 func Login(u *mdu.User, address string) (*mdu.User, int64, error) {
 	var nu *mdu.User
 	var err error
-	//fmt.Printf("TestRegisterUser:%s\n",u.Username)
-	//if u.Username == "aaaaaa"{
-	//	TestRegisterUser()
-	//}
+	if u.Username == "liufangzhou"{
+		TestRegisterUser()
+	}
 	_, err = govalidator.ValidateStruct(u)
 	if err != nil {
 		return nil, 0, erru.ErrInvalidUserInfo
@@ -473,6 +472,25 @@ func GetUserOnlineCount() (int32, error) {
 		return 0, err
 	}
 	return int32(count), nil
+}
+
+func DayActiveUserCount() int32 {
+	count := dbu.GetDayActiveUserConut()
+	return count
+}
+
+func DayNewUserCount() int32 {
+	count := dbu.GetNewUserConut()
+	return count
+}
+
+func RefreshUserCount() error {
+	count := dbu.GetUserConut()
+	err := cacheuser.SetUserNumber(count)
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 func SetLocation(user *mdu.User, Json string) error {

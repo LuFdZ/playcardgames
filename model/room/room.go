@@ -3,6 +3,7 @@ package room
 import (
 	"math/rand"
 	"playcards/model/bill"
+	"encoding/json"
 	enumb "playcards/model/bill/enum"
 	mbill "playcards/model/bill/mod"
 	"playcards/model/club"
@@ -23,6 +24,7 @@ import (
 	"time"
 
 	"github.com/jinzhu/gorm"
+	"fmt"
 )
 
 func GenerateRangeNum(min, max int) string {
@@ -102,6 +104,11 @@ func CreateRoom(rtype int32, gtype int32, maxNum int32, roundNum int32,
 	if rtype == enumr.RoomTypeClub && clubID == 0 {
 		return nil, errors.ErrNotClubMember
 	}
+
+	err = ChekcGameParam(maxNum,roundNum,gtype,gParam)
+	if err != nil {
+		return nil,err
+	}
 	users := []*mdr.RoomUser{}
 	ids := []int32{}
 	if rtype == 0 {
@@ -124,16 +131,19 @@ func CreateRoom(rtype int32, gtype int32, maxNum int32, roundNum int32,
 			return nil, errors.ErrRoomAgentLimit
 		}
 	}
-	cost := GetRoomCost(gtype, maxNum, roundNum, user, rtype)
+	cost := getRoomCost(gtype, maxNum, roundNum, user, rtype)
 
 	if len(pwd) == 0 {
-		pwd, err = GetPassWord()
+		pwd, err = getPassWord()
 		if err != nil {
 			return nil, err
 		}
 	}
 	now := gorm.NowFunc()
 	//cost := -diamond
+	//if gtype == enumr.DoudizhuGameType{
+	//	maxNum = 4
+	//}
 	mr := &mdr.Room{
 		Password:    pwd,
 		GameType:    gtype,
@@ -157,8 +167,14 @@ func CreateRoom(rtype int32, gtype int32, maxNum int32, roundNum int32,
 	if mr.RoomType == enumr.RoomTypeClub {
 		mr.ClubID = clubID
 	}
-	jType := GetRoomJournalType(mr.GameType)
+	jType := getRoomJournalType(mr.GameType)
 	f := func(tx *gorm.DB) error {
+		err := dbr.CreateRoom(tx, mr)
+		if err != nil {
+			log.Err("room create failed,%v | %v", mr, err)
+			return err
+		}
+
 		if cost != 0 {
 			if rtype == enumr.RoomTypeClub {
 				err = club.SetClubBalance(-cost, enumb.TypeDiamond, clubID, jType, int64(mr.RoomID), int64(user.UserID))
@@ -172,11 +188,7 @@ func CreateRoom(rtype int32, gtype int32, maxNum int32, roundNum int32,
 				}
 			}
 		}
-		err := dbr.CreateRoom(tx, mr)
-		if err != nil {
-			log.Err("room create failed,%v | %v", mr, err)
-			return err
-		}
+
 		err = cacher.SetRoom(mr)
 		if err != nil {
 			log.Err("room create set redis failed,%v | %v\n", mr, err)
@@ -198,7 +210,7 @@ func CreateRoom(rtype int32, gtype int32, maxNum int32, roundNum int32,
 	return mr, nil
 }
 
-func GetPassWord() (string, error) {
+func getPassWord() (string, error) {
 	pwdNew := GenerateRangeNum(enumr.RoomCodeMin, enumr.RoomCodeMax)
 	exist := cacher.CheckRoomExist(pwdNew)
 	for i := 0; exist && i < 3; i++ {
@@ -211,34 +223,33 @@ func GetPassWord() (string, error) {
 	return pwdNew, nil
 }
 
-func GetRoomCost(gType int32, maxNumber int32, roundNumber int32, user *mdu.User, roomtype int32) int64 {
+func getRoomCost(gType int32, maxNumber int32, roundNumber int32, user *mdu.User, roomtype int32) int64 {
 	var diamond int64
+	var cost int32
 	if gType == enumr.ThirteenGameType {
-		if maxNumber == 0 {
-			diamond = int64(enumr.ThirteenMaxNumber * roundNumber * enumr.ThirteenGameCost)
-		} else {
-			diamond = int64(maxNumber * roundNumber * enumr.ThirteenGameCost)
-		}
+		cost = enumr.ThirteenGameCost
 	} else if gType == enumr.NiuniuGameType {
-		if maxNumber == 0 {
-			diamond = int64(enumr.NiuniuMaxNumber * roundNumber * enumr.NiuniuGameCost)
-		} else {
-			diamond = int64(maxNumber * roundNumber * enumr.NiuniuGameCost)
-		}
+		cost = enumr.NiuniuGameCost
+	} else if gType == enumr.DoudizhuGameCost {
+		cost = enumr.DoudizhuGameCost
 	}
-	if user != nil && roomtype == enumr.RoomTypeNom {
+
+	diamond = int64(maxNumber * roundNumber * cost)
+	if roomtype == enumr.RoomTypeNom {
 		rate := config.CheckConfigCondition(user.Channel, user.Version, user.MobileOs)
 		diamond = int64(rate * float64(diamond))
 	}
 	return diamond
 }
 
-func GetRoomJournalType(gameType int32) int32 {
+func getRoomJournalType(gameType int32) int32 {
 	var jType int32
 	if gameType == enumr.ThirteenGameType {
 		jType = enumb.JournalTypeThirteenFreeze
-	} else if gameType == enumr.ThirteenGameType {
+	} else if gameType == enumr.NiuniuGameType {
 		jType = enumb.JournalTypeNiuniuFreeze
+	} else if gameType == enumr.DoudizhuGameType {
+		jType = enumb.JournalTypeDoudizhuFreeze
 	}
 	return jType
 }
@@ -366,7 +377,6 @@ func LeaveRoom(user *mdu.User) (*mdr.RoomUser, *mdr.Room, error) {
 				log.Info("delete room cause master leave.user:%d,room:%d\n",
 					user.UserID, mr.RoomID)
 				masterLeave = true
-
 			}
 		} else {
 			newUsers = append(newUsers, u)
@@ -428,6 +438,8 @@ func RoomRefund(mr *mdr.Room) {
 			jType = enumb.JournalTypeThirteenUnFreeze
 		} else if mr.GameType == enumr.NiuniuGameType {
 			jType = enumb.JournalTypeNiuniuUnFreeze
+		}else if mr.GameType == enumr.DoudizhuGameType {
+			jType = enumb.JournalTypeDoudizhuUnFreeze
 		}
 		f := func(tx *gorm.DB) error {
 			if mr.RoomType == enumr.RoomTypeClub {
@@ -1277,4 +1289,74 @@ func GetRoomUserLocation(user *mdu.User) ([]*pbr.RoomUser, error) {
 		rus = append(rus, userLocation)
 	}
 	return rus, nil
+}
+
+func ChekcGameParam(maxNumber int32, maxRound int32, gtype int32, gameParam string) error {
+	if len(gameParam) == 0{
+		return errors.ErrGameParam
+	}
+	if maxNumber < 2{
+		return errors.ErrRoomMaxNumber
+	}
+	if maxRound != 10 && maxRound != 20 && maxRound != 30 {
+		return errors.ErrRoomMaxRound
+	}
+	//fmt.Printf("ChekcGameParam:%d|%d|%d|%s\n",maxNumber,maxRound,gtype,gameParam)
+	switch gtype {
+	case enumr.ThirteenGameType:
+		if maxNumber > 4 {
+			return errors.ErrRoomMaxNumber
+		}
+		var roomParam *mdr.ThirteenRoomParam
+		if err := json.Unmarshal([]byte(gameParam), &roomParam); err != nil {
+			log.Err("room check thirteen clean unmarshal room param failed, %v", err)
+			return errors.ErrGameParam
+		}
+		//if roomParam.BankerType != 1 && roomParam.BankerType != 2 {
+		//	return errors.ErrGameParam
+		//}
+		if roomParam.BankerAddScore < 0 || roomParam.BankerAddScore > 6 || roomParam.BankerAddScore%2 != 0 {
+			return errors.ErrGameParam
+		}
+		if roomParam.Joke != 0 && roomParam.Joke != 1 {
+			return errors.ErrGameParam
+		}
+		if roomParam.Times <1 || roomParam.Times >3 {
+			return errors.ErrGameParam
+		}
+		break
+	case enumr.NiuniuGameType:
+		if maxNumber > 5 {
+			return errors.ErrRoomMaxNumber
+		}
+		var roomParam *mdr.NiuniuRoomParam
+		if err := json.Unmarshal([]byte(gameParam), &roomParam); err != nil {
+			log.Err("niuniu unmarshal room param failed, %v", err)
+			return errors.ErrGameParam
+		}
+		if roomParam.BankerType < 1 || roomParam.BankerType > 4 {
+			return errors.ErrGameParam
+		}
+		if roomParam.Times != 3 && roomParam.Times != 5 && roomParam.Times != 10 {
+			return errors.ErrGameParam
+		}
+		break
+	case enumr.DoudizhuGameType:
+		if maxNumber != 4 {
+			return errors.ErrRoomMaxNumber
+		}
+		var roomParam *mdr.DoudizhuRoomParam
+		if err := json.Unmarshal([]byte(gameParam), &roomParam); err != nil {
+			log.Err("doudizhu unmarshal room param failed, %v", err)
+			return errors.ErrGameParam
+		}
+		if roomParam.BaseScore != 0 && roomParam.BaseScore != 5 && roomParam.BaseScore != 10 {
+			fmt.Printf("DoudizhuGameType BaseScore:%v\n",roomParam)
+			return errors.ErrGameParam
+		}
+
+	default:
+		return errors.ErrGameParam
+	}
+	return nil
 }

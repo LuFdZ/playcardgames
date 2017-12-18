@@ -120,6 +120,31 @@ class Client(object):
         })
         return ul
 
+    def SubscribeRoom(self, Password):
+        self.StreamSend("SubscribeRoomMessage", Password)
+
+    def SubscribeThirteen(self):
+        self.StreamSend("SubscribeThirteenMessage", {})
+
+    def SubscribeBill(self):
+        self.StreamSend("SubscribeBillMessage", {})
+
+    def SubscribeNiu(self):
+        self.StreamSend("SubscribeNiuniuMessage", {})
+
+    def SubscribeClub(self):
+        self.StreamSend("SubscribeClubMessage", {})
+
+    def UnSubscribeClub(self):
+        self.StreamSend("UnSubscribeClubMessage", {})
+
+    def ClinetHearbeat(self):
+        self.StreamSend("ClinetHearbeat", {})
+
+    """
+    房间相关操作
+    """
+
     def CreateTRoom(self, roomType, maxNumber, roundNumber):
         ul = self.Request("/room/roomSrv/CreateRoom", {
             "RoundNumber": roundNumber,
@@ -147,38 +172,119 @@ class Client(object):
         })
         return ul
 
-    def OutReady(self, Password):
-        ul = self.Request("/room/roomSrv/OutReady", {
-            "Password": Password
+    def SubmitCardT(self):
+        ul = self.Request("/thirteen/thirteenSrv/SubmitCard", {
+            "Head": ['2_8', '2_5', '2_3'],
+            "Middle": ['3_13', '1_13', '3_12', '3_11', '3_9'],
+            "Tail": ['4_14', '4_5', '1_4', '4_3', '4_2']
         })
         return ul
 
-    def SubscribeRoom(self, Password):
-        self.StreamSend("SubscribeRoomMessage", Password)
+    def SubmitCardT2(self):
+        ul = self.Request("/thirteen/thirteenSrv/SubmitCard", {
+            "Head": ['4_14', '4_13', '2_12'],
+            "Middle": ['4_9', '3_9', '3_7', '2_7', '4_3'],
+            "Tail": ['1_6', '2_6', '1_6', '1_4', '1_4']
+        })
+        return ul
 
-    def SubscribeThirteen(self):
-        self.StreamSend("SubscribeThirteenMessage", {})
+    def GiveUpGame(self, pwd):
+        ul = self.Request("/room/roomSrv/GiveUpGame", {
+            "Password": pwd,
+        })
+        return ul
 
-    def SubscribeBill(self):
-        self.StreamSend("SubscribeBillMessage", {})
+    def GiveUpVote(self, pwd, status):
+        ul = self.Request("/room/roomSrv/GiveUpVote", {
+            "Password": pwd,
+            "AgreeOrNot": status,
+        })
+        return ul
 
-    def SubscribeNiu(self):
-        self.StreamSend("SubscribeNiuniuMessage", {})
+    def CreateFeedback(self):
+        ul = self.Request("/room/roomSrv/CreateFeedback", {
+            "UserID": 100000,
+            "Channel": "test",
+            "Version": "1.0.1",
+            "Content": "测试",
+            "MobileModel": "123123123",
+            "MobileNetWork": "123123123",
+            "MobileOs": "1501655847",
+            "LoginIP": "1601655847",
+        })
+        return ul
 
-    def SubscribeClub(self):
-        self.StreamSend("SubscribeClubMessage", {})
+    def Renewal(self, pwd):
+        ul = self.Request("/room/roomSrv/Renewal", {
+            "Password": pwd,
+        })
+        return ul
 
-    def UnSubscribeClub(self):
-        self.StreamSend("UnSubscribeClubMessage", {})
+    def PageFeedbackList(self, page, pagesize):
+        ul = self.Request("/room/roomSrv/PageFeedbackList", {
+            "Page": {
+                "Page": page,
+                "PageSize": pagesize,
+                "Time": {
+                    "Start": 0,
+                    "End": 0,
+                },
+                "Sum": False,
+            },
+            "Feedback": {}
+        })
+        return ul
 
-    def ClinetHearbeat(self):
-        self.StreamSend("ClinetHearbeat", {})
+    def RoomResultList(self, gtype):
+        ul = self.Request("/room/roomSrv/RoomResultList", {
+            "GameType": gtype,
+        })
+        return ul
+
+    def GameResultList(self, rid):
+        ul = self.Request("/thirteen/thirteenSrv/GameResultList", {
+            "RoomID": rid,
+        })
+        return ul
+
+    def AgentRoomList(self, page, gametyp):
+        ul = self.Request("/room/roomSrv/GetAgentRoomList", {
+            "Page": page,
+            "GameType": gametyp,
+
+        })
+        return ul
+
+    def CheckRoomExist(self):
+        ul = self.Request("/room/roomSrv/CheckRoomExist", {
+        })
+        return ul
+
+    def Shock(self, uid):
+        ul = self.Request("/room/roomSrv/Shock", {
+            "UserID": uid,
+        })
+        return ul
+
+
+    """
+    充值相关操作
+    """
 
     def Recharge(self, uid, diamond, orderCode):
         ul = self.Request("/bill/billSrv/Recharge", {
             "UserID": uid,
             "Diamond": diamond,
             "OrderID": orderCode,
+        })
+        return ul
+
+    """
+    用户相关操作
+    """
+
+    def RefreshUser(self):
+        ul = self.Request("/user/UserSrv/RefreshUserCount", {
         })
         return ul
 
@@ -210,39 +316,13 @@ class Client(object):
         })
         return ul
 
-    def SubmitCardT(self):
-        ul = self.Request("/thirteen/thirteenSrv/SubmitCard", {
-            "Head": ['2_8', '2_5', '2_3'],
-            "Middle": ['3_13', '1_13', '3_12', '3_11', '3_9'],
-            "Tail": ['4_14', '4_5', '1_4', '4_3', '4_2']
-        })
-        return ul
-
-    def SubmitCardT2(self):
-        ul = self.Request("/thirteen/thirteenSrv/SubmitCard", {
-            "Head": ['4_14', '4_13', '2_12'],
-            "Middle": ['4_9', '3_9', '3_7', '2_7', '4_3'],
-            "Tail": ['1_6', '2_6', '1_6', '1_4', '1_4']
-        })
-        return ul
 
     def TestClean(self):
         ul = self.Request("/room/roomSrv/TestClean", {
         })
         return ul
 
-    def GiveUpGame(self, pwd):
-        ul = self.Request("/room/roomSrv/GiveUpGame", {
-            "Password": pwd,
-        })
-        return ul
 
-    def GiveUpVote(self, pwd, status):
-        ul = self.Request("/room/roomSrv/GiveUpVote", {
-            "Password": pwd,
-            "AgreeOrNot": status,
-        })
-        return ul
 
     def GetNotice(self, version):
         ul = self.Request("/notice/NoticeSrv/GetNotice", {
@@ -277,33 +357,7 @@ class Client(object):
         })
         return ul
 
-    def CreateFeedback(self):
-        ul = self.Request("/room/roomSrv/CreateFeedback", {
-            "UserID": 100000,
-            "Channel": "test",
-            "Version": "1.0.1",
-            "Content": "测试",
-            "MobileModel": "123123123",
-            "MobileNetWork": "123123123",
-            "MobileOs": "1501655847",
-            "LoginIP": "1601655847",
-        })
-        return ul
 
-    def PageFeedbackList(self, page, pagesize):
-        ul = self.Request("/room/roomSrv/PageFeedbackList", {
-            "Page": {
-                "Page": page,
-                "PageSize": pagesize,
-                "Time": {
-                    "Start": 0,
-                    "End": 0,
-                },
-                "Sum": False,
-            },
-            "Feedback": {}
-        })
-        return ul
 
     def PageNoticeList(self, page, pagesize):
         ul = self.Request("/notice/noticeSrv/PageNoticeList", {
@@ -320,23 +374,6 @@ class Client(object):
         })
         return ul
 
-    def Renewal(self, pwd):
-        ul = self.Request("/room/roomSrv/Renewal", {
-            "Password": pwd,
-        })
-        return ul
-
-    def RoomResultList(self, gtype):
-        ul = self.Request("/room/roomSrv/RoomResultList", {
-            "GameType": gtype,
-        })
-        return ul
-
-    def GameResultList(self, rid):
-        ul = self.Request("/thirteen/thirteenSrv/GameResultList", {
-            "RoomID": rid,
-        })
-        return ul
 
     def Share(self):
         ul = self.Request("/activity/ActivitySrv/Share", {
@@ -349,16 +386,7 @@ class Client(object):
         })
         return ul
 
-    def CheckRoomExist(self):
-        ul = self.Request("/room/roomSrv/CheckRoomExist", {
-        })
-        return ul
 
-    def Shock(self, uid):
-        ul = self.Request("/room/roomSrv/Shock", {
-            "UserID": uid,
-        })
-        return ul
 
     def ThirteenRecovery(self, rid):
         ul = self.Request("/thirteen/thirteenSrv/ThirteenRecovery", {
@@ -417,14 +445,6 @@ class Client(object):
 
     def InviteUserInfo(self):
         ul = self.Request("/activity/ActivitySrv/InviteUserInfo", {
-        })
-        return ul
-
-    def AgentRoomList(self, page, gametyp):
-        ul = self.Request("/room/roomSrv/GetAgentRoomList", {
-            "Page": page,
-            "GameType": gametyp,
-
         })
         return ul
 
@@ -574,5 +594,32 @@ class Client(object):
             "Type": 1,
             "OriginID": originID,
             "TargetID": targetID,
+        })
+        return ul
+
+    """
+    斗地主相关操作
+    """
+    def CreateDRoom(self, roomType, maxNumber, roundNumber):
+        ul = self.Request("/room/roomSrv/CreateRoom", {
+            "RoundNumber": roundNumber,
+            "MaxNumber": maxNumber,
+            "GameType": 1003,
+            "RoomType": roomType,
+            "GameParam": "{\"BaseScore\":0}"
+        })
+        return ul
+
+    def GetBanker(self,gid,type ):
+        ul = self.Request("/doudizhu/doudizhuSrv/GetBanker", {
+            "GameID": gid,
+            "GetBanker": type,
+        })
+        return ul
+
+    def SubmitCard(self,gid):
+        ul = self.Request("/room/roomSrv/CreateRoom", {
+            "GameID": gid,
+            "CardList": ['4_14'],
         })
         return ul

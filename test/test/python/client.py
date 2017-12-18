@@ -186,7 +186,7 @@ class Client(object):
             "MaxNumber": maxNumber,
             "GameType": 1001,
             "RoomType": roomType,
-            "GameParam": "{\"BankerAddScore\":2,\"Time\":30,\"Joke\":0,\"Times\":2}"
+            "GameParam": "{\"BankerAddScore\":2,\"Time\":30,\"Joke\":0,\"Times\":2,\"BankerType\":1}"
         })
         return ul
 

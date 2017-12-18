@@ -94,13 +94,13 @@ type ThirteenRecovery struct {
 	GameResult GameResultList
 }
 
-type ThirteenRoomParam struct {
-	BankerAddScore int32
-	BankerType     int32
-	Time           int32
-	Joke           int32
-	Times          int32
-}
+//type ThirteenRoomParam struct {
+//	BankerAddScore int32
+//	BankerType     int32
+//	Time           int32
+//	Joke           int32
+//	Times          int32
+//}
 
 func SubmitCardFromProto(sc *pbt.SubmitCard, uid int32) *SubmitCard {
 	return &SubmitCard{

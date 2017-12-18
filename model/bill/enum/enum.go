@@ -1,18 +1,20 @@
 package enum
 
 const (
-	JournalTypeInitBalance = iota + 1
-	JournalTypeRecharge
-	JournalTypeInvite
-	JournalTypeInvited
-	JournalTypeShare
-	JournalTypeThirteen
-	JournalTypeNiuniu
-	JournalTypeThirteenFreeze
-	JournalTypeThirteenUnFreeze
-	JournalTypeNiuniuFreeze
-	JournalTypeNiuniuUnFreeze
-	JournalTypeClubRecharge
+	JournalTypeInitBalance      = 1 //iota + 1
+	JournalTypeRecharge         = 2
+	JournalTypeInvite           = 3
+	JournalTypeInvited          = 4
+	JournalTypeShare            = 5
+	JournalTypeThirteen         = 6
+	JournalTypeNiuniu           = 7
+	JournalTypeThirteenFreeze   = 8
+	JournalTypeThirteenUnFreeze = 9
+	JournalTypeNiuniuFreeze     = 10
+	JournalTypeNiuniuUnFreeze   = 11
+	JournalTypeClubRecharge     = 12
+	JournalTypeDoudizhuFreeze   = 10
+	JournalTypeDoudizhuUnFreeze = 11
 )
 
 const (
@@ -21,8 +23,8 @@ const (
 )
 
 const (
-	TypeGold = 1
-	TypeDiamond =2
+	TypeGold    = 1
+	TypeDiamond = 2
 )
 
 const (

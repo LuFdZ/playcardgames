@@ -12,7 +12,6 @@ import (
 	"github.com/micro/go-micro/broker"
 	"github.com/micro/go-micro/server"
 
-	"strconv"
 
 	"golang.org/x/net/context"
 )
@@ -86,13 +85,13 @@ func (b *BillSrv) Recharge(ctx context.Context, req *pbbill.RechargeRequest,
 	rsp.Result = 2
 	rsp.Code = 101
 	u := gctx.GetUser(ctx)
-	orderID, err := strconv.ParseInt(req.OrderID, 10, 64)
-	if err != nil {
-		rsp.Code = 102
-		return err
-	}
+	//orderID, err := strconv.ParseInt(req.OrderID, 10, 64)
+	//if err != nil {
+	//	rsp.Code = 102
+	//	return err
+	//}
 	res, ub, err := bill.Recharge(req.UserID, u.UserID, req.Diamond,
-		orderID, enumbill.JournalTypeRecharge, u.Channel)
+		req.OrderID, enumbill.JournalTypeRecharge, u.Channel)
 	if err != nil {
 		rsp.Code = 102
 		return err

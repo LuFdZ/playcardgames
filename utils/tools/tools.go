@@ -41,3 +41,15 @@ func Int2String(s string) (int32, error) {
 	}
 	return int32(i), nil
 }
+
+//func MergeSlice(s1 []string, s2 []string) []string {
+//	slice := make([]string, len(s1)+len(s2))
+//	copy(slice, s1)
+//	copy(slice[len(s1):], s2)
+//	return slice
+//}
+
+func MergeSlice(s1 []string, s2 []string) []string {
+	s3 := append(s1,s2...)
+	return s3
+}

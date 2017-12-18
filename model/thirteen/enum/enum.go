@@ -3,6 +3,7 @@ package enum
 const (
 	LoopTime       = 500
 	MaxRecordCount = 50
+	LogTime        = 20
 )
 
 const (
@@ -27,8 +28,7 @@ const (
 )
 
 const (
-	BankerNom = 1//当庄模式 普通上庄
-	BankerDefault = 2//当庄模式 固定上庄
+	TimesDefault = 3//当庄模式 固定上庄
 
 )
 

@@ -26,16 +26,20 @@ func UserHWXKey(openid string) string {
 	return fmt.Sprintf(cache.KeyPrefix("USERWXTOKEN:%s"), openid)
 }
 
-func UserHKeySearch() string {
-	return cache.KeyPrefix("USER:*")
-}
-
 func UserOnlineHKey() string {
 	return cache.KeyPrefix("USERONLINE")
 }
 
 func UserToken(uid int32) string {
 	return fmt.Sprintf("%d:%s", uid, uuid.NewV4().String())
+}
+
+func UserNumberHKey() string {
+	return cache.KeyPrefix("USERNUMBER")
+}
+
+func UserHKeySearch() string {
+	return cache.KeyPrefix("USER:*")
 }
 
 func UserIDFromToken(token string) (int32, error) {
@@ -343,11 +347,38 @@ func GetUserOnlineStatus(uid int32) int32 {
 
 func GetAllOnlineCount() (int32, error) {
 	key := UserOnlineHKey()
-	userNumber, err := CountUserHKeys()
-	if err != nil {
-		return 0, err
-	}
-	bc := redis.BitCount{0, int64(userNumber)}
+	//userNumber, err := CountUserHKeys()
+	//if err != nil {
+	//	return 0, err
+	//}
+	userNumber := GetUserNumber()
+	bc := redis.BitCount{0, userNumber}
 	count := cache.KV().BitCount(key, &bc).Val()
 	return int32(count), nil
+}
+
+
+func SetUserNumber(count int32) error {
+	key := UserNumberHKey()
+
+	f := func(tx *redis.Tx) error {
+		tx.Pipelined(func(p *redis.Pipeline) error {
+			tx.HSet(key, "count", count)
+			return nil
+		})
+		return nil
+	}
+
+	err := cache.KV().Watch(f, key)
+	if err != nil {
+		return errors.Internal("set user number info error", err)
+	}
+	return nil
+}
+
+func GetUserNumber() int64 {
+	key := UserNumberHKey()
+	val := cache.KV().HGet(key,"count").Val()
+	count, _ := strconv.ParseInt(val, 10, 32)
+	return count
 }
