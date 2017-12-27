@@ -20,7 +20,8 @@ type Doudizhu struct {
 	RestartTimes    int32
 	Status          int32
 	BaseScore       int32
-	BombScore       int32
+	BankerTimes     int32
+	BombTimes       int32
 	OpIndex         int32
 	WinerID         int32
 	WinerType       int32
@@ -28,6 +29,8 @@ type Doudizhu struct {
 	CreatedAt       *time.Time
 	UpdatedAt       *time.Time
 
+	PassWord            string        `gorm:"-"`
+	SearchKey           string        `gorm:"-"`
 	OpTotalIndex        int32         `gorm:"-"`
 	BankerType          int32         `gorm:"-"`
 	UserCardInfoList    []*UserCard   `gorm:"-"`
@@ -43,10 +46,9 @@ type Doudizhu struct {
 }
 
 type GetBanker struct {
-	Index  int32
-	UserID int32
-	Type   int32
-	//NextID  int32
+	Index   int32
+	UserID  int32
+	Type    int32
 	OpTimes int32
 }
 
@@ -89,11 +91,11 @@ func (ddz *Doudizhu) ResultToProto() *pbddz.DDZGameResult {
 	ur := &pbddz.DDZGameResult{}
 	for i, uci := range ddz.UserCardInfoList {
 		ur := &pbddz.UserResult{
-			UserID:uci.UserID,
-			Score:ddz.GameResultList[i].Score,
-			CardRemain:uci.CardRemain,
+			UserID:     uci.UserID,
+			Score:      ddz.GameResultList[i].Score,
+			CardRemain: uci.CardRemain,
 		}
-		urls = append(urls,ur)
+		urls = append(urls, ur)
 	}
 	ur.GameID = ddz.GameID
 	ur.ResultList = urls

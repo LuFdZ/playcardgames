@@ -11,7 +11,7 @@ import (
 )
 
 type Thirteen struct {
-	GameID          int32 `gorm:"primary_key"`
+	GameID          int32           `gorm:"primary_key"`
 	RoomID          int32
 	BankerID        int32
 	Status          int32
@@ -21,10 +21,12 @@ type Thirteen struct {
 	GameResults     string
 	CreatedAt       *time.Time
 	UpdatedAt       *time.Time
+	PassWord        string          `gorm:"-"`
 	SubmitCards     []*SubmitCard   `gorm:"-"`
 	Cards           []*GroupCard    `gorm:"-"`
 	GameLua         *lua.LState     `gorm:"-"`
 	Result          *GameResultList `gorm:"-"`
+	SearchKey       string          `gorm:"-"`
 	Ids             []int32         `gorm:"-"`
 }
 
@@ -222,6 +224,10 @@ func (t *Thirteen) AfterFind() error {
 		return err
 	}
 	err = t.UnmarshalUserSubmitCards()
+	if err != nil {
+		return err
+	}
+	err = t.UnmarshalUserCards()
 	if err != nil {
 		return err
 	}

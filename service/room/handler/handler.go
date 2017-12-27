@@ -58,12 +58,8 @@ func NewHandler(s server.Server, gt *gsync.GlobalTimer) *RoomSrv {
 
 func (rs *RoomSrv) update(gt *gsync.GlobalTimer) {
 	lock := "playcards.room.update.lock"
-	//st := time.Now()
 	f := func() error {
 		rs.count ++
-
-		//s := time.Now()
-		//log.Debug("room update loop... and has %d rooms")
 		rooms := room.ReInit()
 		for _, room := range rooms {
 			roomResults := mdr.RoomResults{
@@ -90,58 +86,36 @@ func (rs *RoomSrv) update(gt *gsync.GlobalTimer) {
 			msg.Ids = room.Ids
 			topic.Publish(rs.broker, msg, TopicRoomResult)
 		}
-		//if rs.count == enumr.LogTime {
-		//	e := time.Now().Sub(s).Nanoseconds() / 1000000
-		//	log.Info("RoomLoopTimesReInitUpdate:%d\n", e)
-		//}
 
-		giveups := room.GiveUpRoomDestroy()
-		for _, giveup := range giveups {
-			msg := giveup.GiveupGame.ToProto()
-			msg.Ids = giveup.Ids
-			topic.Publish(rs.broker, msg, TopicRoomGiveup)
-			if giveup.Status == enumr.RoomStatusGiveUp {
-				if giveup.ClubID > 0 {
-					msg := &pbr.Room{
-						RoomID: giveup.RoomID,
-						ClubID: giveup.ClubID,
+		if rs.count == 30 {
+			room.DelayRoomDestroy()
+		}
+
+		if rs.count == 60 {
+			giveups := room.GiveUpRoomDestroy()
+			for _, giveup := range giveups {
+				msg := giveup.GiveupGame.ToProto()
+				msg.Ids = giveup.Ids
+				topic.Publish(rs.broker, msg, TopicRoomGiveup)
+				if giveup.Status == enumr.RoomStatusGiveUp {
+					if giveup.ClubID > 0 {
+						msg := &pbr.Room{
+							RoomID: giveup.RoomID,
+							ClubID: giveup.ClubID,
+						}
+						topic.Publish(rs.broker, msg, TopicClubRoomFinish)
 					}
-					topic.Publish(rs.broker, msg, TopicClubRoomFinish)
 				}
 			}
 		}
 
-		if rs.count == 3 {
-			//s = time.Now()
-			room.DelayRoomDestroy()
-			//if rs.count == enumr.LogTime {
-			//	e := time.Now().Sub(s).Nanoseconds() / 1000000
-			//	log.Info("RoomLoopTimesGiveUpRoomDestroy:%d\n", e)
-			//}
+		if rs.count == 120 {
 			room.DeadRoomDestroy()
-
-			//s = time.Now()
-			RoomUserSocket := room.RoomUserStatusCheck()
-			for _, msg := range RoomUserSocket {
-				topic.Publish(rs.broker, msg, TopicRoomUserConnection)
-			}
-			//if rs.count == enumr.LogTime {
-			//	e := time.Now().Sub(s).Nanoseconds() / 1000000
-			//	log.Info("RoomLoopTimesUserStatusCheck:%d\n", e)
-			//}
-			//if rs.count == enumr.LogTime {
-			//	roomCount, _ := room.GetLiveRoomCount()
-			//	log.Info("RoomLoopTimesRoomNumber:%d\n", roomCount)
-			//}
 			rs.count = 0
 		}
 		return nil
 	}
 	gt.Register(lock, time.Millisecond*enumr.LoopTime, f)
-	//if rs.count == 1 {
-	//	e := time.Now().Sub(st).Nanoseconds() / 1000000
-	//	log.Info("RoomLoopTimesTotal:%d\n", e)
-	//}
 
 }
 
@@ -174,15 +148,6 @@ func (rs *RoomSrv) CreateRoom(ctx context.Context, req *pbr.Room,
 	msg.UserID = u.UserID
 	msg.CreateOrEnter = enumr.CreateRoom
 	topic.Publish(rs.broker, msg, TopicRoomCreate)
-	//if r.RoomType == enumr.RoomTypeAgent {
-	//	balance, err := bill.GetUserBalance(u.UserID)
-	//	if err != nil {
-	//		return err
-	//	}
-	//	topic.Publish(rs.broker, balance.ToProto(), srvbill.TopicBillChange)
-	//}
-	//e := time.Now().Sub(s).Nanoseconds() / 1000000
-	//log.Info("RoomOpCreateRoom:%d\n", e)
 	return nil
 }
 
@@ -238,6 +203,7 @@ func (rs *RoomSrv) Renewal(ctx context.Context, req *pbr.RenewalRequest,
 		ids []int32
 		r   *mdr.Room
 	)
+	lock := RoomLockKey(req.Password)
 	f := func() error {
 		oid, ids, r, err = room.RenewalRoom(req.Password, u)
 		if err != nil {
@@ -246,7 +212,6 @@ func (rs *RoomSrv) Renewal(ctx context.Context, req *pbr.RenewalRequest,
 		}
 		return nil
 	}
-	lock := RoomLockKey(req.Password)
 	err = gsync.GlobalTransaction(lock, f)
 	if err != nil {
 		log.Err("%s renewal failed: %v", lock, err)
@@ -273,7 +238,6 @@ func (rs *RoomSrv) Renewal(ctx context.Context, req *pbr.RenewalRequest,
 
 func (rs *RoomSrv) EnterRoom(ctx context.Context, req *pbr.Room,
 	rsp *pbr.RoomReply) error {
-	//s := time.Now()
 	u, err := auth.GetUser(ctx)
 	if err != nil {
 		return err
@@ -310,12 +274,6 @@ func (rs *RoomSrv) EnterRoom(ctx context.Context, req *pbr.Room,
 	msgBack.CreateOrEnter = enumr.EnterRoom
 	topic.Publish(rs.broker, msgBack, TopicRoomCreate)
 	msgAll := ru.ToProto()
-	//var ids []int32
-	//for _, uid := range r.Ids {
-	//	if uid != u.UserID {
-	//		ids = append(ids, uid)
-	//	}
-	//}
 	msgAll.Ids = r.Ids
 	topic.Publish(rs.broker, msgAll, TopicRoomJoin)
 	if r.ClubID > 0 {
@@ -328,15 +286,6 @@ func (rs *RoomSrv) EnterRoom(ctx context.Context, req *pbr.Room,
 		}
 		topic.Publish(rs.broker, msgEnter, TopicClubRoomJoin)
 	}
-	//if r.Status == enumr.RoomStatusDiamondNoEnough {
-	//	msgErr := &pbr.RoomNotice{
-	//		Code: errorr.ErrDiamondNotEnough,
-	//		Ids:  r.Ids,
-	//	}
-	//	topic.Publish(rs.broker, msgErr, TopicRoomNotice)
-	//}
-	//e := time.Now().Sub(s).Nanoseconds() / 1000000
-	//log.Info("RoomOpEnterRoom:%d\n", e)
 	return nil
 }
 
@@ -350,24 +299,29 @@ func (rs *RoomSrv) LeaveRoom(ctx context.Context, req *pbr.Room,
 		ru *mdr.RoomUser
 		r  *mdr.Room
 	)
+	r, err = cacher.GetRoomUserID(u.UserID)
+	if err != nil {
+		return err
+	}
+	if r == nil {
+		return errorr.ErrUserNotInRoom
+	}
 	f := func() error {
-		ru, r, err = room.LeaveRoom(u)
+		ru, r, err = room.LeaveRoom(u, r)
 		if err != nil {
 			return err
 		}
 		return nil
 	}
-	lock := RoomLockKey(req.Password)
+	lock := RoomLockKey(r.Password)
 	err = gsync.GlobalTransaction(lock, f)
 	if err != nil {
 		log.Err("%s leave room failed: %v", lock, err)
 		return err
 	}
 
-	//*rsp = *r.ToProto()
 	msg := ru.SimplyToProto()
 	msg.Ids = r.Ids
-	//msg.RoomID = room.RoomID
 	if r.Status == enumr.RoomStatusDestroy {
 		msg.Destroy = 1
 	}
@@ -377,13 +331,13 @@ func (rs *RoomSrv) LeaveRoom(ctx context.Context, req *pbr.Room,
 			RoomID: r.RoomID,
 			UserID: u.UserID,
 			ClubID: r.ClubID,
+			BankerID:r.Users[0].UserID,
 		}
 		topic.Publish(rs.broker, msgLeave, TopicClubRoomUnJoin)
 		if r.Status == enumr.RoomStatusDestroy {
 			msgLeave.UserID = 0
 			mClub, _ := club.GetClubInfo(u)
 			msgLeave.Diamond = mClub.Diamond + r.Cost
-			fmt.Printf("LeaveRoom:%d|%d|%v\n", mClub.Diamond, r.Cost, msgLeave)
 			topic.Publish(rs.broker, msgLeave, TopicClubRoomFinish)
 		}
 	}
@@ -393,7 +347,6 @@ func (rs *RoomSrv) LeaveRoom(ctx context.Context, req *pbr.Room,
 
 func (rs *RoomSrv) SetReady(ctx context.Context, req *pbr.Room,
 	rsp *pbr.RoomUser) error {
-	//s := time.Now()
 	u, err := auth.GetUser(ctx)
 	if err != nil {
 		return err
@@ -417,17 +370,8 @@ func (rs *RoomSrv) SetReady(ctx context.Context, req *pbr.Room,
 	}
 	*rsp = *ru.ToProto()
 	msg := rsp
-	//var ids []int32
-	//for _, uid := range Ids {
-	//	if uid != u.UserID {
-	//		ids = append(ids, uid)
-	//	}
-	//}
 	msg.Ids = ids
-	//msg.RoomID = rid
 	topic.Publish(rs.broker, msg, TopicRoomReady)
-	//e := time.Now().Sub(s).Nanoseconds() / 1000000
-	//log.Info("RoomOpSetReady:%d\n", e)
 	return nil
 }
 
@@ -455,11 +399,10 @@ func (rs *RoomSrv) GiveUpGame(ctx context.Context, req *pbr.GiveUpGameRequest,
 		log.Err("%s give up game failed: %v", lock, err)
 		return err
 	}
-	//	*rsp = *result.ToProto()
 	msg := result.ToProto()
 	msg.Ids = ids
 	topic.Publish(rs.broker, msg, TopicRoomGiveup)
-	rs.ClubDiamondTopic(u, mr)
+	clubDiamondTopic(rs.broker, u, mr)
 	return nil
 }
 
@@ -487,7 +430,6 @@ func (rs *RoomSrv) GiveUpVote(ctx context.Context, req *pbr.GiveUpVoteRequest,
 		log.Err("%s give up vote room failed: %v", lock, err)
 		return err
 	}
-	//	*rsp = *result.ToProto()
 	msg := result.ToProto()
 	msg.Ids = ids
 	topic.Publish(rs.broker, msg, TopicRoomGiveup)
@@ -497,11 +439,11 @@ func (rs *RoomSrv) GiveUpVote(ctx context.Context, req *pbr.GiveUpVoteRequest,
 			userstate.State = enumr.UserStateWaiting
 		}
 	}
-	rs.ClubDiamondTopic(u, mr)
+	clubDiamondTopic(rs.broker, u, mr)
 	return nil
 }
 
-func (rs *RoomSrv) ClubDiamondTopic(user *mdu.User, mr *mdr.Room) {
+func clubDiamondTopic(brok broker.Broker, user *mdu.User, mr *mdr.Room) {
 	if mr.Status == enumr.RoomStatusGiveUp && mr.ClubID > 0 {
 		if mr.ClubID > 0 {
 			msg := &pbr.Room{
@@ -511,7 +453,7 @@ func (rs *RoomSrv) ClubDiamondTopic(user *mdu.User, mr *mdr.Room) {
 			msg.UserID = 0
 			mClub, _ := club.GetClubInfo(user)
 			msg.Diamond = mClub.Diamond
-			topic.Publish(rs.broker, msg, TopicClubRoomFinish)
+			topic.Publish(brok, msg, TopicClubRoomFinish)
 		}
 	}
 }
@@ -588,32 +530,32 @@ func (rs *RoomSrv) RoomResultList(ctx context.Context, req *pbr.PageRoomResultLi
 	return nil
 }
 
-func (rs *RoomSrv) CheckRoomExist(ctx context.Context, req *pbr.Room,
-	rsp *pbr.CheckRoomExistReply) error {
-	u, err := auth.GetUser(ctx)
-	if err != nil {
-		return err
-	}
-	result, roomResults, err := room.CheckRoomExist(u.UserID)
-	if err != nil {
-		return err
-	}
-
-	if result == 1 {
-		rsp.Result = 1
-		msg := roomResults.ToProto()
-		msg.UserID = u.UserID
-		topic.Publish(rs.broker, msg, TopicRoomExist)
-	} else {
-		rsp.Result = result
-		msg := &pbr.CheckRoomExistReply{
-			Result: result,
-		}
-		topic.Publish(rs.broker, msg, TopicRoomExist)
-	}
-
-	return nil
-}
+//func (rs *RoomSrv) CheckRoomExist(ctx context.Context, req *pbr.Room,
+//	rsp *pbr.CheckRoomExistReply) error {
+//	u, err := auth.GetUser(ctx)
+//	if err != nil {
+//		return err
+//	}
+//	result, roomResults, err := room.CheckRoomExist(u.UserID)
+//	if err != nil {
+//		return err
+//	}
+//
+//	if result == 1 {
+//		rsp.Result = 1
+//		msg := roomResults.ToProto()
+//		msg.UserID = u.UserID
+//		topic.Publish(rs.broker, msg, TopicRoomExist)
+//	} else {
+//		rsp.Result = result
+//		msg := &pbr.CheckRoomExistReply{
+//			Result: result,
+//		}
+//		topic.Publish(rs.broker, msg, TopicRoomExist)
+//	}
+//
+//	return nil
+//}
 
 func (rs *RoomSrv) VoiceChat(ctx context.Context, req *pbr.VoiceChatRequest, rsp *pbr.RoomReply) error {
 	u, err := auth.GetUser(ctx)
@@ -712,26 +654,80 @@ func (rs *RoomSrv) GetRoomUserLocation(ctx context.Context, req *pbr.Room, rsp *
 func (rs *RoomSrv) Heartbeat(ctx context.Context,
 	req *pbr.Room, rsp *pbr.Room) error {
 
-	//errtest := room.LuaTest()
-	//if errtest != nil {
-	//	return errtest
-	//}
-	// u, err := auth.GetUser(ctx)
-	// if err != nil {
-	// 	return err
-	// }
-	// err = room.Heartbeat(u.UserID)
-	// if err != nil {
-	// 	return err
-	// }
-
 	return nil
 }
 
-func (rs *RoomSrv) TestClean(ctx context.Context, req *pbr.Room, rsp *pbr.Room) error {
-	err := room.TestClean()
+func (rs *RoomSrv) GetRoomRecovery(ctx context.Context, req *pbr.Room, rsp *pbr.RoomReply) error {
+	u, err := auth.GetUser(ctx)
 	if err != nil {
 		return err
 	}
+	rsp.Result = 2
+	hasRoom, mdroom, err := room.CheckHasRoom(u.UserID)
+	if err != nil {
+		return err
+	}
+	if hasRoom || req.RoomID > 0 {
+		msg := &pbr.RoomExist{}
+		msg.UserID = u.UserID
+		var gameType int32
+		if hasRoom {
+			msg.RoomID = mdroom.RoomID
+			gameType = mdroom.GameType
+		} else {
+			msg.RoomID = req.RoomID
+			gameType = req.GameType
+		}
+		var top string
+		switch gameType {
+		case enumr.ThirteenGameType:
+			top = TopicRoomThirteenExist
+			break
+		case enumr.NiuniuGameType:
+			top = TopicRoomNiuniuExist
+			break
+		case enumr.DoudizhuGameType:
+			top = TopicRoomDoudizhuExist
+			break
+
+		}
+		topic.Publish(rs.broker, msg, top)
+		rsp.Result = 1
+	}
 	return nil
 }
+
+func (rs *RoomSrv) GameStart(ctx context.Context, req *pbr.Room,
+	rsp *pbr.RoomUser) error {
+	u, err := auth.GetUser(ctx)
+	if err != nil {
+		return err
+	}
+	mr, err := cacher.GetRoom(req.Password)
+	if err != nil {
+		return err
+	}
+	lock := RoomLockKey(req.Password)
+	f := func() error {
+		err = room.GameStart(mr, u.UserID)
+		if err != nil {
+			return err
+		}
+		return nil
+	}
+	err = gsync.GlobalTransaction(lock, f)
+	if err != nil {
+		log.Err("%s game start failed: %v", lock, err)
+		return err
+	}
+
+	return nil
+}
+
+//func (rs *RoomSrv) TestClean(ctx context.Context, req *pbr.Room, rsp *pbr.Room) error {
+//	err := room.TestClean()
+//	if err != nil {
+//		return err
+//	}
+//	return nil
+//}

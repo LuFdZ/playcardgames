@@ -3,6 +3,9 @@ package niuniu
 import (
 	pbniu "playcards/proto/niuniu"
 	srvniu "playcards/service/niuniu/handler"
+	srvroom "playcards/service/room/handler"
+	pbroom "playcards/proto/room"
+	"playcards/model/niuniu"
 	"playcards/service/web/clients"
 	"playcards/service/web/enum"
 	"playcards/utils/subscribe"
@@ -49,9 +52,13 @@ func SubscribeAllNiuniuMessage(brk broker.Broker) error {
 	TopicNiuniuGameResult),
 		NiuniuGameResultHandler,
 	)
-	subscribe.SrvSubscribe(brk, topic.Topic(srvniu.
-	TopicNiuniuCountDown),
-		NiuniuCountDownHandler,
+	//subscribe.SrvSubscribe(brk, topic.Topic(srvniu.
+	//TopicNiuniuCountDown),
+	//	NiuniuCountDownHandler,
+	//)
+	subscribe.SrvSubscribe(brk, topic.Topic(srvroom.
+	TopicRoomNiuniuExist),
+		NiuniuExistHandle,
 	)
 	return nil
 }
@@ -154,17 +161,36 @@ func NiuniuGameResultHandler(p broker.Publication) error {
 	return nil
 }
 
-func NiuniuCountDownHandler(p broker.Publication) error {
+//func NiuniuCountDownHandler(p broker.Publication) error {
+//	t := p.Topic()
+//	msg := p.Message()
+//	rs := &pbniu.CountDown{}
+//	err := proto.Unmarshal(msg.Body, rs)
+//	if err != nil {
+//		return err
+//	}
+//	ids := rs.Ids
+//	rs.Ids = nil
+//	err = clients.SendRoomUsers(ids, t, enum.MsgNiuniuCountDown, rs)
+//	if err != nil {
+//		return err
+//	}
+//	return nil
+//}
+
+func NiuniuExistHandle(p broker.Publication) error {
 	t := p.Topic()
 	msg := p.Message()
-	rs := &pbniu.CountDown{}
+	rs := &pbroom.RoomExist{}
 	err := proto.Unmarshal(msg.Body, rs)
 	if err != nil {
 		return err
 	}
-	ids := rs.Ids
-	rs.Ids = nil
-	err = clients.SendRoomUsers(ids, t, enum.MsgNiuniuCountDown, rs)
+	recovery, err := niuniu.NiuniuExist(rs.UserID,rs.RoomID)
+	if err != nil {
+		return err
+	}
+	err = clients.SendTo(rs.UserID, t, enum.MsgNiuniuExist, recovery)
 	if err != nil {
 		return err
 	}

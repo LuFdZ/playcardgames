@@ -1,14 +1,14 @@
 
- package.path = os.getenv("PWD") ..'/?.lua;'
- require "lua/thirteenlua/CardGroup"
- require "lua/thirteenlua/Card"
- require "lua/thirteenlua/Tools"
- require "/lua/thirteenlua/json"
+--  package.path = os.getenv("PWD") ..'/?.lua;'
+--  require "lua/thirteenlua/CardGroup"
+--  require "lua/thirteenlua/Card"
+--  require "lua/thirteenlua/Tools"
+--  require "/lua/thirteenlua/json"
 
---require "CardGroup"
---require "Card"
---require "Tools"
---require "json"
+require "CardGroup"
+require "Card"
+require "Tools"
+require "json"
 
 function G_Init(s)
     math.randomseed(s)
@@ -751,7 +751,7 @@ end
 function Logic:GetNotEqualsInTableCards(cards, card)
     local res = {}
     for k, v in pairs(cards) do
-        if v._value ~= card._value and v._type ~= card._value then
+        if v._value ~= card._value and v._type ~= card._type then
             table.insert( res, v )
         end
     end

@@ -139,7 +139,7 @@ class Client(object):
         self.StreamSend("UnSubscribeClubMessage", {})
 
     def ClinetHearbeat(self):
-        self.StreamSend("ClinetHearbeat", {})
+        self.StreamSend("ClinetHearbeat", 3423424)
 
     """
     房间相关操作
@@ -263,6 +263,13 @@ class Client(object):
     def Shock(self, uid):
         ul = self.Request("/room/roomSrv/Shock", {
             "UserID": uid,
+        })
+        return ul
+
+    def GetRoomRecovery(self,rid,gtype):
+        ul = self.Request("/room/roomSrv/GetRoomRecovery", {
+            "RoomID":rid,
+            "GameType":gtype,
         })
         return ul
 
@@ -617,8 +624,8 @@ class Client(object):
         })
         return ul
 
-    def SubmitCard(self,gid):
-        ul = self.Request("/room/roomSrv/CreateRoom", {
+    def SubmitCardD(self,gid):
+        ul = self.Request("/doudizhu/doudizhuSrv/SubmitCard", {
             "GameID": gid,
             "CardList": ['4_14'],
         })

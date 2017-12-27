@@ -46,11 +46,13 @@ func main() {
 	filePath := env.GetCurrentDirectory() + "/lua/thirteenlua/Logic.lua"
 	if err = l.DoFile(filePath); err != nil {
 		log.Err("thirteen logic do file %+v", err)
+		return
 	}
 
 	ostime := time.Now().UnixNano()
 	if err = l.DoString(fmt.Sprintf("return G_Init(%d)", ostime)); err != nil {
 		log.Err("thirteen G_Init error %+v", err)
+		return
 	}
 
 	h := handler.NewHandler(server, gt, l)

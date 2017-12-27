@@ -11,7 +11,7 @@ const (
 const (
 	LoopTime               = 500
 	MaxRecordCount         = 50
-	RoomDelayMinutes       = 15.0
+	RoomDelayMinutes       = 5.0
 	RoomCodeMax            = 999999
 	RoomCodeMin            = 100000
 	RoomGiveupCleanMinutes = 5.0
@@ -52,7 +52,7 @@ const (
 )
 
 const (
-	NoGiveUp   = 1 //游戏不在投降状态
+	NoGiveUp   = 1 //游戏正常进行
 	WaitGiveUp = 2 //游戏进入投降状态
 )
 
@@ -108,6 +108,7 @@ const (
 	RecoveryInitNoReady      = 2 //房间初始化玩家未准备 有上一局
 	RecoveryInitReady        = 3 //房间初始化玩家已准备
 	RecoveryGameStart        = 4 //游戏开始
+	RecoveryGameDone        = 5 //游戏开始
 )
 
 const (
@@ -125,3 +126,5 @@ const (
 	RoomFlag   = 1
 	RoomNoFlag = 2
 )
+
+var GameType = []int32{1001,1002,1003}

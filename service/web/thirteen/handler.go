@@ -9,7 +9,6 @@ import (
 
 var ThirteenEvent = []string{
 	srvthirteen.TopicThirteenGameResult,
-	srvthirteen.TopicThirteenSurrender,
 	srvthirteen.TopicThirteenGameStart,
 	srvthirteen.TopicThirteenGameReady,
 }

@@ -16,11 +16,11 @@ type CommonSrv struct {
 
 func NewHandler() *CommonSrv {
 	cs := &CommonSrv{}
-	cs.Init()
+	cs.init()
 	return cs
 }
 
-func (cs *CommonSrv) Init() {
+func (cs *CommonSrv) init() {
 	common.RefreshAllFromDB()
 }
 

@@ -25,6 +25,7 @@ message Room {
     int32 Flag = 18; //是否标记 1标记 2未标记
     int64 Diamond = 19;
     repeated GameUserResult ResultList = 20;
+    int32 BankerID = 21;
 
 }
 
@@ -231,6 +232,16 @@ message RoomNotice {
     repeated int32 Ids = 3;
 }
 
+message HeartBeat{
+    int64 Ctime = 1;
+    int64 Stime = 2;
+}
+
+message RoomExist{
+    int32 UserID = 1;
+    int32 RoomID = 2;
+}
+
 service RoomSrv {
     rpc CreateRoom (Room) returns (RoomReply) {
     }
@@ -273,6 +284,10 @@ service RoomSrv {
     rpc CreateClubRoom (Room) returns (RoomUsersReply) {
     }
     rpc PageRoomList (PageRoomRequest) returns (PageRoomListReply) {
+    }
+    rpc GetRoomRecovery(Room) returns (RoomReply) {
+    }
+    rpc GameStart(Room) returns (RoomReply) {
     }
 }
 

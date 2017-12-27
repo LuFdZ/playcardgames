@@ -3,6 +3,9 @@ package thirteen
 import (
 	pbthirteen "playcards/proto/thirteen"
 	srvthirteen "playcards/service/thirteen/handler"
+	srvroom "playcards/service/room/handler"
+	pbroom "playcards/proto/room"
+	"playcards/model/thirteen"
 	"playcards/service/web/clients"
 	"playcards/service/web/enum"
 	"playcards/utils/subscribe"
@@ -10,6 +13,7 @@ import (
 
 	"github.com/micro/go-micro/broker"
 	"github.com/micro/protobuf/proto"
+	"playcards/utils/log"
 )
 
 var (
@@ -36,6 +40,10 @@ func SubscribeAllThirteenMessage(brk broker.Broker) error {
 	subscribe.SrvSubscribe(brk, topic.Topic(srvthirteen.
 	TopicThirteenGameReady),
 		ThirteenReadyHandler,
+	)
+	subscribe.SrvSubscribe(brk, topic.Topic(srvroom.
+	TopicRoomThirteenExist),
+		ThirteenExistHandle,
 	)
 	return nil
 }
@@ -84,6 +92,26 @@ func ThirteenReadyHandler(p broker.Publication) error {
 	ids := rs.Ids
 	rs.Ids = nil
 	err = clients.SendRoomUsers(ids, t, enum.MsgThireteenGameReady, rs)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func ThirteenExistHandle(p broker.Publication) error {
+	t := p.Topic()
+	msg := p.Message()
+	rs := &pbroom.RoomExist{}
+	err := proto.Unmarshal(msg.Body, rs)
+	if err != nil {
+		return err
+	}
+	recovery, err := thirteen.ThirteenExist(rs.UserID,rs.RoomID)
+	if err != nil {
+		log.Err("ThirteenExistHandle:%v",err)
+		return err
+	}
+	err = clients.SendTo(rs.UserID, t, enum.MsgThireteenExist, recovery)
 	if err != nil {
 		return err
 	}

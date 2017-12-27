@@ -22,9 +22,13 @@ func UserHKey(uid int32) string {
 	return fmt.Sprintf(cache.KeyPrefix("USER:%d"), uid)
 }
 
-func UserHWXKey(openid string) string {
-	return fmt.Sprintf(cache.KeyPrefix("USERWXTOKEN:%s"), openid)
+func UserWXKey() string {
+	return fmt.Sprintf(cache.KeyPrefix("USERWXTOKEN"))
 }
+
+//func UserWXHKey(openid string) string {
+//	return fmt.Sprintf(cache.KeyPrefix("USERWXTOKEN:%s"), openid)
+//}
 
 func UserOnlineHKey() string {
 	return cache.KeyPrefix("USERONLINE")
@@ -56,25 +60,27 @@ func UserIDFromToken(token string) (int32, error) {
 	return int32(n), nil
 }
 
-func GetAccessToken(openid string) (string, error) {
-	key := UserHWXKey(openid)
-	val := cache.KV().HGet(key, "accesstoken").Val()
-	return val, nil
-}
+//func GetAccessToken(openid string) (string, error) {
+//	key := UserHWXKey(openid)
+//	val := cache.KV().HGet(key, "accesstoken").Val()
+//	return val, nil
+//}
 
 func GetRefreshToken(openid string) (string, error) {
-	key := UserHWXKey(openid)
-	val := cache.KV().HGet(key, "refreshtoken").Val()
+	//key := UserHWXKey(openid)
+	key := UserWXKey()
+	val := cache.KV().HGet(key, openid).Val()
 	return val, nil
 }
 
-func SetUserWXInfo(openid string, accesstoken string, refreshtoken string) error {
-	key := UserHWXKey(openid)
-
+func SetUserWXInfo(openid string, refreshtoken string) error {
+	key := UserWXKey()
+	//hKey := UserHWXKey(openid)
 	f := func(tx *redis.Tx) error {
 		tx.Pipelined(func(p *redis.Pipeline) error {
-			tx.HSet(key, "accesstoken", accesstoken)
-			tx.HSet(key, "refreshtoken", refreshtoken)
+			tx.HSet(key, openid, refreshtoken)
+			//tx.HSet(key, "accesstoken", accesstoken)
+			//tx.HSet(key, "refreshtoken", refreshtoken)
 			return nil
 		})
 		return nil

@@ -103,6 +103,7 @@ CREATE TABLE `rooms` (
   KEY `idx_gtype` (`game_type`),
   KEY `idx_rtype` (`room_type`),
   KEY `idx_payer` (`payer_id`),
+  KEY `idx_club` (`club_id`),
   KEY `idx_created`(`created_at`)
 )
   ENGINE = InnoDB

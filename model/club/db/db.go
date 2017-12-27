@@ -5,7 +5,7 @@ import (
 	mdclub "playcards/model/club/mod"
 	mdpage "playcards/model/page"
 	"playcards/utils/errors"
-
+	"playcards/utils/db"
 	sq "github.com/Masterminds/squirrel"
 	"github.com/jinzhu/gorm"
 )
@@ -29,6 +29,15 @@ func UpdateClub(tx *gorm.DB, mclub *mdclub.Club) (*mdclub.Club, error) {
 	return mclub, nil
 }
 
+func GetLockClub(tx *gorm.DB, cid int32) (*mdclub.Club, error) {
+	out := &mdclub.Club{}
+	if err := db.ForUpdate(tx).Where("club_id = ? ", cid).Find(out).
+		Error; err != nil {
+		return nil, errors.Internal("get lock club failed", err)
+	}
+	return out, nil
+}
+
 func ClubBalance(tx *gorm.DB, mclub *mdclub.Club, amounttype int32, amount int64, typeid int32, fid int64, opid int64) (*mdclub.Club, error) {
 	now := gorm.NowFunc()
 	mclub.UpdatedAt = &now
@@ -47,17 +56,6 @@ func ClubBalance(tx *gorm.DB, mclub *mdclub.Club, amounttype int32, amount int64
 		return nil, errors.Internal("update club failed", err)
 	}
 	return mclub, nil
-}
-
-func GetClub(tx *gorm.DB, clubid int32) (*mdclub.Club, error) {
-	var (
-		out *mdclub.Club
-	)
-	if err := tx.Where("club_id = ?", clubid).
-		Find(&out).Error; err != nil {
-		return nil, errors.Internal("get club by failed", err)
-	}
-	return out, nil
 }
 
 func CreateClubMember(tx *gorm.DB, mcm *mdclub.ClubMember) error {

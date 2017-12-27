@@ -5,6 +5,10 @@ const (
 	SocketAline      = 1
 	SocketClose      = 2
 )
+const (
+	MsgSubscribeSuccess = "SubscribeSuccess"
+	MsgHeartbeat        = "ClientHeartbeat"
+)
 
 const (
 	MsgRoomCreate         = "RoomCreate"
@@ -25,6 +29,7 @@ const (
 	MsgThireteenGameResult = "ThirteenGameResult"
 	MsgThireteenGameReady  = "ThirteenGameReady"
 	MsgThireteenGameStart  = "ThirteenGameStart"
+	MsgThireteenExist      = "ThirteenExist"
 )
 
 const (
@@ -34,7 +39,7 @@ const (
 	MsgNiuniuAllBet     = "NiuniuAllBet"
 	MsgNiuniuGameReady  = "NiuniuGameReady"
 	MsgNiuniuGameStart  = "NiuniuGameStart"
-	MsgNiuniuCountDown  = "NiuniuCountDown"
+	MsgNiuniuExist      = "NiuniuExist"
 )
 
 const (

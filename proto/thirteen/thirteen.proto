@@ -1,4 +1,5 @@
 syntax = "proto3";
+import "playcards/proto/room/room.proto";
 
 package thirteen;
 
@@ -81,6 +82,11 @@ message ThirteenRecoveryReply {
     GroupCard Cards = 4;
     repeated int32 ReadyUser = 5;
     int32 BankerID = 6;
+}
+
+message ThirteenRecovery{
+    room.CheckRoomExistReply RoomExist = 1;//房间信息
+    ThirteenRecoveryReply ThirteenExist = 2;//十三张
 }
 
 service ThirteenSrv {

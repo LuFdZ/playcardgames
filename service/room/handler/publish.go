@@ -11,8 +11,13 @@ const (
 	TopicRoomUserConnection = "playcards.room.UserConnection"
 	TopicRoomRenewal        = "playcards.room.Renewal"
 	TopicRoomVoiceChat      = "playcards.room.VoiceChat"
-	TopicRoomExist          = "playcards.room.Exist"
 	TopicRoomNotice         = "playcards.room.Notice"
+)
+
+const(
+	TopicRoomThirteenExist  = "playcards.room.ThirteenExist"
+	TopicRoomNiuniuExist    = "playcards.room.NiuniuExist"
+	TopicRoomDoudizhuExist  = "playcards.room.DoudizhuExist"
 )
 
 const (

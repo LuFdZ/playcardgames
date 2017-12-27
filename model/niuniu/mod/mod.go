@@ -11,7 +11,7 @@ import (
 )
 
 type Niuniu struct {
-	GameID        int32 `gorm:"primary_key"`
+	GameID        int32        `gorm:"primary_key"`
 	RoomID        int32
 	Status        int32
 	Index         int32
@@ -22,6 +22,8 @@ type Niuniu struct {
 	UpdatedAt     *time.Time
 	OpDateAt      *time.Time
 	BankerID      int32
+	PassWord      string       `gorm:"-"`
+	SearchKey     string       `gorm:"-"`
 	GetBankerList []*GetBanker `gorm:"-"`
 	BroStatus     int32        `gorm:"-"`
 	SubDateAt     *time.Time   `gorm:"-"`

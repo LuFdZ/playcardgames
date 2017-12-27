@@ -16,6 +16,7 @@ import (
 	pbt "playcards/proto/thirteen"
 	enumbill "playcards/model/bill/enum"
 	mdbill "playcards/model/bill/mod"
+	"playcards/model/room"
 	//"playcards/utils/env"
 	"playcards/model/bill"
 	"playcards/utils/db"
@@ -25,68 +26,33 @@ import (
 	"github.com/yuin/gopher-lua"
 )
 
-var GoLua *lua.LState
+//var GoLua *lua.LState
+//
+//func InitGoLua(gl *lua.LState) {
+//	GoLua = gl
+//}
 
-func InitGoLua(gl *lua.LState) {
-	GoLua = gl
-}
-
-func CreateThirteen() []*mdt.Thirteen {
-	//rooms, err := GetRoomsByStatusAndGameType()
-	//if err != nil {
-	//	log.Err("get rooms by status and game type err :%+v", err)
-	//	return nil
-	//}
-
-	f := func(r *mdr.Room) bool {
-		if r.Status == enumr.RoomStatusAllReady && r.GameType == enumt.GameID {
-			return true
-		}
-		return false
-	}
-	rooms := cacher.GetAllRoom(f)
-	if rooms == nil && len(rooms) == 0 {
+func CreateThirteen(goLua *lua.LState) []*mdt.Thirteen {
+	mdrooms := cacher.GetAllRoomByGameTypeAndStatus(enumr.ThirteenGameType, enumr.RoomStatusAllReady)
+	if mdrooms == nil && len(mdrooms) == 0 {
 		return nil
 	}
 
-	if len(rooms) == 0 {
+	if len(mdrooms) == 0 {
 		return nil
 	}
 	var newGames []*mdt.Thirteen
 
-	for _, room := range rooms {
+	for _, mdroom := range mdrooms {
 		var userResults []*mdr.GameUserResult
 		var groupCards []*mdt.GroupCard
 		var bankerID int32
-		//l := lua.NewState()
-		//defer l.Close()
-		//filePath := env.GetCurrentDirectory() + "/lua/thirteenlua/Logic.lua"
-		//if err := l.DoFile(filePath); err != nil {
-		//	log.Err("thirteen logic do file %+v", err)
-		//	continue
-		//}
-		//ostimeA := time.Now().UnixNano()
-		//ostimeB := ostimeA<<32 | ostimeA>>32
-		//fmt.Printf("ostime:%d|%d\n",ostimeA,ostimeB)
-		//log.Err("create thirteen seed:%d|%d\n", ostimeA, ostimeB)
-		//if err := GoLuaCreate.DoString(fmt.Sprintf("return Logic:new(%d)", ostimeB)); err != nil {
-		//	log.Err("thirteen logic do string %+v", err)
-		//	continue
-		//}
-		//if err := l.DoString("return Logic:new()"); err != nil {
-		//	log.Err("thirteen logic do string %+v", err)
-		//	continue
-		//}
-		//logic := l.Get(1)
-
-		if err := GoLua.DoString("return G_Reset()"); err != nil {
+		if err := goLua.DoString("return G_Reset()"); err != nil {
 			log.Err("thirteen G_Reset %+v", err)
 			continue
 		}
-		//GoLuaCreate.Pop(1)
-
-		for _, user := range room.Users {
-			if room.RoundNow == 1 {
+		for _, user := range mdroom.Users {
+			if mdroom.RoundNow == 1 {
 				userResult := &mdr.GameUserResult{
 					UserID:   user.UserID,
 					Nickname: user.Nickname,
@@ -98,11 +64,11 @@ func CreateThirteen() []*mdt.Thirteen {
 				}
 				userResults = append(userResults, userResult)
 			}
-			if err := GoLua.DoString("return G_GetCards()"); err != nil {
+			if err := goLua.DoString("return G_GetCards()"); err != nil {
 				log.Err("thirteen G_GetCards %+v", err)
 			}
-			getCards := GoLua.Get(-1)
-			GoLua.Pop(1)
+			getCards := goLua.Get(-1)
+			goLua.Pop(1)
 			var cardList []string
 			if cardsMap, ok := getCards.(*lua.LTable); ok {
 				cardsMap.ForEach(func(key lua.LValue, value lua.LValue) {
@@ -135,72 +101,74 @@ func CreateThirteen() []*mdt.Thirteen {
 			}
 		}
 
-		if room.RoundNow == 1 {
-			room.UserResults = userResults
+		if mdroom.RoundNow == 1 {
+			mdroom.UserResults = userResults
 		}
 		thirteen := &mdt.Thirteen{
-			RoomID:   room.RoomID,
-			BankerID: bankerID,
-			Status:   enumt.GameStatusInit,
-			Index:    room.RoundNow,
+			RoomID:      mdroom.RoomID,
+			BankerID:    bankerID,
+			Status:      enumt.GameStatusInit,
+			Index:       mdroom.RoundNow,
+			PassWord:    mdroom.Password,
+			SubmitCards: []*mdt.SubmitCard{},
 			//GameLua: l,
 			Cards: groupCards,
-			Ids:   room.Ids,
+			Ids:   mdroom.Ids,
 		}
-		room.Status = enumr.RoomStatusStarted
+		mdroom.Status = enumr.RoomStatusStarted
 		f := func(tx *gorm.DB) error {
-			if room.RoundNow == 1 {
-				if room.RoomType != enumr.RoomTypeClub && room.Cost != 0 {
-					err := bill.GainGameBalance(room.PayerID, room.RoomID, enumbill.JournalTypeThirteen,
-						enumbill.JournalTypeThirteenUnFreeze, &mdbill.Balance{Amount: -room.Cost, CoinType: room.CostType})
+			if mdroom.RoundNow == 1 {
+				if mdroom.RoomType != enumr.RoomTypeClub && mdroom.Cost != 0 {
+					err := bill.GainGameBalance(mdroom.PayerID, mdroom.RoomID, enumbill.JournalTypeThirteen,
+						enumbill.JournalTypeThirteenUnFreeze, &mdbill.Balance{Amount: -mdroom.Cost, CoinType: mdroom.CostType})
 					if err != nil {
-						log.Err("thirteen create user balance failed,%v | %+v", room.PayerID, err)
+						log.Err("thirteen create user balance failed,%v | %+v", mdroom.PayerID, err)
 						return err
 					}
 				}
 
-				for _, user := range room.Users {
+				for _, user := range mdroom.Users {
 					pr := &mdr.PlayerRoom{
 						UserID:    user.UserID,
-						RoomID:    room.RoomID,
-						GameType:  room.GameType,
+						RoomID:    mdroom.RoomID,
+						GameType:  mdroom.GameType,
 						PlayTimes: 0,
 					}
 					dbr.CreatePlayerRoom(tx, pr)
 				}
 			}
 
-			_, err := dbr.UpdateRoom(tx, room)
+			_, err := dbr.UpdateRoom(tx, mdroom)
 			if err != nil {
-				log.Err("thirten room update set session failed, roomid:%d,err:%+v", room.RoomID, err)
+				log.Err("thirten room update set session failed, roomid:%d,err:%+v", mdroom.RoomID, err)
 				return err
 			}
 
 			err = dbt.CreateThirteen(tx, thirteen)
 			if err != nil {
-				log.Err("thirteen create set session failed,roomid:%d, err:%+v", room.RoomID, err)
+				log.Err("thirteen create set session failed,roomid:%d, err:%+v", mdroom.RoomID, err)
 				return err
 			}
 
-			err = cacher.UpdateRoom(room)
+			err = cacher.UpdateRoom(mdroom)
 			if err != nil {
-				log.Err("room update set session failed,roomid:%d,err: %+v", room.RoomID, err)
+				log.Err("room update set session failed,roomid:%d,err: %+v", mdroom.RoomID, err)
 				return err
 			}
 
-			err = cachet.SetGame(thirteen, room.MaxNumber, room.Password)
+			err = cachet.SetGame(thirteen)
 			if err != nil {
-				log.Err("thirteen create set redis failed,%v | %+v", room, err)
+				log.Err("thirteen create set redis failed,%v | %+v", mdroom, err)
 				return err
 			}
 
-			for _, user := range room.Users {
-				err = cachet.SetGameUser(room.RoomID, user.UserID)
-				if err != nil {
-					log.Err("thirteen create set game user redis failed,%v | %+v", room, err)
-					return err
-				}
-			}
+			//for _, user := range room.Users {
+			//	err = cachet.SetGameUser(room.RoomID, user.UserID)
+			//	if err != nil {
+			//		log.Err("thirteen create set game user redis failed,%v | %+v", room, err)
+			//		return err
+			//	}
+			//}
 
 			return nil
 		}
@@ -223,22 +191,9 @@ func CreateThirteen() []*mdt.Thirteen {
 }
 
 //游戏结算逻辑
-func UpdateGame() []*mdt.Thirteen { //[]*mdt.GameResultList
-	//从数据库获取未结算的游戏信息
-	//thirteens, err := GetThirteenByStatusAndGameType()
-	//if err != nil {
-	//	print(err)
-	//	log.Err("get thirteen by status and game type err :%v", err)
-	//	return nil
-	//}
+func UpdateGame(goLua *lua.LState) []*mdt.Thirteen { //[]*mdt.GameResultList
 
-	f := func(r *mdt.Thirteen) bool {
-		if r.Status == enumt.GameStatusStarted {
-			return true
-		}
-		return false
-	}
-	thirteens := cachet.GetAllThirteen(f)
+	thirteens := cachet.GetAllThirteenByStatus(enumt.GameStatusStarted)
 	if len(thirteens) == 0 {
 		return nil
 	}
@@ -254,38 +209,27 @@ func UpdateGame() []*mdt.Thirteen { //[]*mdt.GameResultList
 		//var resultArray []*mdt.GameResult
 
 		//获取游戏所属房间缓存 更新房间信息
-		pwd := cachet.GetRoomPaawordRoomID(thirteen.RoomID)
-		room, err := cacher.GetRoom(pwd)
+		mdroom, err := cacher.GetRoom(thirteen.PassWord)
 		if err != nil {
 			log.Err("room get session failed, %v", err)
 			continue
 		}
-		if room == nil {
+		if mdroom == nil {
 			log.Err("room get session failed, %v", err)
 			continue
 		}
 
 		var results []*mdt.ThirteenResult
-		//l := lua.NewState()
-		//defer l.Close()
-		//filePath := env.GetCurrentDirectory() + "/lua/thirteenlua/Logic.lua"
-		//if err := l.DoFile(filePath); err != nil {
-		//	log.Err("thirteen clean logic do file %v", err)
-		//	continue
-		//}
-		//if err := GoLuaUpdate.DoString(fmt.Sprintf("return Logic:new(%d)", 0)); err != nil {
-		//	log.Err("thirteen logic do string %+v", err)
-		//	continue
-		//}
+
 		thirteen.MarshalUserSubmitCards()
 		//fmt.Printf("GameParam:%v\n%v\n",thirteen.UserSubmitCards,room.GameParam)
-		if err := GoLua.DoString(fmt.Sprintf("return G_GetResult('%s','%s')",
-			thirteen.UserSubmitCards, room.GameParam)); err != nil {
+		if err := goLua.DoString(fmt.Sprintf("return G_GetResult('%s','%s')",
+			thirteen.UserSubmitCards, mdroom.GameParam)); err != nil {
 			log.Err("thirteen G_GetResult %v", err)
 			continue
 		}
 
-		luaResult := GoLua.Get(-1)
+		luaResult := goLua.Get(-1)
 		if err := json.Unmarshal([]byte(luaResult.String()), &results); err != nil {
 			log.Err("thirteen lua str do struct %v", err)
 			continue
@@ -295,7 +239,7 @@ func UpdateGame() []*mdt.Thirteen { //[]*mdt.GameResultList
 
 		var resultArray []*mdr.GameUserResult
 		for _, result := range resultList.Result {
-			for _, userResult := range room.UserResults {
+			for _, userResult := range mdroom.UserResults {
 				m := initThirteenGameTypeMap()
 				if userResult.UserID == result.UserID {
 					if len(userResult.GameCardCount) > 0 {
@@ -339,26 +283,26 @@ func UpdateGame() []*mdt.Thirteen { //[]*mdt.GameResultList
 
 		//resultListArray = append(resultListArray, resultList)
 		thirteen.Result = resultList
-		room.Status = enumr.RoomStatusReInit
+		mdroom.Status = enumr.RoomStatusReInit
 
 		var roomparam *mdr.ThirteenRoomParam
-		if err := json.Unmarshal([]byte(room.GameParam), &roomparam); err != nil {
+		if err := json.Unmarshal([]byte(mdroom.GameParam), &roomparam); err != nil {
 			log.Err("thirteen clean unmarshal room param failed, %v", err)
 			continue
 		}
 
 		if roomparam.BankerAddScore > 0 && roomparam.Times != enumt.TimesDefault {
-			for i := 0; i < len(room.Users); i++ {
+			for i := 0; i < len(mdroom.Users); i++ {
 				//room.Users[i].Ready = enumr.UserUnready
 				//十三张一局结束后 轮庄
-				if room.Users[i].Role == enumr.UserRoleMaster {
+				if mdroom.Users[i].Role == enumr.UserRoleMaster {
 					if bankerScore <= 0 {
-						if i == len(room.Users)-1 {
-							room.Users[0].Role = enumr.UserRoleMaster
+						if i == len(mdroom.Users)-1 {
+							mdroom.Users[0].Role = enumr.UserRoleMaster
 						} else {
-							room.Users[i+1].Role = enumr.UserRoleMaster
+							mdroom.Users[i+1].Role = enumr.UserRoleMaster
 						}
-						room.Users[i].Role = enumr.UserRoleSlave
+						mdroom.Users[i].Role = enumr.UserRoleSlave
 					}
 					break
 				}
@@ -372,11 +316,11 @@ func UpdateGame() []*mdt.Thirteen { //[]*mdt.GameResultList
 				log.Err("thirteen update failed, %v\n", err)
 				return err
 			}
-			r, err := dbr.UpdateRoom(tx, room)
+			r, err := dbr.UpdateRoom(tx, mdroom)
 			if err != nil {
 				return err
 			}
-			room = r
+			mdroom = r
 			return nil
 		}
 		//go db.Transaction(f)
@@ -386,14 +330,14 @@ func UpdateGame() []*mdt.Thirteen { //[]*mdt.GameResultList
 			log.Err("thirteen update failed, %v", err)
 			return nil
 		}
-		err = cachet.DeleteGame(thirteen.RoomID)
+		err = cachet.DeleteGame(thirteen)
 		if err != nil {
 			log.Err("thirteen set session failed, %v", err)
 			return nil
 		}
-		err = cacher.UpdateRoom(room)
+		err = cacher.UpdateRoom(mdroom)
 		if err != nil {
-			log.Err("room update room redis failed,%v | %v", room, err)
+			log.Err("room update room redis failed,%v | %v", mdroom, err)
 			return nil
 		}
 		thirteenList = append(thirteenList, thirteen)
@@ -409,39 +353,42 @@ func initThirteenGameTypeMap() map[string]int32 {
 	return m
 }
 
-func SubmitCard(uid int32, submitCard *mdt.SubmitCard, room *mdr.Room) ([]int32, error) {
-	if room.Status > enumr.RoomStatusStarted {
+func SubmitCard(uid int32, submitCard *mdt.SubmitCard, mdroom *mdr.Room) ([]int32, error) {
+	if mdroom.Status > enumr.RoomStatusStarted {
 		return nil, errors.ErrGameIsDone
 	}
-	if room.Giveup == enumr.WaitGiveUp {
+	if mdroom.Giveup == enumr.WaitGiveUp {
 		return nil, errors.ErrInGiveUp
 	}
-	isReady := cachet.IsGamePlayerReady(room.RoomID, uid)
 
-	if isReady == 0 {
-		return nil, errorst.ErrUserNotInGame
-	} else if isReady == 2 {
-		return nil, errorst.ErrAlreadySubmitCard
-	}
-
-	thirteen, err := cachet.GetGame(room.RoomID)
+	thirteen, err := cachet.GetGame(mdroom.RoomID)
 	if err != nil {
 		return nil, err
 	}
+	if thirteen == nil {
+		return nil, errorst.ErrGameNotExist
+	}
 
-	var checkCards []string
-	for _, cardGroup := range thirteen.Cards {
-		if cardGroup.UserID == uid {
-			checkCards = cardGroup.CardList
+	for _, uc := range thirteen.SubmitCards {
+		if uc.UserID == uid {
+			return nil, errorst.ErrAlreadySubmitCard
+		}
+	}
+	if cacher.GetRoomTestConfigKey("ThirteenCheckHasCards") != "0" {
+		var checkCards []string
+		for _, cardGroup := range thirteen.Cards {
+			if cardGroup.UserID == uid {
+				checkCards = cardGroup.CardList
+			}
+		}
+
+		checkHasCard := checkHasCards(submitCard, checkCards)
+		if !checkHasCard {
+			return nil, errorst.ErrCardNotExist
 		}
 	}
 
-	checkHasCard := checkHasCards(submitCard, checkCards)
-	if !checkHasCard {
-		return nil, errorst.ErrCardNotExist
-	}
-
-	for _, user := range room.Users {
+	for _, user := range mdroom.Users {
 		if user.UserID == uid {
 			submitCard.Role = user.Role
 		}
@@ -452,10 +399,8 @@ func SubmitCard(uid int32, submitCard *mdt.SubmitCard, room *mdr.Room) ([]int32,
 	if thirteen.Status > enumt.GameStatusInit {
 		return nil, errors.ErrGameIsDone
 	}
-	playerNow := cachet.GetGamePlayerNowRoomID(room.RoomID)
-	playerNow += 1
 
-	if playerNow == room.MaxNumber {
+	if mdroom.MaxNumber == int32(len(thirteen.SubmitCards)) {
 		thirteen.Status = enumt.GameStatusStarted
 	}
 
@@ -476,7 +421,7 @@ func SubmitCard(uid int32, submitCard *mdt.SubmitCard, room *mdr.Room) ([]int32,
 	//	return 0, err
 	//}
 
-	err = cachet.UpdateGameUser(thirteen, uid, playerNow)
+	err = cachet.UpdateGame(thirteen)
 	if err != nil {
 		log.Err("thirteen set session failed, %v", err)
 		return nil, err
@@ -521,7 +466,7 @@ func CleanGame() error {
 	//	log.Err("get thirteen give up room err:%v", err)
 	//}
 
-	rids, err := cacher.GetAllDeleteRoomKey(enumt.GameID)
+	rids, err := cacher.GetAllDeleteRoomKey(enumr.ThirteenGameType)
 	if err != nil {
 		log.Err("get thirteen clean room err:%v", err)
 		return err
@@ -534,7 +479,7 @@ func CleanGame() error {
 		}
 		if game != nil {
 			gids = append(gids, game.GameID)
-			err = cachet.DeleteGame(rid)
+			err = cachet.DeleteGame(game)
 			//log.Debug("clean thirteen game:%d|%d|%+v\n",game.GameID,game.RoomID,game.Ids)
 			if err != nil {
 				log.Err(" delete thirteen set session failed, %v", err)
@@ -610,6 +555,77 @@ func ThirteenRecovery(rid int32, uid int32) (*mdt.ThirteenRecovery, error) {
 	recovery.ReadyUser = readyuser
 	recovery.BankerID = thirteen.BankerID
 	return recovery, nil
+}
+
+func ThirteenExist(uid int32, rid int32) (*pbt.ThirteenRecovery, error) {
+	out := &pbt.ThirteenRecovery{}
+	_, roomRecovery, err := room.CheckRoomExist(uid, rid)
+	if err != nil {
+		return nil, err
+	}
+	out.RoomExist = roomRecovery.ToProto()
+	out.RoomExist.Room.CreateOrEnter = enumr.EnterRoom
+	if roomRecovery.Status < enumr.RecoveryGameStart && roomRecovery.Status != enumr.RecoveryInitNoReady {
+		return out, nil
+	}
+	thirteen, err := cachet.GetGame(roomRecovery.Room.RoomID)
+	if err != nil {
+		return nil, err
+	}
+	if thirteen == nil {
+		thirteen, err = dbt.GetLastThirteenByRoomID(db.DB(), roomRecovery.Room.RoomID)
+		if err != nil {
+			return nil, err
+		}
+	}
+	if thirteen == nil {
+		return nil, errorst.ErrGameNotExist
+	}
+	recovery := &mdt.ThirteenRecovery{}
+	var readyuser []int32
+	gameStatus := enumt.RecoveryInitNoReady
+	//if thirteen.Status == enumt.GameStatusInit {
+	//	for _, card := range thirteen.Cards {
+	//		if card.UserID == uid {
+	//			recovery.Cards = *card
+	//		}
+	//	}
+	//	for _, card := range thirteen.SubmitCards {
+	//		if card.UserID == uid {
+	//			gameStatus = enumt.RecoveryInitReady
+	//		}
+	//		readyuser = append(readyuser, card.UserID)
+	//	}
+	//} else {
+	//
+	//	gameStatus = enumt.RecoveryGameStart
+	//	recovery.GameResult = *thirteen.Result
+	//}
+
+	for _, card := range thirteen.Cards {
+		if card.UserID == uid {
+			recovery.Cards = *card
+		}
+	}
+	for _, card := range thirteen.SubmitCards {
+		if card.UserID == uid {
+			gameStatus = enumt.RecoveryInitReady
+		}
+		readyuser = append(readyuser, card.UserID)
+	}
+	if thirteen.Status == enumt.GameStatusDone {
+		gameStatus = enumt.RecoveryGameStart
+		recovery.GameResult = *thirteen.Result
+	}
+	recovery.Status = int32(gameStatus)
+	recovery.ReadyUser = readyuser
+	recovery.BankerID = thirteen.BankerID
+	//out := &pbt.ThirteenRecovery{
+	//	RoomExist:     roomRecovery.ToProto(),
+	//	ThirteenExist: recovery.ToProto(),
+	//}
+	out.ThirteenExist = recovery.ToProto()
+	return out, nil
 }
 
 func checkHasCards(submitCards *mdt.SubmitCard, cardList []string) bool {

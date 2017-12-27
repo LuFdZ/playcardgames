@@ -102,7 +102,7 @@ func (b *BillSrv) Recharge(ctx context.Context, req *pbbill.RechargeRequest,
 
 		msg := &pbbill.BalanceChange{
 			UserID:  req.UserID,
-			Diamond: ub.Amount,
+			Diamond: ub.Balance,
 		}
 		topic.Publish(b.broker, msg, TopicBillChange)
 	}

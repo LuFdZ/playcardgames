@@ -38,7 +38,7 @@ func CreateDoudizhu() []*mdddz.Doudizhu {
 		}
 		return false
 	}
-	rooms := cacheroom.GetAllRoom(f)
+	rooms := cacheroom.GetAllRooms(f)
 	if rooms == nil && len(rooms) == 0 {
 		return nil
 	}
@@ -67,9 +67,11 @@ func CreateDoudizhu() []*mdddz.Doudizhu {
 			OpTotalIndex:     0,
 			SubmitCardNow:    &mdddz.SubmitCard{NextID: gameInit.UserCardList[0].UserID},
 			OpID:             gameInit.UserCardList[0].UserID,
-			BankerID:         enumddz.DDZCallBanker,
+			BankerID:         0,
 			BaseScore:        baseScore,
-			BombScore:        baseScore,
+			BombTimes:        1,
+			BankerTimes:      1,
+			PassWord:         room.Password,
 			SubDateAt:        &now,
 			OpDateAt:         &now,
 			Ids:              room.Ids,
@@ -117,7 +119,7 @@ func CreateDoudizhu() []*mdddz.Doudizhu {
 				return err
 			}
 
-			err = cacheddz.SetGame(doudizhu, room.Password)
+			err = cacheddz.SetGame(doudizhu)
 			if err != nil {
 				log.Err("doudizhu create set redis failed,%v | %v", doudizhu,
 					err)
@@ -239,13 +241,11 @@ func updateGame(ddz *mdddz.Doudizhu, toDB bool) error {
 }
 
 func UpdateGame() []*mdddz.Doudizhu {
-	f := func(r *mdddz.Doudizhu) bool {
-		if r.Status < enumddz.GameStatusDone {
-			return true
-		}
-		return false
+	ddzs, err := cacheddz.GetAllDoudizhuByStatus(enumddz.GameStatusDone)
+	if err != nil {
+		log.Err("GetAllDoudizhuByStatusErr err:%v", err)
+		return nil
 	}
-	ddzs := cacheddz.GetAllDDZ(f)
 	if len(ddzs) == 0 {
 		return nil
 	}
@@ -262,17 +262,11 @@ func UpdateGame() []*mdddz.Doudizhu {
 				continue
 			}
 		} else if ddz.Status == enumddz.GameStatusStarted {
-			pwd := cacheddz.GetRoomPaawordRoomID(ddz.RoomID)
-			room, err := cacheroom.GetRoom(pwd)
+			room, err := cacheroom.GetRoom(ddz.PassWord)
 			if err != nil {
-				log.Err("doudizhu room get session failed, roomid:%d,pwd:%s,err:%v", ddz.RoomID, pwd, err)
+				log.Err("doudizhu room get session failed, roomid:%d,pwd:%s,err:%v", ddz.RoomID, ddz.PassWord, err)
 				continue
 			}
-			if room == nil {
-				log.Err("doudizhu room get session nil, %v|%d", pwd, ddz.RoomID)
-				continue
-			}
-
 			var roomparam *mdroom.NiuniuRoomParam
 			if err := json.Unmarshal([]byte(room.GameParam),
 				&roomparam); err != nil {
@@ -352,10 +346,19 @@ func GetBanker(uid int32, gid int32, getBanker int32, room *mdroom.Room) (int32,
 	if ddz.OpID != uid {
 		return 0, nil, errddz.ErrNotYouTrun
 	}
-	if getBanker != ddz.BankerType {
+	//fmt.Printf("GetBanker:%d|%d\n", getBanker, ddz.BankerType)
+	//if getBanker != enumddz.DDZNoBanker && getBanker != ddz.BankerType {
+	//	return 0, nil, errddz.ErrBankerType
+	//}
+	if ddz.BankerType == 0 && (getBanker != enumddz.DDZCallBanker && getBanker != enumddz.DDZNoBanker) {
+		return 0, nil, errddz.ErrBankerType
+	} else if (ddz.BankerType == enumddz.DDZCallBanker || ddz.BankerType == enumddz.DDZGetBanker) &&
+		getBanker < enumddz.DDZGetBanker {
 		return 0, nil, errddz.ErrBankerType
 	}
-	if ddz.BankerType == enumddz.DDZBankerTypeCall && getBanker == enumddz.DDZBankerTypeGet {
+	if ddz.BankerType == 0 {
+		ddz.BankerType = enumddz.DDZBankerTypeCall
+	} else if ddz.BankerType == enumddz.DDZBankerTypeCall && getBanker == enumddz.DDZBankerTypeGet {
 		ddz.BankerType = enumddz.DDZBankerTypeGet
 	}
 	ugb, bankerStatus := getNextBanker(ddz.OpTotalIndex, ddz.OpIndex, getBanker, ddz.GetBankerLogList)
@@ -394,7 +397,7 @@ func GetBanker(uid int32, gid int32, getBanker int32, room *mdroom.Room) (int32,
 		cardList.CardList = tools.MergeSlice(cardList.CardList, ddz.DizhuCardList)
 		break
 	}
-	ddz.BombScore += ddz.BaseScore
+	ddz.BankerTimes *= 2
 	now := gorm.NowFunc()
 	ddz.OpDateAt = &now
 	ddz.SubDateAt = &now
@@ -430,16 +433,18 @@ func SubmitCard(uid int32, gid int32, submitCardList []string, room *mdroom.Room
 	}
 	var cardType int32
 	if submitCardNumber > 0 {
-		checkHasCard := checkHasCards(submitCardList, uci.CardRemain)
-		if !checkHasCard {
-			return nil, nil, nil, errddz.ErrCardNotExist
+		if cacheroom.GetRoomTestConfigKey("DoudizhuCheckHasCards") != "0" {
+			checkHasCard := checkHasCards(submitCardList, uci.CardRemain)
+			if !checkHasCard {
+				return nil, nil, nil, errddz.ErrCardNotExist
+			}
 		}
 		result, bombScore, cType := cardCompare(game.SubmitCardNow, submitCardList, isSelf)
 		cardType = cType
 		if !result {
 			return nil, nil, nil, errddz.ErrSubmitCard
 		}
-		game.BombScore *= bombScore
+		game.BombTimes *= bombScore
 		if isSelf {
 			for _, u := range game.UserCardInfoList {
 				u.CardList = nil
@@ -474,7 +479,7 @@ func SubmitCard(uid int32, gid int32, submitCardList []string, room *mdroom.Room
 	game.OpDateAt = &now
 	game.SubDateAt = &now
 
-	submitCardLogStr := fmt.Sprintf("%d|%d|%d|%v", game.OpTotalIndex, uid, game.BombScore, submitCardList)
+	submitCardLogStr := fmt.Sprintf("%d|%d|%d|%v", game.OpTotalIndex, uid, game.BombTimes, submitCardList)
 	game.GameCardLogList = append(game.GameCardLogList, submitCardLogStr)
 	err = cacheddz.UpdateGame(game)
 	if err != nil {
@@ -483,12 +488,12 @@ func SubmitCard(uid int32, gid int32, submitCardList []string, room *mdroom.Room
 	}
 
 	msg := &pbddz.SubmitCard{
-		GameID:    gid,
-		SubmitID:  uid,
-		CardType:  cardType,
-		NextID:    game.SubmitCardNow.NextID,
-		BombScore: game.BombScore,
-		Status:    game.Status,
+		GameID:     gid,
+		SubmitID:   uid,
+		CardType:   cardType,
+		NextID:     game.SubmitCardNow.NextID,
+		ScoreTimes: game.BombTimes * game.BankerTimes * game.BaseScore,
+		Status:     game.Status,
 		CountDown: &pbddz.CountDown{
 			ServerTime: game.OpDateAt.Unix(),
 			Count:      enumddz.SubmitCardCountDown,
@@ -496,6 +501,7 @@ func SubmitCard(uid int32, gid int32, submitCardList []string, room *mdroom.Room
 		CardList: submitCardList,
 		//CardRemain:       uci.CardRemain,
 		CardRemainNumber: int32(len(uci.CardRemain)),
+		Ids:              game.Ids,
 	}
 
 	if game.Status == enumddz.GameStatusStarted {
@@ -503,6 +509,7 @@ func SubmitCard(uid int32, gid int32, submitCardList []string, room *mdroom.Room
 
 	} else {
 		err = updateGame(game, false)
+		game.OpID = game.SubmitCardNow.NextID
 	}
 	if err != nil {
 		return nil, nil, nil, err
@@ -512,15 +519,15 @@ func SubmitCard(uid int32, gid int32, submitCardList []string, room *mdroom.Room
 }
 
 func GetGameResult(game *mdddz.Doudizhu, room *mdroom.Room) error {
-	var score = game.BombScore
+	var score = game.BankerTimes * game.BombTimes * game.BaseScore
 	for _, uc := range game.UserCardInfoList {
 		ur := &mdddz.UserResult{}
 		ur.UserID = uc.UserID
 		if game.WinerType == enumddz.Dizhu {
 			if ur.UserID == game.BankerID {
-				ur.Score = score
+				ur.Score = 3 * score
 			} else {
-				ur.Score = -score
+				ur.Score = -3 * score
 			}
 		} else {
 			if ur.UserID == game.BankerID {
@@ -550,7 +557,7 @@ func GetGameResult(game *mdddz.Doudizhu, room *mdroom.Room) error {
 		log.Err("doudizhu update failed, %v", err)
 		return err
 	}
-	err = cacheddz.DeleteGame(game.RoomID)
+	err = cacheddz.DeleteGame(game)
 	if err != nil {
 		log.Err("doudizhu room del session failed, roomid:%d,pwd:%s,err:%v", game.RoomID, room.Password, err)
 		return err
@@ -609,7 +616,6 @@ func deleteCard(ui *mdddz.UserCard, submitCardList []string) {
 }
 
 func getNextBanker(opIndex int32, startIndex int32, bankerType int32, ugbList []*mdddz.GetBanker) (*mdddz.GetBanker, int32) {
-	fmt.Printf("getNextBanker:%d|%d|%+v\n", opIndex, startIndex, ugbList)
 	ugbList[startIndex].Type = bankerType
 	if opIndex < 3 {
 		return ugbList[startIndex+1], enumddz.DDZBankerStatusContinue
@@ -627,7 +633,7 @@ func getNextBanker(opIndex int32, startIndex int32, bankerType int32, ugbList []
 			}
 		}
 		if noCallCount == 4 {
-			return nil, enumddz.DDZBankerStatusReStart
+			return ugbList[3], enumddz.DDZBankerStatusReStart
 		} else if lastCallIndex > -1 {
 			return ugbList[lastCallIndex], enumddz.DDZBankerStatusContinue
 		} else {

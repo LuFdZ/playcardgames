@@ -314,7 +314,7 @@ func WXLogin(u *mdu.User, code string, address string) (int64, *mdu.User, error)
 		//fmt.Printf("BBB WX Login Get Old Token:%v", atr)
 	}
 
-	err := cacheuser.SetUserWXInfo(atr.OpenID, atr.AccessToken, atr.RefreshToken)
+	err := cacheuser.SetUserWXInfo(atr.OpenID, atr.RefreshToken)
 	if err != nil {
 		return 0, nil, err
 	}

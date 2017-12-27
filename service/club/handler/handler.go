@@ -41,11 +41,11 @@ func NewHandler(s server.Server) *ClubSrv {
 		server: s,
 		broker: s.Options().Broker,
 	}
-	cs.Init()
+	cs.init()
 	return cs
 }
 
-func (cs *ClubSrv) Init() {
+func (cs *ClubSrv) init() {
 	club.RefreshAllFromDB()
 }
 

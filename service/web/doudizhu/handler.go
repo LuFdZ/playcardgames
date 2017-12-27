@@ -80,7 +80,7 @@ func DoudizhuSubmitCardHandler(p broker.Publication) error {
 	if err != nil {
 		return err
 	}
-	err = clients.SendTo(rs.UserID,t, enum.MsgDDZSubmitCard, rs)
+	err = clients.SendRoomUsers(rs.Ids,t, enum.MsgDDZSubmitCard, rs)
 	if err != nil {
 		return err
 	}

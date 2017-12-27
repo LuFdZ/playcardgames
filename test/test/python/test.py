@@ -32,11 +32,11 @@ listHostLocal = ["http://192.168.1.76:8888", "http://192.168.1.76:8080", "http:/
 listWSLocal = ["ws://192.168.1.76:8888/stream", "ws://192.168.1.76:8080/stream", "ws://192.168.1.76:8080/stream",
                "ws://192.168.1.76:8080/stream","ws://192.168.1.76:8080/stream","ws://192.168.1.76:8080/stream","ws://192.168.1.76:8080/stream"];
 
-# lh = "http://111.230.87.172:8888"
-# lw = "ws://111.230.87.172:8888/stream"
+lh = "http://111.230.87.172:8888"
+lw = "ws://111.230.87.172:8888/stream"
 
-lh = "http://192.168.1.76:8080"
-lw = "ws://192.168.1.76:8999/stream"
+# lh = "http://192.168.1.76:8080"
+# lw = "ws://192.168.1.76:8999/stream"
 
 # lh = "http://192.168.1.125:8080"
 # lw = "ws://192.168.1.125:8999/stream"
@@ -102,7 +102,7 @@ class Test(object):
             Init(userD)
             time.sleep(2.0)
 
-            userA.CreateTRoom(1,4,20)
+            userA.CreateTRoom(1,4,60)
             time.sleep(2.0)
             if userA.Pwd()== "------":
                 print ("Error: Create Room Err")

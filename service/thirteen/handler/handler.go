@@ -30,21 +30,19 @@ func RoomLockKey(pwd string) string {
 }
 
 func NewHandler(s server.Server, gt *gsync.GlobalTimer, gl *lua.LState) *ThirteenSrv {
-	b := &ThirteenSrv{
+	t := &ThirteenSrv{
 		server: s,
 		broker: s.Options().Broker,
 	}
-	thirteen.InitGoLua(gl)
-
-	b.update(gt)
-	return b
+	t.update(gt,gl)
+	return t
 }
 
-func (ts *ThirteenSrv) update(gt *gsync.GlobalTimer) {
+func (ts *ThirteenSrv) update(gt *gsync.GlobalTimer,gl *lua.LState) {
 	lock := "playcards.thirteen.update.lock"
 	f := func() error {
 		ts.count ++
-		newGames := thirteen.CreateThirteen()
+		newGames := thirteen.CreateThirteen(gl)
 		if newGames != nil {
 			for _, game := range newGames {
 				for _, groupCard := range game.Cards {
@@ -54,7 +52,7 @@ func (ts *ThirteenSrv) update(gt *gsync.GlobalTimer) {
 				}
 			}
 		}
-		games := thirteen.UpdateGame()
+		games := thirteen.UpdateGame(gl)
 		if games != nil {
 			for _, game := range games {
 				msg := game.Result.ToProto()
@@ -62,7 +60,7 @@ func (ts *ThirteenSrv) update(gt *gsync.GlobalTimer) {
 				topic.Publish(ts.broker, msg, TopicThirteenGameResult)
 			}
 		}
-		if ts.count == 3 {
+		if ts.count == 30 {
 			err := thirteen.CleanGame()
 			if err != nil {
 				log.Err("clean game loop err:%v", err)

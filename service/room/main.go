@@ -22,7 +22,6 @@ var FuncRights = map[string]int32{
 	"RoomSrv.GiveUpVote":            auth.RightsPlayer,
 	"RoomSrv.Renewal":               auth.RightsPlayer,
 	"RoomSrv.RoomResultList":        auth.RightsPlayer,
-	"RoomSrv.CheckRoomExist":        auth.RightsPlayer,
 	"RoomSrv.Shock":                 auth.RightsPlayer,
 	"RoomSrv.VoiceChat":             auth.RightsPlayer,
 	"RoomSrv.GetAgentRoomList":      auth.RightsPlayer,
@@ -31,8 +30,11 @@ var FuncRights = map[string]int32{
 	"RoomSrv.GetRoomUserLocation":   auth.RightsPlayer,
 	"RoomSrv.CreateClubRoom":        auth.RightsPlayer,
 	"RoomSrv.CreateFeedback":        auth.RightsPlayer,
-	"RoomSrv.PageRoomList":          auth.RightsNoticeAdmin,
-	"RoomSrv.PageFeedbackList":      auth.RightsRoomAdmin,
+	"RoomSrv.GetRoomRecovery":       auth.RightsPlayer,
+	"RoomSrv.GameStart":             auth.RightsPlayer,
+	//"RoomSrv.CheckRoomExist":        auth.RightsPlayer,
+	"RoomSrv.PageRoomList":     auth.RightsNoticeAdmin,
+	"RoomSrv.PageFeedbackList": auth.RightsRoomAdmin,
 }
 
 func main() {

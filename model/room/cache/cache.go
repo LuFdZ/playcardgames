@@ -10,31 +10,21 @@ import (
 	"playcards/utils/cache"
 	"playcards/utils/errors"
 	"playcards/utils/log"
-	"runtime/debug"
 	"strconv"
 	"strings"
 
 	"gopkg.in/redis.v5"
+	"playcards/utils/tools"
 )
 
-func RoomHKey(pwd string) string {
-	return fmt.Sprintf(cache.KeyPrefix("ROOM:%s"), pwd)
-}
-
-func UserHKey(uid int32) string {
-	return fmt.Sprintf(cache.KeyPrefix("ROOMUSER:%d"), uid)
-}
+//var roomMap = make(map[string]mdr.Room)
 
 func AgentRoomHKey() string {
 	return fmt.Sprintf(cache.KeyPrefix("AGENTROOM"))
 }
 
 func AgentRoomHSubKey(uid int32, gametype int32, rid int32, pwd string) string {
-	return fmt.Sprintf("%d:%d:%d:%s", uid, gametype, rid, pwd)
-}
-
-func RoomHKeySearch() string {
-	return cache.KeyPrefix("ROOM:*")
+	return fmt.Sprintf("uid:%d-gametype:%d-rid:%d-pwd:%s-", uid, gametype, rid, pwd)
 }
 
 func RoomHKeyDelete(gametype int32, rid int32) string {
@@ -45,82 +35,120 @@ func RoomHKeyDeleteSearch(gametype int32) string {
 	return fmt.Sprintf(cache.KeyPrefix("ROOMDELETE:%d*"), gametype)
 }
 
-func SetRoom(r *mdr.Room) error {
-	var key string
+func RoomLockKey(password string) string {
+	return fmt.Sprintf("ROOMLOCK:%s", password)
+}
+
+func RoomKey() string {
+	return fmt.Sprintf(cache.KeyPrefix("ROOMMAP"))
+}
+
+func UserKey() string {
+	return fmt.Sprintf(cache.KeyPrefix("ROOMUSER"))
+}
+
+func RoomSearcKey() string {
+	return fmt.Sprintf(cache.KeyPrefix("ROOMSEARCH"))
+}
+
+func RoomSearchHKey(gtype int32, status int32, password string) string {
+	return fmt.Sprintf("gtype:%d-status:%d-password:%s-", gtype, status, password)
+}
+
+func SetRoom(mdroom *mdr.Room) error {
+	lockKey := RoomLockKey(mdroom.Password)
+	roomKey := RoomKey()
+	searchKey := RoomSearcKey()
 	f := func(tx *redis.Tx) error {
-		key = RoomHKey(r.Password)
+		searchHKey := RoomSearchHKey(mdroom.GameType, mdroom.Status, mdroom.Password)
 		tx.Pipelined(func(p *redis.Pipeline) error {
-			b, _ := json.Marshal(r)
-			tx.HSet(key, "password", r.Password)
-			tx.HSet(key, "roomid", r.RoomID)
-			tx.HSet(key, "room", string(b))
-			//tx.HSet(key, "lock", 0)
-			if r.RoomType == enumr.RoomTypeAgent {
-				key = AgentRoomHKey()
-				subKey := AgentRoomHSubKey(r.PayerID, r.GameType, r.RoomID, r.Password)
-				tx.HSet(key, subKey, b)
+			mdroom.SearchKey = searchHKey
+			b, _ := json.Marshal(mdroom)
+			tx.HSet(roomKey, mdroom.Password, string(b))
+			tx.HSet(searchKey, searchHKey, mdroom.Password)
+			if mdroom.RoomType == enumr.RoomTypeAgent {
+				aKey := AgentRoomHKey()
+				subKey := AgentRoomHSubKey(mdroom.PayerID, mdroom.GameType, mdroom.RoomID, mdroom.Password )
+				tx.HSet(aKey, subKey,string(b))
 			}
 			return nil
 		})
-
+		//roomMap[mdroom.Password] = *mdroom
+		//cache.KV().ZAdd(RoomRankKey(), redis.Z{Score: float64(mdroom.RoomID), Member: mdroom.Password})
 		return nil
 	}
-
-	if err := cache.KV().Watch(f, key); err != nil {
+	if err := cache.KV().Watch(f, lockKey); err != nil {
 		return errors.Internal("set room failed", err)
 	}
 	return nil
 }
 
-func UpdateRoom(r *mdr.Room) error {
-	key := RoomHKey(r.Password)
+func UpdateRoom(mdroom *mdr.Room) error {
+	lockKey := RoomLockKey(mdroom.Password)
+	roomKey := RoomKey()
+	searchKey := RoomSearcKey()
 
 	f := func(tx *redis.Tx) error {
+		searchHkey := RoomSearchHKey(mdroom.GameType, mdroom.Status, mdroom.Password)
 		tx.Pipelined(func(p *redis.Pipeline) error {
-			b, _ := json.Marshal(r)
-			tx.HSet(key, "room", string(b))
-			if r.RoomType == enumr.RoomTypeAgent {
-				key = AgentRoomHKey()
-				subKey := AgentRoomHSubKey(r.PayerID, r.GameType, r.RoomID, r.Password)
-				tx.HSet(key, subKey, b)
+			lastKey := mdroom.SearchKey
+			tx.HDel(searchKey, lastKey)
+			mdroom.SearchKey = searchHkey
+			b, _ := json.Marshal(mdroom)
+			tx.HSet(roomKey, mdroom.Password, string(b))
+			tx.HSet(searchKey, searchHkey, mdroom.Password)
+			if mdroom.RoomType == enumr.RoomTypeAgent {
+				aKey := AgentRoomHKey()
+				subKey := AgentRoomHSubKey(mdroom.PayerID, mdroom.GameType, mdroom.RoomID, mdroom.Password)
+				tx.HSet(aKey, subKey, string(b))
 			}
 			return nil
 		})
+		//roomMap[mdroom.Password] = *mdroom
 		return nil
 	}
-
-	if err := cache.KV().Watch(f, key); err != nil {
+	if err := cache.KV().Watch(f, lockKey); err != nil {
+		log.Err("%s set room failed\n",lockKey)
 		return errors.Internal("set room failed", err)
 	}
 
 	return nil
 }
 
-func DeleteRoom(password string) error {
-	key := RoomHKey(password)
+func DeleteRoom(mdroom *mdr.Room) error {
+	lockKey := RoomLockKey(mdroom.Password)
+	roomKey := RoomKey()
+	searcKey := RoomSearcKey()
 	f := func(tx *redis.Tx) error {
-		//orig, _ := tx.HGet(key, "password").Bytes()
 		tx.Pipelined(func(p *redis.Pipeline) error {
-			tx.Del(key)
+			tx.HDel(roomKey, mdroom.Password)
+			tx.HDel(searcKey, mdroom.SearchKey)
+			//tx.ZRem(rankKey, mdroom.Password)
 			return nil
 		})
+		//delete(roomMap, pwd)
 		return nil
 	}
-	err := cache.KV().Watch(f, key)
+	err := cache.KV().Watch(f, lockKey)
 	if err != nil {
 		return errors.Internal("delete room error", err)
 	}
 	return nil
 }
 
+//func deleteRoomSearch(tx *redis.Tx,pwd string){
+//	key := GetRoomKey(pwd)
+//	tx.HDel(RoomSearcKey(),key)
+//}
+
 func CheckRoomExist(pwd string) bool {
-	key := RoomHKey(pwd)
-	return cache.KV().Exists(key).Val()
+	key := RoomKey()
+	return cache.KV().HExists(key, pwd).Val()
 }
 
 func GetRoom(pwd string) (*mdr.Room, error) {
-	key := RoomHKey(pwd)
-	val, err := cache.KV().HGet(key, "room").Bytes()
+	key := RoomKey()
+	val, err := cache.KV().HGet(key, pwd).Bytes()
 	if err == redis.Nil {
 		return nil, errr.ErrRoomNotFind //errors.Internal("room not find", err)
 	}
@@ -153,36 +181,20 @@ func GetRoomByKey(key string) (*mdr.Room, error) {
 	return room, nil
 }
 
-func SetRoomUser(rid int32, password string, uid int32) error {
-	key := UserHKey(uid)
-	f := func(tx *redis.Tx) error {
-		tx.Pipelined(func(p *redis.Pipeline) error {
-			tx.HSet(key, "userid", uid)
-			tx.HSet(key, "roomid", rid)
-			tx.HSet(key, "password", password)
-			tx.HSet(key, "socketstatus", 1) //scoket连接状态 1在线 2掉线
-			tx.HSet(key, "socketnotice", 0) //连接信息是否已广播
-			return nil
-		})
-		return nil
+func GetRoomTestConfigKey(key string) string {
+	val := cache.KV().HGet("TESTKEY", key).Val()
+	if len(val) == 0 {
+		return "0"
 	}
-	err := cache.KV().Watch(f, key)
-	if err != nil {
-		return errors.Internal("set room user failed", err)
-	}
-	return nil
+	return val
 }
 
-func UpdateRoomUserSocektStatus(uid int32, socketStatus int32) error {
-	key := UserHKey(uid)
-	rid := cache.KV().HGet(key, "roomid").Val()
-	if len(rid) == 0 {
-		return nil
-	}
+func SetRoomUser(rid int32, password string, uid int32) error {
+	key := UserKey()
+	value := fmt.Sprintf("%s:%d", password, rid)
 	f := func(tx *redis.Tx) error {
 		tx.Pipelined(func(p *redis.Pipeline) error {
-			tx.HSet(key, "socketstatus", socketStatus) //scoket连接状态 1在线 2掉线
-			//tx.HSet(key, "socketnotice", socketNotice)
+			tx.HSet(key, tools.String2int(uid), value)
 			return nil
 		})
 		return nil
@@ -195,11 +207,11 @@ func UpdateRoomUserSocektStatus(uid int32, socketStatus int32) error {
 }
 
 func DeleteRoomUser(uid int32) error {
-	key := UserHKey(uid)
+	key := UserKey()
 	f := func(tx *redis.Tx) error {
 		tx.Pipelined(func(p *redis.Pipeline) error {
-			tx.Del(key)
-			log.Info("delete room user:%s\n", key)
+			tx.HDel(key, tools.String2int(uid))
+			log.Info("delete room user:%d\n", uid)
 			return nil
 		})
 		return nil
@@ -211,65 +223,86 @@ func DeleteRoomUser(uid int32) error {
 	return nil
 }
 
-func DeleteAllRoomUser(password string, callFrom string) error {
-	key := RoomHKey(password)
+func DeleteAllRoomUser(pwd string, callFrom string) error {
+	lockKey := RoomLockKey(pwd)
+	userkey := UserKey()
 	f := func(tx *redis.Tx) error {
 		tx.Pipelined(func(p *redis.Pipeline) error {
-			room, err := GetRoom(password)
+			room, err := GetRoom(pwd)
 			//fmt.Printf("delete room user room:%v \n", room)
 			str := ""
 			if err == nil && room != nil {
 				for _, user := range room.Users {
-					userkey := UserHKey(user.UserID)
-					rid := tx.HGet(userkey, "roomid").Val()
+					value := tx.HGet(userkey, tools.String2int(user.UserID)).Val()
+					if len(value) == 0{
+						continue
+					}
+					rid := strings.Split(value, ":")[1]
 					roomid, _ := strconv.Atoi(rid)
 					if int32(roomid) == room.RoomID {
-						tx.Del(userkey)
-						str += fmt.Sprintf("|delthisroomuser:%s,roomid:%d|", userkey, roomid)
+						tx.HDel(userkey,tools.String2int(user.UserID) )
+						str += fmt.Sprintf("|delthisroomuser:%s", user.UserID)
 					} else {
-						str += fmt.Sprintf("|nothisroomuser:%s,roomid:%d|", userkey, roomid)
+						str += fmt.Sprintf("|nothisroomuser:%s,roomid:%d|", user.UserID, roomid)
 					}
 				}
 			}
-			log.Info("%s DeleteRoomAllUser RoomID:%s,RoomPWd:%s,userlist:%s,Stack:\n%s\n", callFrom, room.RoomID, key, room.RoundNow, str, string(debug.Stack()))
+			log.Info("%s DeleteRoomAllUser RoomID:%s,RoomPWd:%s,user list:%s", callFrom, room.RoomID, lockKey, room.RoundNow, str)
 			return nil
 		})
 		return nil
 	}
-	err := cache.KV().Watch(f, key)
+	err := cache.KV().Watch(f, lockKey)
 	if err != nil {
 		return errors.Internal("set room error", err)
 	}
-
 	return nil
 }
 
-func GetRoomPasswordByUserID(uid int32) string {
-	key := UserHKey(uid)
-	pwd := cache.KV().HGet(key, "password").Val()
-	return pwd
-}
-
-func GetUserStatus(uid int32) int32 {
-	key := UserHKey(uid)
-	status := cache.KV().HGet(key, "socketstatus").Val()
-
-	if len(status) > 0 {
-		result, _ := strconv.Atoi(status)
-		return int32(result)
-	}
-	return 0
-}
-
-//func GetUserSocketNotice(uid int32) int32 {
-//	key := UserHKey(uid)
-//	status := cache.KV().HGet(key, "socketnotice").Val()
-//	if len(status) > 0 {
-//		result, _ := strconv.Atoi(status)
-//		return int32(result)
+//func GetRoomUserID(uid int32) (*mdr.Room, error) {
+//	key := UserKey()
+//	value := cache.KV().HGet(key, string(uid)).Val()
+//	if len(value) == 0 {
+//		return nil, errr.ErrUserNotInRoom
 //	}
-//	return 0
+//	roomInfo := strings.Split(value, ":")
+//	pwd := roomInfo[0]
+//	rid, _ := strconv.Atoi(roomInfo[1])
+//	mdroom, err := GetRoom(pwd)
+//	if err != nil {
+//		return nil, err
+//	}
+//	if mdroom.RoomID != int32(rid) {
+//		DeleteRoomUser(uid)
+//		return nil, nil
+//	}
+//	return mdroom, nil
 //}
+
+func ExistRoomUser(uid int32) bool {
+	key := UserKey()
+	return cache.KV().HExists(key, tools.String2int(uid)).Val()
+}
+
+func GetRoomUserID(uid int32) (*mdr.Room, error) {
+	key := UserKey()
+	value := cache.KV().HGet(key, tools.String2int(uid)).Val()
+	if len(value) == 0 {
+		return nil, errr.ErrUserNotInRoom
+	}
+	roomInfo := strings.Split(value, ":")
+	pwd := roomInfo[0]
+	rid, _ := strconv.Atoi(roomInfo[1])
+	mdroom, err := GetRoom(pwd)
+	if err != nil {
+		return nil, err
+	}
+	if mdroom.RoomID != int32(rid) {
+		DeleteRoomUser(uid)
+		return nil, errr.ErrUserNotInRoom
+	}
+	return mdroom, nil
+}
 
 func SetAgentRoom(r *mdr.Room) error {
 	var key string
@@ -286,45 +319,6 @@ func SetAgentRoom(r *mdr.Room) error {
 	if err := cache.KV().Watch(f, key); err != nil {
 		return errors.Internal("set config failed", err)
 	}
-	return nil
-}
-
-func GetAgentRoom(uid int32, gameType int32, rid int32, pwd string) (*mdr.Room, error) {
-	key := AgentRoomHKey()
-	subKey := AgentRoomHSubKey(uid, gameType, rid, pwd)
-	val, err := cache.KV().HGet(key, subKey).Bytes()
-	if err == redis.Nil {
-		return nil, errr.ErrRoomNotFind //errors.Internal("room not find", err)
-	}
-
-	if err != nil && err != redis.Nil {
-		return nil, errors.Internal("get agent room failed", err)
-	}
-
-	room := &mdr.Room{}
-	if err := json.Unmarshal(val, room); err != nil {
-		return nil, errors.Internal("get agent room failed", err)
-	}
-	return room, nil
-}
-
-func DeleteAgentRoom(uid int32, gameType int32, rid int32, pwd string) error {
-	var key string
-	f := func(tx *redis.Tx) error {
-		key = AgentRoomHKey()
-		tx.Pipelined(func(p *redis.Pipeline) error {
-			subKey := AgentRoomHSubKey(uid, gameType, rid, pwd)
-			//fmt.Printf("DeleteAgentRoom:%s\n",subKey)
-			tx.HDel(key, subKey)
-			return nil
-		})
-		return nil
-	}
-	err := cache.KV().Watch(f, key)
-	if err != nil {
-		return errors.Internal("del room user error", err)
-	}
-	log.Debug("DeleteAgentRoom userid:%d,gametype:%d,rid%d,pwd:%s", uid, gameType, rid, pwd)
 	return nil
 }
 
@@ -400,26 +394,35 @@ func FlushAll() {
 	cache.KV().FlushAll()
 }
 
-func GetAllRoomKey() ([]string, error) {
-	var curson uint64
-	var rks []string
-	var count int64
-	count = 999
-	for {
-		scan := cache.KV().Scan(curson, RoomHKeySearch(), count)
-		keys, cur, err := scan.Result()
-		if err != nil {
-			return nil, errors.Internal("list room list failed", err)
-		}
-
-		curson = cur
-		rks = append(rks, keys...)
-
-		if curson == 0 {
-			break
-		}
+func GetAgentRoom(uid int32, gameType int32, rid int32, pwd string) (*mdr.Room, error) {
+	key := AgentRoomHKey()
+	subKey := AgentRoomHSubKey(uid, gameType, rid, pwd)
+	password := cache.KV().HGet(key, subKey).Val()
+	room, err := GetRoom(password)
+	if err != nil {
+		return nil, err
 	}
-	return rks, nil
+	return room, nil
+}
+
+func DeleteAgentRoom(uid int32, gameType int32, rid int32, pwd string) error {
+	var key string
+	f := func(tx *redis.Tx) error {
+		key = AgentRoomHKey()
+		tx.Pipelined(func(p *redis.Pipeline) error {
+			subKey := AgentRoomHSubKey(uid, gameType, rid, pwd)
+			//fmt.Printf("DeleteAgentRoom:%s\n",subKey)
+			tx.HDel(key, subKey)
+			return nil
+		})
+		return nil
+	}
+	err := cache.KV().Watch(f, key)
+	if err != nil {
+		return errors.Internal("del room user error", err)
+	}
+	log.Debug("DeleteAgentRoom userid:%d,gametype:%d,rid%d,pwd:%s", uid, gameType, rid, pwd)
+	return nil
 }
 
 func GetAgentRoomKey(gametype int32, uid int32) ([]string, error) {
@@ -429,9 +432,9 @@ func GetAgentRoomKey(gametype int32, uid int32) ([]string, error) {
 	count = 999
 	match := ""
 	if gametype == enumr.AgentRoomAllGameType { //match = fmt.Sprintf("%d:%d:%d:%s", uid, gametype, rid, pwd)
-		match = fmt.Sprintf("%d:*", uid)
+		match = fmt.Sprintf("uid:%d-*", uid)
 	} else {
-		match = fmt.Sprintf("%d:%d*", uid, gametype)
+		match = fmt.Sprintf("uid:%d-gametype:%d-*", uid, gametype)
 	}
 	for {
 		scan := cache.KV().HScan(AgentRoomHKey(), curson, match, count)
@@ -439,89 +442,27 @@ func GetAgentRoomKey(gametype int32, uid int32) ([]string, error) {
 		if err != nil {
 			return nil, errors.Internal("list room list failed", err)
 		}
-		var temp []string
-		for _, k := range keys {
-			if k[0] == 123 {
-				temp = append(temp, k)
+		//var temp []string
+		for i, k := range keys {
+			if i%2 == 1 {
+				rks = append(rks, k)
 			}
+			//if k[0] == 123 {
+			//	temp = append(temp, k)
+			//}
 		}
 		curson = cur
-		rks = append(rks, temp...)
+		//rks = append(rks, temp...)
 
 		if curson == 0 {
 			break
 		}
 	}
+
 	//sort.Strings(rks)
 	//fmt.Printf("GetAgentRoomKey:%v\n",rks)
 	return rks, nil
 }
-
-func GetAllRoom(f func(*mdr.Room) bool) []*mdr.Room {
-	var rooms []*mdr.Room
-	keys, err := GetAllRoomKey()
-	if err != nil {
-		log.Err("redis get all room err: %v", err)
-	}
-	for _, k := range keys {
-		room, err := GetRoomByKey(k)
-		if err != nil {
-			log.Err("redis get room err: %v", err)
-		}
-		if room == nil {
-			continue
-		}
-		if f != nil && !f(room) {
-			continue
-		}
-		rooms = append(rooms, room)
-	}
-	return rooms
-}
-
-//func GetAllAgentRoom(uid int32, gametype int32, page int32, f func(*mdr.Room) bool) ([]*mdr.Room, int64) {
-//	var rooms []*mdr.Room
-//	keys, err := GetAgentRoomKey(gametype, uid)
-//	if err != nil {
-//		log.Err("redis get all room err: %v", err)
-//	}
-//
-//	count :=float64(len(keys))/ float64(enumr.MaxAgentRoomRecordCount)
-//	count = math.Ceil(count)
-//	if count == 0{
-//		count = 1
-//	}
-//
-//	pageStart := 0
-//	pageEnd := 99999
-//	if page > enumr.AgentRoomAllPage {
-//		pageStart = int((page - 1) * enumr.MaxAgentRoomRecordCount)
-//		pageEnd = int(pageStart + enumr.MaxAgentRoomRecordCount)
-//	}
-//
-//	if pageStart > int(count) {
-//		return nil, int64(count)
-//	}
-//	for i, k := range keys {
-//		index := i+1
-//		if index <= pageStart || index > pageEnd {
-//			continue
-//		}
-//		room := &mdr.Room{}
-//		if err := json.Unmarshal([]byte(k), room); err != nil {
-//			log.Err("redis get room err: str:%s,err:%v", k, err)
-//			continue
-//		}
-//		if room == nil {
-//			continue
-//		}
-//		if f != nil && !f(room) {
-//			continue
-//		}
-//		rooms = append(rooms, room)
-//	}
-//	return rooms, int64(count)
-//}
 
 func PageAgentRoom(uid int32, gametype int32, page int32, f func(*mdr.Room) bool) ([]*mdr.Room, int32, int32) {
 	var rooms []*mdr.Room
@@ -532,7 +473,8 @@ func PageAgentRoom(uid int32, gametype int32, page int32, f func(*mdr.Room) bool
 
 	for _, k := range keys {
 		room := &mdr.Room{}
-		if err := json.Unmarshal([]byte(k), room); err != nil {
+		//room, err := GetRoom(k)
+		if err = json.Unmarshal([]byte(k), room); err != nil {
 			log.Err("redis get room err: str:%s,err:%v", k, err)
 			continue
 		}
@@ -547,28 +489,28 @@ func PageAgentRoom(uid int32, gametype int32, page int32, f func(*mdr.Room) bool
 	return PageRoomList(page, rooms)
 }
 
-func PageRedisRoom(page int32, f func(*mdr.Room) bool) ([]*mdr.Room, int32, int32) {
-	var rooms []*mdr.Room
-	keys, err := GetAllRoomKey()
-	if err != nil {
-		log.Err("redis get all room err: %v", err)
-	}
-	for _, k := range keys {
-		room, err := GetRoomByKey(k)
-		if err != nil {
-			log.Err("redis get room err: %v", err)
-		}
-		if room == nil {
-			continue
-		}
-		if f != nil && !f(room) {
-			continue
-		}
-		rooms = append(rooms, room)
-	}
-	return PageRoomList(page, rooms)
-
-}
+//func PageRedisRoom(page int32, f func(*mdr.Room) bool) ([]*mdr.Room, int32, int32) {
+//	var rooms []*mdr.Room
+//	keys, err := GetAllRoomKey()
+//	if err != nil {
+//		log.Err("redis get all room err: %v", err)
+//	}
+//	for _, k := range keys {
+//		room, err := GetRoomByKey(k)
+//		if err != nil {
+//			log.Err("redis get room err: %v", err)
+//		}
+//		if room == nil {
+//			continue
+//		}
+//		if f != nil && !f(room) {
+//			continue
+//		}
+//		rooms = append(rooms, room)
+//	}
+//	return PageRoomList(page, rooms)
+//
+//}
 
 func PageRoomList(page int32, rooms []*mdr.Room) ([]*mdr.Room, int32, int32) {
 	total := int32(len(rooms))
@@ -597,4 +539,93 @@ func PageRoomList(page int32, rooms []*mdr.Room) ([]*mdr.Room, int32, int32) {
 	}
 
 	return pageList, int32(count), total
+}
+
+//func GetAllRoom(f func(int32, int32) bool) []*mdr.Room {
+//	var rooms []*mdr.Room
+//	//var keys []string
+//	for _, rm := range roomMap {
+//		if f != nil && !f(rm) {
+//			continue
+//		}
+//		T1 := &rm
+//		T2 := *T1
+//		mdroom := &T2
+//		rooms = append(rooms, mdroom)
+//	}
+//	return rooms
+//}
+
+func GetAllRoomByStatus(status int32) []*mdr.Room {
+	var rooms []*mdr.Room
+	match := fmt.Sprintf("*status:%d-*", status)
+	rooms, err := GetAllRoomKey(match)
+	if err != nil {
+		log.Err("GetAllRoomByStatus:%v", err)
+	}
+	return rooms
+}
+
+func GetAllRoomByGameTypeAndStatus(gtype int32, status int32) []*mdr.Room {
+	var rooms []*mdr.Room
+	match := fmt.Sprintf("*gtype:%d-status:%d-*", gtype, status)
+	rooms, err := GetAllRoomKey(match)
+	if err != nil {
+		log.Err("GetAllRoomByStatus:%v", err)
+	}
+	return rooms
+}
+
+func GetAllRooms(f func(*mdr.Room) bool) []*mdr.Room {
+	var (
+		rooms []*mdr.Room
+		out   []*mdr.Room
+	)
+	match := "*"
+	rooms, err := GetAllRoomKey(match)
+	if err != nil {
+		log.Err("GetAllRoomByStatus:%v", err)
+	}
+	if len(rooms) == 0 {
+		return rooms
+	}
+
+	for _, room := range rooms {
+		if f != nil && !f(room) {
+			continue
+		}
+		out = append(out, room)
+	}
+	return out
+}
+
+func GetAllRoomKey(match string) ([]*mdr.Room, error) {
+	var curson uint64
+	var rs []*mdr.Room
+	var count int64
+	count = 999
+	key := RoomSearcKey()
+	for {
+		scan := cache.KV().HScan(key, curson, match, count)
+		keysValues, cur, err := scan.Result()
+		if err != nil {
+			return nil, errors.Internal("list room list failed", err)
+		}
+		for i, searchRoom := range keysValues {
+			if i%2 == 0 {
+				password := strings.Split(searchRoom, "-")[2]
+				pwd := strings.Split(password, ":")[1]
+				room, err := GetRoom(pwd)
+				if err != nil {
+					log.Err("GetAllRoomKeyErr match:%s,err:%v", match, err)
+				}
+				rs = append(rs, room)
+			}
+		}
+		curson = cur
+		if curson == 0 {
+			break
+		}
+	}
+	return rs, nil
 }

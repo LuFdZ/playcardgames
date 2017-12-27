@@ -4,6 +4,7 @@ import (
 	apienum "gdc/service/api/enum"
 	pbroom "playcards/proto/room"
 	srvroom "playcards/service/room/handler"
+	cacheroom "playcards/model/room/cache"
 	"playcards/service/web/clients"
 	"playcards/service/web/enum"
 	"playcards/utils/subscribe"
@@ -12,6 +13,7 @@ import (
 	"github.com/micro/go-micro/broker"
 	"github.com/micro/go-micro/client"
 	"github.com/micro/protobuf/proto"
+	"playcards/utils/log"
 )
 
 var rpc pbroom.RoomSrvClient
@@ -64,9 +66,9 @@ func SubscribeAllRoomMessage(brk broker.Broker) error {
 	subscribe.SrvSubscribe(brk, topic.Topic(srvroom.TopicRoomVoiceChat),
 		RoomVoiceChatHandler,
 	)
-	subscribe.SrvSubscribe(brk, topic.Topic(srvroom.TopicRoomExist),
-		RoomExistHandler,
-	)
+	//subscribe.SrvSubscribe(brk, topic.Topic(srvroom.TopicRoomExist),
+	//	RoomExistHandler,
+	//)
 	subscribe.SrvSubscribe(brk, topic.Topic(srvroom.TopicRoomNotice),
 		RoomNoticeHandler,
 	)
@@ -207,24 +209,6 @@ func RoomRenewalHandler(p broker.Publication) error {
 	return nil
 }
 
-func UserConnectionHandler(p broker.Publication) error {
-	t := p.Topic()
-	msg := p.Message()
-	rs := &pbroom.UserConnection{}
-	err := proto.Unmarshal(msg.Body, rs)
-	if err != nil {
-		return err
-	}
-	ids := rs.Ids
-	rs.Ids = nil
-	err = clients.SendRoomUsers(ids, t, enum.MsgRoomUserConnection, rs)
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
 func RoomVoiceChatHandler(p broker.Publication) error {
 	t := p.Topic()
 	msg := p.Message()
@@ -242,20 +226,20 @@ func RoomVoiceChatHandler(p broker.Publication) error {
 	return nil
 }
 
-func RoomExistHandler(p broker.Publication) error {
-	t := p.Topic()
-	msg := p.Message()
-	rs := &pbroom.CheckRoomExistReply{}
-	err := proto.Unmarshal(msg.Body, rs)
-	if err != nil {
-		return err
-	}
-	err = clients.SendTo(rs.UserID, t, enum.MsgRoomExist, rs)
-	if err != nil {
-		return err
-	}
-	return nil
-}
+//func RoomExistHandler(p broker.Publication) error {
+//	t := p.Topic()
+//	msg := p.Message()
+//	rs := &pbroom.CheckRoomExistReply{}
+//	err := proto.Unmarshal(msg.Body, rs)
+//	if err != nil {
+//		return err
+//	}
+//	err = clients.SendTo(rs.UserID, t, enum.MsgRoomExist, rs)
+//	if err != nil {
+//		return err
+//	}
+//	return nil
+//}
 
 func RoomNoticeHandler(p broker.Publication) error {
 	t := p.Topic()
@@ -270,6 +254,62 @@ func RoomNoticeHandler(p broker.Publication) error {
 	err = clients.SendRoomUsers(ids, t, enum.MsgRoomNotice, rs)
 	if err != nil {
 		return err
+	}
+	return nil
+}
+
+//func UserConnectionHandler(p broker.Publication) error {
+//	t := p.Topic()
+//	msg := p.Message()
+//	rs := &pbroom.UserConnection{}
+//	err := proto.Unmarshal(msg.Body, rs)
+//	if err != nil {
+//		return err
+//	}
+//	ids := rs.Ids
+//	rs.Ids = nil
+//	err = clients.SendRoomUsers(ids, t, enum.MsgRoomUserConnection, rs)
+//	if err != nil {
+//		return err
+//	}
+//
+//	return nil
+//}
+
+func UserConnectionHandler(p broker.Publication) error {
+	t := p.Topic()
+	msg := p.Message()
+	rs := &pbroom.UserConnection{}
+	err := proto.Unmarshal(msg.Body, rs)
+	if err != nil {
+		return err
+	}
+	inRoom := cacheroom.ExistRoomUser(rs.UserID)
+	if inRoom {
+		mdroom, err := cacheroom.GetRoomUserID(rs.UserID)
+		if err != nil {
+			log.Err("UserConnectionHandlerErr uid:%d,status:%d,err:%d", rs.UserID, rs.Status, err)
+			return err
+		}
+		rs := &pbroom.UserConnection{rs.UserID, rs.Status, mdroom.Ids}
+		var ids []int32
+		for _,id := range rs.Ids{
+			if id != rs.UserID{
+				ids = append(ids,id)
+			}
+		}
+		if len(ids) == 0{
+			return nil
+		}
+		rs.Ids = nil
+		err = clients.SendRoomUsers(ids, t, enum.MsgRoomUserConnection, rs)
+		if err != nil {
+			return err
+		}
+		//if rs.Status == enum.SocketAline {
+		//	rs := &pbroom.RoomExist{rs.UserID, mdroom.RoomID, mdroom.GameType}
+		//	topic.Publish(brok, rs, srvroom.TopicRoomExist)
+		//}
 	}
 	return nil
 }

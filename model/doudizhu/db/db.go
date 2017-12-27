@@ -19,15 +19,16 @@ func CreateDoudizhu(tx *gorm.DB, ddz *mdddz.Doudizhu) error {
 func UpdateDoudizhu(tx *gorm.DB, ddz *mdddz.Doudizhu) (*mdddz.Doudizhu, error) {
 	now := gorm.NowFunc()
 	doudizhu := &mdddz.Doudizhu{
-		BankerID:  ddz.BankerID,
-		Status:    ddz.Status,
-		BombTimes: ddz.BombTimes,
-		OpID:      ddz.OpID,
-		OpIndex:   ddz.OpIndex,
-		WinerID:   ddz.WinerID,
-		WinerType: ddz.WinerType,
-		OpDateAt:  ddz.OpDateAt,
-		UpdatedAt: &now,
+		BankerID:    ddz.BankerID,
+		Status:      ddz.Status,
+		BankerTimes: ddz.BankerTimes,
+		BombTimes:   ddz.BombTimes,
+		OpID:        ddz.OpID,
+		OpIndex:     ddz.OpIndex,
+		WinerID:     ddz.WinerID,
+		WinerType:   ddz.WinerType,
+		OpDateAt:    ddz.OpDateAt,
+		UpdatedAt:   &now,
 	}
 	if err := tx.Model(ddz).Updates(doudizhu).Error; err != nil {
 		return nil, errors.Internal("update doudizhu failed", err)

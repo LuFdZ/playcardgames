@@ -38,6 +38,7 @@ type Room struct {
 	Users          []*RoomUser       `gorm:"-"`
 	GiveupGame     GiveUpGameResult  `gorm:"-"`
 	HasNotice      bool              `gorm:"-"`
+	SearchKey      string            `gorm:"-"`
 	Ids            []int32           `gorm:"-"`
 }
 

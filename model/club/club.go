@@ -62,6 +62,11 @@ func CreateClub(name string, creatorid int32, creatorproxy int32) error {
 	}
 	return nil
 }
+
+func GetClubFromDB(cid int32) (*mdclub.Club, error) {
+	return dbclub.GetLockClub(db.DB(),cid)
+}
+
 func SetClubBalance(amonut int64, amonuttype int32, clubid int32, typeid int32, foreign int64, opid int64) error {
 	mClub, err := cacheclub.GetClub(clubid)
 	if err != nil {
@@ -337,7 +342,7 @@ func GetClub(muser *mduser.User) (*pbclub.ClubInfo, error) {
 		}
 		return false
 	}
-	rooms := cacheroom.GetAllRoom(f)
+	rooms := cacheroom.GetAllRooms(f)
 	utilpb.ProtoSlice(rooms, &ci.RoomList)
 	return ci, nil
 }

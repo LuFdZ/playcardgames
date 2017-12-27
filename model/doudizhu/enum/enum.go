@@ -25,9 +25,9 @@ const (
 )
 
 const (
-	DDZBankerStatusReStart  = 1
-	DDZBankerStatusContinue = 2
-	DDZBankerStatusFinish   = 3
+	DDZBankerStatusReStart  = 1 //无人叫庄 重新发牌
+	DDZBankerStatusContinue = 2 //继续叫庄
+	DDZBankerStatusFinish   = 3 //叫庄结束选出庄家
 )
 
 const (

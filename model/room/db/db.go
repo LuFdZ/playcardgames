@@ -12,6 +12,7 @@ import (
 	"github.com/Masterminds/squirrel"
 	"github.com/jinzhu/gorm"
 	"fmt"
+	"playcards/utils/log"
 )
 
 func CreateRoom(tx *gorm.DB, r *mdr.Room) error {
@@ -78,6 +79,7 @@ func GetRoomByID(tx *gorm.DB, rid int32) (*mdr.Room, error) {
 	out.RoomID = rid
 	found, err := db.FoundRecord(tx.Find(&out).Error)
 	if err != nil {
+		log.Err("get room by room_id err:%v", err)
 		return nil, errors.Internal("get room failed", err)
 	}
 
@@ -279,14 +281,14 @@ func PageRoomList(tx *gorm.DB, clubid int32, page int32, pagesize int32, flag in
 	//	return nil, errr.ErrRoomNotExisted
 	//}
 
-	strWhere := fmt.Sprintf("club_id = ? and flag = %d and status >3",flag)
-	if flag == -1{
+	strWhere := fmt.Sprintf("club_id = ? and flag = %d and status >3", flag)
+	if flag == -1 {
 		strWhere = "club_id = ? and status >3"
 	}
 	sql, param, err := squirrel.
 	Select(" room_id,password,status,game_type,max_number,round_now,round_number,game_param,game_user_result,created_at").
 		From(enum.RoomTableName + " r ").
-		Where(strWhere,clubid).ToSql()
+		Where(strWhere, clubid).ToSql()
 
 	if err != nil {
 		return nil, errors.Internal("get room list failed", err)

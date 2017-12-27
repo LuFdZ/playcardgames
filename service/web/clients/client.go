@@ -121,22 +121,21 @@ func (c *Client) SendMessage(topic, typ string, msg interface{}) {
 	}
 }
 
-func (c *Client) SendNewClientBackMessage(success string) {
-	m := &Message{Type: success}
-	select {
-	case c.channel <- m:
-	default:
-		log.Warn("drop message: %v, %v", c, m)
-	}
-}
+//func (c *Client) SendSimpleMessage(msgStr string) {
+//	select {
+//	case c.channel <- msgStr:
+//	default:
+//		log.Warn("drop message: %v, %v", c, msgStr)
+//	}
+//}
 
-func (c *Client) SendHearbeatMessage() {
-	select {
-	case c.channel <- 1:
-	default:
-		log.Warn("drop hearbeat message: %v", c)
-	}
-}
+//func (c *Client) SendHearbeatMessage() {
+//	select {
+//	case c.channel <- 1:
+//	default:
+//		log.Warn("drop hearbeat message: %v", c)
+//	}
+//}
 
 func (c *Client) ReadLoop(f func([]byte) error, onclose func(c *Client)) {
 	waitGroup.Add(1)
@@ -158,7 +157,7 @@ func (c *Client) ReadLoop(f func([]byte) error, onclose func(c *Client)) {
 		}
 
 		if err := f(msg); err != nil {
-			log.Err("client process error: %v, %v", c, err)
+			log.Err("client process error: %v, %v,%v", c, err,string(msg))
 			return
 		}
 	}

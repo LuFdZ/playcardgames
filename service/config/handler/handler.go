@@ -17,10 +17,10 @@ type ConfigSrv struct {
 
 func NewHandler() *ConfigSrv {
 	cs := &ConfigSrv{}
-	cs.Init()
+	cs.init()
 	return cs
 }
-func (cs *ConfigSrv) Init() {
+func (cs *ConfigSrv) init() {
 	config.RefreshAllConfigsFromDB()
 }
 

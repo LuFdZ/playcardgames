@@ -7,35 +7,44 @@ import (
 	"playcards/utils/cache"
 	"playcards/utils/errors"
 	"playcards/utils/log"
-	"strconv"
 
 	"gopkg.in/redis.v5"
+	"strings"
+	"playcards/utils/tools"
 )
 
-func ThirteenHKey(rid int32) string {
-	return fmt.Sprintf(cache.KeyPrefix("THIRTEEN:%d"), rid)
+func ThirteenKey() string {
+	return fmt.Sprintf(cache.KeyPrefix("THIRTEENMAP"))
 }
 
-func ThirteenHKeySearch() string {
-	return cache.KeyPrefix("THIRTEEN:*")
+func ThirteenSearcKey() string {
+	return fmt.Sprintf(cache.KeyPrefix("THIRTEENSEARCH"))
 }
 
-func SetGame(t *mdt.Thirteen, playernum int32, pwd string) error {
-	key := ThirteenHKey(t.RoomID)
+func ThirteenSearchHKey(status int32, rid int32) string {
+	return fmt.Sprintf("status:%d-rid:%d-", status, rid)
+}
+
+func ThirteenLockKey(rid int32) string {
+	return fmt.Sprintf("THIRTEENLOCK:%d", rid)
+}
+
+func SetGame(t *mdt.Thirteen) error {
+	lockKey := ThirteenLockKey(t.RoomID)
+	key := ThirteenKey()
+	searchKey := ThirteenSearcKey()
 	f := func(tx *redis.Tx) error {
+		searchHKey := ThirteenSearchHKey(t.Status, t.RoomID)
 		tx.Pipelined(func(p *redis.Pipeline) error {
-			//tx.HSet(key, "userid", rid)
+			t.SearchKey = searchHKey
 			thirteen, _ := json.Marshal(t)
-			tx.HSet(key, "thirteen", string(thirteen))
-			tx.HSet(key, "gameid", t.GameID)
-			tx.HSet(key, "playernum", playernum)
-			tx.HSet(key, "playernow", 0)
-			tx.HSet(key, "password", pwd)
+			tx.HSet(key, tools.String2int(t.RoomID), string(thirteen))
+			tx.HSet(searchKey, searchHKey, t.RoomID)
 			return nil
 		})
 		return nil
 	}
-	err := cache.KV().Watch(f, key)
+	err := cache.KV().Watch(f, lockKey)
 	if err != nil {
 		return errors.Internal("set thirteen user failed", err)
 	}
@@ -43,96 +52,51 @@ func SetGame(t *mdt.Thirteen, playernum int32, pwd string) error {
 }
 
 func UpdateGame(t *mdt.Thirteen) error {
-	key := ThirteenHKey(t.RoomID)
+	lockKey := ThirteenLockKey(t.RoomID)
+	key := ThirteenKey()
+	searchKey := ThirteenSearcKey()
 	f := func(tx *redis.Tx) error {
 		tx.Pipelined(func(p *redis.Pipeline) error {
-			//tx.HSet(key, "userid", rid)
-			thirteen, _ := json.Marshal(t)
-			tx.HSet(key, "thirteen", string(thirteen))
+			searchHKey := ThirteenSearchHKey(t.Status, t.RoomID)
+			lastKey := t.SearchKey
+			tx.HDel(searchKey, lastKey)
+			t.SearchKey = searchHKey
+			b, _ := json.Marshal(t)
+			tx.HSet(key, tools.String2int(t.RoomID), string(b))
+			tx.HSet(searchKey, searchHKey, t.RoomID)
 			return nil
 		})
 		return nil
 	}
-	err := cache.KV().Watch(f, key)
+	err := cache.KV().Watch(f, lockKey)
 	if err != nil {
 		return errors.Internal("set thirteen user failed", err)
 	}
 	return nil
 }
 
-func SetGameUser(rid int32, uid int32) error {
-	key := ThirteenHKey(rid)
+func DeleteGame(t *mdt.Thirteen) error {
+	lockKey := ThirteenLockKey(t.RoomID)
+	key := ThirteenKey()
+	searchKey := ThirteenSearcKey()
 	f := func(tx *redis.Tx) error {
 		tx.Pipelined(func(p *redis.Pipeline) error {
-			tx.HSet(key, string(uid), 1)
+			tx.HDel(key,tools.String2int(t.RoomID))
+			tx.HDel(searchKey, t.SearchKey)
 			return nil
 		})
 		return nil
 	}
-
-	if err := cache.KV().Watch(f, key); err != nil {
-		return errors.Internal("set game user failed", err)
-	}
-
-	return nil
-}
-
-func UpdateGameUser(t *mdt.Thirteen, uid int32, playernow int32) error {
-	key := ThirteenHKey(t.RoomID)
-	f := func(tx *redis.Tx) error {
-		tx.Pipelined(func(p *redis.Pipeline) error {
-			thirteen, _ := json.Marshal(t)
-			tx.HSet(key, "thirteen", string(thirteen))
-			tx.HSet(key, "playernow", playernow)
-			tx.HSet(key, string(uid), 2)
-			return nil
-		})
-		return nil
-	}
-
-	if err := cache.KV().Watch(f, key); err != nil {
-		return errors.Internal("update niuniu game user failed", err)
-	}
-
-	return nil
-}
-
-func DeleteGame(rid int32) error {
-	key := ThirteenHKey(rid)
-	f := func(tx *redis.Tx) error {
-		tx.Pipelined(func(p *redis.Pipeline) error {
-			tx.Del(key)
-			return nil
-		})
-		return nil
-	}
-	err := cache.KV().Watch(f, key)
+	err := cache.KV().Watch(f, lockKey)
 	if err != nil {
 		return errors.Internal("del thirteen game redis error", err)
 	}
 	return nil
 }
 
-func GetGameByKey(key string) (*mdt.Thirteen, error) {
-	val, err := cache.KV().HGet(key, "thirteen").Bytes()
-	if err == redis.Nil {
-		return nil, nil
-	}
-
-	if err != nil && err != redis.Nil {
-		return nil, errors.Internal("get thirteen failed", err)
-	}
-
-	thirteen := &mdt.Thirteen{}
-	if err := json.Unmarshal(val, thirteen); err != nil {
-		return nil, errors.Internal("get thirteen failed", err)
-	}
-	return thirteen, nil
-}
-
 func GetGame(rid int32) (*mdt.Thirteen, error) {
-	key := ThirteenHKey(rid)
-	val, err := cache.KV().HGet(key, "thirteen").Bytes()
+	key := ThirteenKey()
+	val, err := cache.KV().HGet(key, tools.String2int(rid)).Bytes()
 	if err == redis.Nil {
 		return nil, nil
 	}
@@ -149,82 +113,45 @@ func GetGame(rid int32) (*mdt.Thirteen, error) {
 	return thirteen, nil
 }
 
-func GetGamePlayerNumRoomID(rid int32) int32 {
-	key := ThirteenHKey(rid)
-	num := cache.KV().HGet(key, "playernum").Val()
-	if len(num) > 0 {
-		result, _ := strconv.Atoi(num)
-		return int32(result)
+func GetAllThirteenByStatus(status int32) []*mdt.Thirteen {
+	var thirteens []*mdt.Thirteen
+	match := fmt.Sprintf("*status:%d-*", status)
+	thirteens, err := GetMatchThirteen(match)
+	if err != nil {
+		log.Err("GetAllRoomByStatus:%v", err)
 	}
-	return 0
+	return thirteens
 }
 
-func GetGamePlayerNowRoomID(rid int32) int32 {
-	key := ThirteenHKey(rid)
-	num := cache.KV().HGet(key, "playernow").Val()
-	if len(num) > 0 {
-		result, _ := strconv.Atoi(num)
-		return int32(result)
-	}
-	return 0
-}
-
-func GetRoomPaawordRoomID(rid int32) string {
-	key := ThirteenHKey(rid)
-	pwd := cache.KV().HGet(key, "password").Val()
-	return pwd
-}
-
-func IsGamePlayerReady(rid int32, uid int32) int32 {
-	key := ThirteenHKey(rid)
-	num := cache.KV().HGet(key, string(uid)).Val()
-	if len(num) > 0 {
-		result, _ := strconv.Atoi(num)
-		return int32(result)
-	}
-	return 0
-}
-
-func GetAllThirteenKey() ([]string, error) {
+func GetMatchThirteen(match string) ([]*mdt.Thirteen, error) {
 	var curson uint64
-	var nks []string
+	var ts []*mdt.Thirteen
 	var count int64
 	count = 999
+	key := ThirteenSearcKey()
 	for {
-		scan := cache.KV().Scan(curson, ThirteenHKeySearch(), count)
-		keys, cur, err := scan.Result()
+		scan := cache.KV().HScan(key, curson, match, count)
+		keysValues, cur, err := scan.Result()
 		if err != nil {
-			return nil, errors.Internal("list thirteen list failed", err)
+			return nil, errors.Internal("list room list failed", err)
 		}
-
+		for i, searchThirteen := range keysValues {
+			if i%2==0{
+				rid := strings.Split(searchThirteen,"-")[1]
+				ridStr := strings.Split(rid,":")[1]
+				roomID,_:= tools.Int2String(ridStr)
+				room ,err:= GetGame(roomID)
+				if err!=nil{
+					log.Err("GetAllThirteenKeyErr match:%s,err:%v",match,err)
+				}
+				ts = append(ts, room)
+			}
+		}
 		curson = cur
-		nks = append(nks, keys...)
-
 		if curson == 0 {
 			break
 		}
 	}
-	return nks, nil
+	return ts, nil
 }
 
-func GetAllThirteen(f func(*mdt.Thirteen) bool) []*mdt.Thirteen {
-	var thirteens []*mdt.Thirteen
-	keys, err := GetAllThirteenKey()
-	if err != nil {
-		log.Err("redis get all thirteen err: %v", err)
-	}
-	for _, k := range keys {
-		thirteen, err := GetGameByKey(k)
-		if err != nil {
-			log.Err("redis get thirteen err: %v", err)
-		}
-		if thirteen == nil {
-			continue
-		}
-		if f != nil && !f(thirteen) {
-			continue
-		}
-		thirteens = append(thirteens, thirteen)
-	}
-	return thirteens
-}

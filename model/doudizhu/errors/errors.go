@@ -16,7 +16,7 @@ var (
 	ErrBankerDone     = errors.Forbidden(15011, "不是抢庄阶段！")
 	ErrSubmitCardDone = errors.Forbidden(15013, "不是出牌阶段！")
 	ErrParam          = errors.Conflict(15014, "参数不符合要求！")
-	ErrBankerType     = errors.Forbidden(15015, "已有人叫庄，只能抢庄！")
+	ErrBankerType     = errors.Forbidden(15015, "抢庄类型非法！")
 	ErrSubmitCard     = errors.Forbidden(15016, "提交的牌型非法！")
 )
 

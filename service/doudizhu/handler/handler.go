@@ -187,14 +187,7 @@ func (ds *DoudizhuSrv) SubmitCard(ctx context.Context, req *pbddz.SubmitCardRequ
 		return err
 	}
 	*rsp = *reply
-	for _,uid :=range game.Ids {
-		if uid == u.UserID{
-			submitCard.CardRemain = remainCard
-		}else{
-			submitCard.CardRemain = nil
-		}
-		topic.Publish(ds.broker, submitCard, TopicDDZSubmitCard)
-	}
+	topic.Publish(ds.broker, submitCard, TopicDDZSubmitCard)
 
 	if game.Status == enumddz.GameStatusDone{
 		topic.Publish(ds.broker, game.ResultToProto(), TopicDDZGameResult)

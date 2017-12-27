@@ -1,4 +1,5 @@
 syntax = "proto3";
+import "playcards/proto/room/room.proto";
 
 package niuniu;
 
@@ -14,9 +15,9 @@ message UserCard {
     repeated string CardList = 2;
 }
 
-message NiuniuUserResult{
+message NiuniuUserResult {
     int32 UserID = 1;
-    BankerAndBet Info =2;
+    BankerAndBet Info = 2;
     UserCard Cards = 3;
     string Score = 4;
     int32 Status = 5;
@@ -25,50 +26,49 @@ message NiuniuUserResult{
 message NiuniuRoomResult {
     int32 RoomID = 1;
     int32 Status = 2;
-    repeated NiuniuUserResult List= 3;
+    repeated NiuniuUserResult List = 3;
     repeated int32 Ids = 4;
 }
 
 message GameResultListReply {
-    repeated NiuniuRoomResult List= 1;
+    repeated NiuniuRoomResult List = 1;
 }
 
-message NiuniuRequest{
+message NiuniuRequest {
     int32 RoomID = 1;
 }
 
 message NiuniuReply {
     int32 Status = 1;
-    NiuniuRoomResult Result  =2;
+    NiuniuRoomResult Result = 2;
 }
 
-message GetBanker{
+message GetBanker {
     int32 UserID = 1;
     int32 Key = 2;
 }
 
 //请求
-message GetBankerRequest{
+message GetBankerRequest {
     int32 Key = 1;
 }
 
-message SetBetRequest{
+message SetBetRequest {
     int32 Key = 1;
 }
 
 message SubmitCardRequest {
-    
+
 }
 
 message GameResultListRequest {
     int32 RoomID = 1;
-} 
-
-//回应
-message DefaultReply{
-    int32 Result = 1;
 }
 
+//回应
+message DefaultReply {
+    int32 Result = 1;
+}
 
 //广播
 message NiuniuGameStart {
@@ -78,42 +78,56 @@ message NiuniuGameStart {
     int32 UserID = 4;
     int32 RoomStatus = 5;
     int32 GameStatus = 6;
+    CountDown CountDown = 7;
 }
 
-message BeBanker{
+message BeBanker {
     int32 BankerID = 1;
     int32 GameStatus = 2;
     repeated GetBanker List = 3;
     repeated int32 Ids = 4;
+    CountDown CountDown = 5;
 }
 
-message AllBet{
+message AllBet {
     int32 Status = 1;
     int32 UserID = 2;
     string Card = 3;
+    CountDown CountDown = 4;
 }
 
-message SetBet{
+message SetBet {
     int32 UserID = 1;
     int32 Key = 2;
     repeated int32 Ids = 3;
 }
 
-message GameReady{
+message GameReady {
     int32 UserID = 1;
     repeated int32 Ids = 2;
 }
 
-message CountDown{
-    int32 Time = 1;
-    int32 Status = 2;
-    repeated int32 Ids = 3;
+//倒计时结构体
+message CountDown {
+    int64 ServerTime = 1; //服务器时间
+    int32 Count = 2; //倒计时秒数
+}
+
+message NiuniuRecovery {
+    room.CheckRoomExistReply RoomExist = 1; //房间信息
+    NiuniuRoomResult NiuniuExist = 2; //牛牛
+    CountDown CountDown = 3;
 }
 
 service NiuniuSrv {
-    rpc GetBanker(GetBankerRequest) returns (DefaultReply) {}
-    rpc SetBet(SetBetRequest) returns (DefaultReply) {}
-    rpc Submit(SubmitCardRequest) returns (DefaultReply) {}
-    rpc GameResultList(GameResultListRequest) returns (GameResultListReply) {}
-    rpc NiuniuRecovery(NiuniuRequest) returns (NiuniuReply) {}
+    rpc GetBanker (GetBankerRequest) returns (DefaultReply) {
+    }
+    rpc SetBet (SetBetRequest) returns (DefaultReply) {
+    }
+    rpc Submit (SubmitCardRequest) returns (DefaultReply) {
+    }
+    rpc GameResultList (GameResultListRequest) returns (GameResultListReply) {
+    }
+    rpc NiuniuRecovery (NiuniuRequest) returns (NiuniuReply) {
+    }
 }

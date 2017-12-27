@@ -14,7 +14,7 @@ var NiuniuEvent = []string{
 	srvniu.TopicNiuniuAllBet,
 	srvniu.TopicNiuniuGameReady,
 	srvniu.TopicNiuniuGameStart,
-	srvniu.TopicNiuniuCountDown,
+	//srvniu.TopicNiuniuCountDown,
 }
 
 func SubscribeNiuniuMessage(c *clients.Client, req *request.Request) error {

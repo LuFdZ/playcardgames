@@ -1,4 +1,5 @@
 syntax = "proto3";
+import "playcards/proto/room/room.proto";
 
 package doudizhu;
 
@@ -11,13 +12,14 @@ message Doudizhu {
     int32 Index = 3;//当前游戏轮数
     int32 BankerID = 4;
     int32 Status = 5; //游戏状态
-    int32 BombTimes = 6; //炸弹分倍数
-    GetBanker GetBanker = 7; //抢地主信息
-    SubmitCard SubmitCard = 8; //当前出牌玩家出牌信息
-    UserResult Result = 9; //玩家结算信息
-    CountDown CountDown = 10; //倒计时信息
-    repeated string DuzhuCardList = 11; //地主牌
-    repeated UserInfo UserInfo = 12; //玩家牌组信息
+    int32 BaseScore = 6;//基本分
+    int32 ScoreTimes = 7;//分数加倍
+    repeated GetBanker GetBanker = 9; //抢地主信息
+    UserResult Result = 10; //玩家结算信息
+    CountDown CountDown = 11; //倒计时信息
+    repeated string DuzhuCardList = 12; //地主牌
+    repeated UserInfo UserInfo = 13; //玩家牌组信息
+    int32 OpID = 14; //当前操作玩家ID
 }
 
 //倒计时结构体
@@ -91,8 +93,8 @@ message BeBanker {
     int32 BankerType = 6; //1 叫庄 2抢庄
     CountDown CountDown = 7;
     repeated string DuzhuCardList = 8; //地主牌 抢庄结束时使用
-    repeated string DizhuCardList = 9;
-    repeated int32 Ids = 10;
+    repeated int32 Ids = 9;
+    int32 BankerTimes = 10;//抢庄加倍
 }
 
 //玩家出牌广播
@@ -103,20 +105,26 @@ message SubmitCard {
     int32 CardType = 4; //牌组类型
     int32 NextID = 5;
     int32 CardRemainNumber = 6; //玩家剩余牌数
-    int32 BombTimes = 7; //倍数
-    int32 BombScore = 8; //倍数
+    int32 ScoreTimes = 7; //倍数
     int32 Status = 9;//游戏状态
     CountDown CountDown = 10;
     repeated string CardList = 11;
-    repeated string CardRemain = 12; //玩家剩余牌组
     repeated int32 Ids = 13;
+}
+
+//游戏恢复
+message DoudizhuRecovery{
+    room.CheckRoomExistReply RoomExist = 1;//房间信息
+    Doudizhu DoudizhuExist = 2;//斗地主
+    CountDown CountDown =3;
 }
 
 //结算广播
 message DDZGameResult {
     int32 GameID = 1;
-    repeated UserResult ResultList = 2;
-    repeated int32 Ids = 3;
+    int32 ScoreTimes = 2;
+    repeated UserResult ResultList = 3;
+    repeated int32 Ids = 4;
 }
 
 service DoudizhuSrv {
