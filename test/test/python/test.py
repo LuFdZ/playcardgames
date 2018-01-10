@@ -32,11 +32,11 @@ listHostLocal = ["http://192.168.1.76:8888", "http://192.168.1.76:8080", "http:/
 listWSLocal = ["ws://192.168.1.76:8888/stream", "ws://192.168.1.76:8080/stream", "ws://192.168.1.76:8080/stream",
                "ws://192.168.1.76:8080/stream","ws://192.168.1.76:8080/stream","ws://192.168.1.76:8080/stream","ws://192.168.1.76:8080/stream"];
 
-lh = "http://111.230.87.172:8888"
-lw = "ws://111.230.87.172:8888/stream"
+# lh = "http://111.230.87.172:8888"
+# lw = "ws://111.230.87.172:8888/stream"
 
-# lh = "http://192.168.1.76:8080"
-# lw = "ws://192.168.1.76:8999/stream"
+lh = "http://192.168.1.76:8080"
+lw = "ws://192.168.1.76:8999/stream"
 
 # lh = "http://192.168.1.125:8080"
 # lw = "ws://192.168.1.125:8999/stream"
@@ -100,30 +100,23 @@ class Test(object):
             Init(userB)
             Init(userC)
             Init(userD)
-            time.sleep(2.0)
 
             userA.CreateTRoom(1,4,60)
-            time.sleep(2.0)
+            time.sleep(1.0)
             if userA.Pwd()== "------":
                 print ("Error: Create Room Err")
                 return
-            time.sleep(4.0)
+            time.sleep(1.0)
             #userA.CheckRoomExist()
-            time.sleep(1.0)
             userB.EnterRoom(userA.Pwd())
-            time.sleep(1.0)
             userC.EnterRoom(userA.Pwd())
-            time.sleep(1.0)
             userD.EnterRoom(userA.Pwd())
             self.lock.release()
 
 
         while True:
-            time.sleep(6.0)
+            time.sleep(0.5)
             if userA.Status() == 1:
                 userB.EnterRoom(userA.Pwd())
-                time.sleep(5)
                 userC.EnterRoom(userA.Pwd())
-                time.sleep(6)
                 userD.EnterRoom(userA.Pwd())
-                time.sleep(7)

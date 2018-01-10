@@ -47,14 +47,15 @@ const (
 )
 
 const (
-	MsgClubMemberJoin   = "ClubMemberJoin"
-	MsgClubMemberLeave  = "ClubMemberLeave"
-	MsgClubInfo         = "ClubInfo"
-	MsgClubOnlineStatus = "ClubOnlineStatus"
-	MsgClubRoomCreate   = "ClubRoomCreate"
-	MsgClubRoomJoin     = "ClubRoomJoin"
-	MsgClubRoomUnJoin   = "ClubRoomUnJoin"
-	MsgClubRoomFinish   = "ClubRoomFinish"
+	MsgClubMemberJoin    = "ClubMemberJoin"
+	MsgClubMemberLeave   = "ClubMemberLeave"
+	MsgClubInfo          = "ClubInfo"
+	MsgClubOnlineStatus  = "ClubOnlineStatus"
+	MsgClubRoomCreate    = "ClubRoomCreate"
+	MsgClubRoomJoin      = "ClubRoomJoin"
+	MsgClubRoomUnJoin    = "ClubRoomUnJoin"
+	MsgClubRoomFinish    = "ClubRoomFinish"
+	MsgClubRoomGameStart = "ClubRoomGameStart"
 )
 
 const (
@@ -62,4 +63,5 @@ const (
 	MsgDDZBeBanker   = "DoudizhuBeBanker"
 	MsgDDZSubmitCard = "DoudizhuSubmitCard"
 	MsgDDZGameResult = "DoudizhuGameResult"
+	MsgDoudizhuExist = "DoudizhuExist"
 )

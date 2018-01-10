@@ -168,8 +168,8 @@ func (grl *GameResultList) ToProto() *pbt.GameResultList {
 	return out
 }
 
-func (tr *ThirteenRecovery) ToProto() *pbt.ThirteenRecoveryReply {
-	return &pbt.ThirteenRecoveryReply{
+func (tr *ThirteenRecovery) ToProto() *pbt.GameRecovery {
+	return &pbt.GameRecovery{
 		Result:     tr.Result,
 		Status:     tr.Status,
 		Cards:      tr.Cards.ToProto(),

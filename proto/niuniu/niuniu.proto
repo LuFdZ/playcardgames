@@ -70,6 +70,13 @@ message DefaultReply {
     int32 Result = 1;
 }
 
+//游戏恢复
+message NiuniuRecoveryRequest {
+    int32 UserID = 1;
+    int32 RoomID = 2;
+}
+
+
 //广播
 message NiuniuGameStart {
     int32 Role = 1;
@@ -113,7 +120,7 @@ message CountDown {
     int32 Count = 2; //倒计时秒数
 }
 
-message NiuniuRecovery {
+message NiuniuRecoveryReply {
     room.CheckRoomExistReply RoomExist = 1; //房间信息
     NiuniuRoomResult NiuniuExist = 2; //牛牛
     CountDown CountDown = 3;
@@ -128,6 +135,6 @@ service NiuniuSrv {
     }
     rpc GameResultList (GameResultListRequest) returns (GameResultListReply) {
     }
-    rpc NiuniuRecovery (NiuniuRequest) returns (NiuniuReply) {
+    rpc NiuniuRecovery (NiuniuRecoveryRequest) returns (NiuniuRecoveryReply) {
     }
 }

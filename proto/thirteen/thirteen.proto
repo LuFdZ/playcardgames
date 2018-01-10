@@ -66,6 +66,12 @@ message ThirteenRequest {
     int32 RoomID = 1;
 }
 
+//游戏恢复
+message ThirteenRecoveryRequest {
+    int32 UserID = 1;
+    int32 RoomID = 2;
+}
+
 //返回
 message GameResultListReply {
     repeated GameResultList List= 1;
@@ -75,7 +81,7 @@ message ThirteenReply {
     int32 Result = 1;
 }
 
-message ThirteenRecoveryReply {
+message GameRecovery {
     int32 Result = 1;
     int32 Status =2;
     GameResultList GameResult = 3;
@@ -84,13 +90,15 @@ message ThirteenRecoveryReply {
     int32 BankerID = 6;
 }
 
-message ThirteenRecovery{
+
+
+message ThirteenRecoveryReply{
     room.CheckRoomExistReply RoomExist = 1;//房间信息
-    ThirteenRecoveryReply ThirteenExist = 2;//十三张
+    GameRecovery ThirteenExist = 2;//十三张
 }
 
 service ThirteenSrv {
     rpc Submit(SubmitCard) returns (ThirteenReply) {}
     rpc GameResultList(GameResultListRequest) returns (GameResultListReply) {}
-    rpc ThirteenRecovery(ThirteenRequest) returns (ThirteenRecoveryReply) {}
+    rpc ThirteenRecovery(ThirteenRecoveryRequest) returns (ThirteenRecoveryReply) {}
 }

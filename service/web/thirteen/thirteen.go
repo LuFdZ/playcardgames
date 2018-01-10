@@ -5,7 +5,8 @@ import (
 	srvthirteen "playcards/service/thirteen/handler"
 	srvroom "playcards/service/room/handler"
 	pbroom "playcards/proto/room"
-	"playcards/model/thirteen"
+	apienum "playcards/service/api/enum"
+	"github.com/micro/go-micro/client"
 	"playcards/service/web/clients"
 	"playcards/service/web/enum"
 	"playcards/utils/subscribe"
@@ -13,8 +14,10 @@ import (
 
 	"github.com/micro/go-micro/broker"
 	"github.com/micro/protobuf/proto"
-	"playcards/utils/log"
+	gctx "playcards/utils/context"
 )
+
+var rpc pbthirteen.ThirteenSrvClient
 
 var (
 	brok broker.Broker
@@ -25,6 +28,10 @@ func Init(brk broker.Broker) error {
 	if err := SubscribeAllThirteenMessage(brk); err != nil {
 		return err
 	}
+	rpc = pbthirteen.NewThirteenSrvClient(
+		apienum.ThirteenServiceName,
+		client.DefaultClient,
+	)
 	return nil
 }
 
@@ -74,7 +81,7 @@ func ThirteenGameResultHandler(p broker.Publication) error {
 	}
 	ids := rs.Ids
 	rs.Ids = nil
-	err = clients.SendRoomUsers(ids, t, enum.MsgThireteenGameResult, rs)
+	err = clients.SendToUsers(ids, t, enum.MsgThireteenGameResult, rs)
 	if err != nil {
 		return err
 	}
@@ -91,7 +98,7 @@ func ThirteenReadyHandler(p broker.Publication) error {
 	}
 	ids := rs.Ids
 	rs.Ids = nil
-	err = clients.SendRoomUsers(ids, t, enum.MsgThireteenGameReady, rs)
+	err = clients.SendToUsers(ids, t, enum.MsgThireteenGameReady, rs)
 	if err != nil {
 		return err
 	}
@@ -106,12 +113,17 @@ func ThirteenExistHandle(p broker.Publication) error {
 	if err != nil {
 		return err
 	}
-	recovery, err := thirteen.ThirteenExist(rs.UserID,rs.RoomID)
+	ctx := gctx.NewContext(clients.GetClientByUserID(rs.UserID)[0].Token())
+	dr := &pbthirteen.ThirteenRecoveryRequest{
+		UserID: rs.UserID,
+		RoomID: rs.RoomID,
+	}
+
+	reply, err := rpc.ThirteenRecovery(ctx, dr)
 	if err != nil {
-		log.Err("ThirteenExistHandle:%v",err)
 		return err
 	}
-	err = clients.SendTo(rs.UserID, t, enum.MsgThireteenExist, recovery)
+	err = clients.SendTo(rs.UserID, t, enum.MsgThireteenExist, reply)
 	if err != nil {
 		return err
 	}

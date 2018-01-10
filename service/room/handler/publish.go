@@ -12,12 +12,13 @@ const (
 	TopicRoomRenewal        = "playcards.room.Renewal"
 	TopicRoomVoiceChat      = "playcards.room.VoiceChat"
 	TopicRoomNotice         = "playcards.room.Notice"
+	TopicRoomGameStart      = "playcards.room.RoomGameStart"
 )
 
-const(
-	TopicRoomThirteenExist  = "playcards.room.ThirteenExist"
-	TopicRoomNiuniuExist    = "playcards.room.NiuniuExist"
-	TopicRoomDoudizhuExist  = "playcards.room.DoudizhuExist"
+const (
+	TopicRoomThirteenExist = "playcards.room.ThirteenExist"
+	TopicRoomNiuniuExist   = "playcards.room.NiuniuExist"
+	TopicRoomDoudizhuExist = "playcards.room.DoudizhuExist"
 )
 
 const (

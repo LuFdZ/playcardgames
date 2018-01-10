@@ -25,10 +25,16 @@ type Doudizhu struct {
 	OpIndex         int32
 	WinerID         int32
 	WinerType       int32
+	Spring          int32
+	CommonBomb      int32
+	RocketBomb      int32
+	EightBomb       int32
 	OpDateAt        *time.Time
 	CreatedAt       *time.Time
 	UpdatedAt       *time.Time
 
+	GoldGame            int32         `gorm:"-"`
+	BankerStatus        int32         `gorm:"-"`
 	PassWord            string        `gorm:"-"`
 	SearchKey           string        `gorm:"-"`
 	OpTotalIndex        int32         `gorm:"-"`
@@ -68,29 +74,40 @@ type UserCard struct {
 }
 
 type UserResult struct {
-	UserID int32
-	Score  int32
+	UserID        int32
+	Score         int32
+	GameCardCount string
 }
 
 type GameInit struct {
 	DiZhuCardList []string
 	UserCardList  []*UserCard
 	GetBankerList []*GetBanker
+	BaseScore     int32
+	BankerTimes   int32
 }
 
-func (gb *GetBanker) ToProto() *pbddz.GetBanker {
-	out := &pbddz.GetBanker{
-		UserID: gb.UserID,
-		Type:   gb.Type,
+type GameRecovery struct {
+	GameID            int32
+	RoomID            int32
+	LastGetBankerID   int32
+	LastGetBankerType int32
+	UserCardList      []string
+	DizhuCardList     []string
+}
+
+func (ur *UserResult) ToProto() *pbddz.UserInfo {
+	return &pbddz.UserInfo{
+		UserID: ur.UserID,
+		Score:  ur.Score,
 	}
-	return out
 }
 
-func (ddz *Doudizhu) ResultToProto() *pbddz.DDZGameResult {
-	var urls []*pbddz.UserResult
-	ur := &pbddz.DDZGameResult{}
+func (ddz *Doudizhu) ResultToProto() *pbddz.GameResultBro {
+	var urls []*pbddz.UserInfo
+	ur := &pbddz.GameResult{}
 	for i, uci := range ddz.UserCardInfoList {
-		ur := &pbddz.UserResult{
+		ur := &pbddz.UserInfo{
 			UserID:     uci.UserID,
 			Score:      ddz.GameResultList[i].Score,
 			CardRemain: uci.CardRemain,
@@ -98,9 +115,23 @@ func (ddz *Doudizhu) ResultToProto() *pbddz.DDZGameResult {
 		urls = append(urls, ur)
 	}
 	ur.GameID = ddz.GameID
-	ur.ResultList = urls
-	ur.Ids = ddz.Ids
-	return ur
+	ur.BaseScore = ddz.BaseScore
+	ur.BombTimes = ddz.BankerTimes * ddz.BombTimes
+	ur.UserResult = urls
+	urb := &pbddz.GameResultBro{
+		Content: ur,
+		Ids:     ddz.Ids,
+	}
+	return urb
+}
+
+func (ddz *Doudizhu) GetUserCard(uid int32) *UserCard {
+	for _, uci := range ddz.UserCardInfoList {
+		if uci.UserID == uid {
+			return uci
+		}
+	}
+	return nil
 }
 
 func (ddz *Doudizhu) BeforeUpdate(scope *gorm.Scope) error {
@@ -131,13 +162,29 @@ func (ddz *Doudizhu) BeforeCreate(scope *gorm.Scope) error {
 	return nil
 }
 
-//func (ddz *Doudizhu) AfterFind() error {
-//	err := ddz.UnmarshalNiuniuRoomResult()
-//	if err != nil {
-//		return err
-//	}
-//	return nil
-//}
+func (ddz *Doudizhu) AfterFind() error {
+	err := ddz.UnmarshalDoudizhuResult()
+	if err != nil {
+		return err
+	}
+	err = ddz.UnmarshalDizhuCard()
+	if err != nil {
+		return err
+	}
+	err = ddz.UnmarshalUserCardInfo()
+	if err != nil {
+		return err
+	}
+	err = ddz.UnmarshalGetBankerLog()
+	if err != nil {
+		return err
+	}
+	err = ddz.UnmarshalGameCardLogStr()
+	if err != nil {
+		return err
+	}
+	return nil
+}
 
 func (ddz *Doudizhu) MarshalDoudizhuResult() error {
 	data, _ := json.Marshal(&ddz.GameResultList)

@@ -10,7 +10,7 @@ const (
 //globle config
 const (
 	LoopTime               = 500
-	MaxRecordCount         = 50
+	MaxRecordCount         = 10
 	RoomDelayMinutes       = 5.0
 	RoomCodeMax            = 999999
 	RoomCodeMin            = 100000
@@ -42,6 +42,7 @@ const (
 	RoomTypeNom   = 1 //普通房
 	RoomTypeAgent = 2 //代理开房
 	RoomTypeClub  = 3 //俱乐部
+	RoomTypeGold  = 4 //金币场
 )
 
 // give up vote status
@@ -92,13 +93,14 @@ const (
 	ThirteenGameType = 1001
 	NiuniuGameType   = 1002
 	DoudizhuGameType = 1003
+	FourCardGameType = 1004
 
 	ThirteenGameCost = 1.0
 	NiuniuGameCost   = 1.0
 	DoudizhuGameCost = 1.0
 
 	ThirteenMaxNumber = 4
-	NiuniuMaxNumber   = 5
+	NiuniuMaxNumber   = 10
 	DoudizhuMaxNumber = 4
 )
 

@@ -55,7 +55,7 @@ func CreateThirteen(goLua *lua.LState) []*mdt.Thirteen {
 			if mdroom.RoundNow == 1 {
 				userResult := &mdr.GameUserResult{
 					UserID:   user.UserID,
-					Nickname: user.Nickname,
+					//Nickname: user.Nickname,
 					Role:     user.Role,
 					Win:      0,
 					Lost:     0,
@@ -212,6 +212,14 @@ func UpdateGame(goLua *lua.LState) []*mdt.Thirteen { //[]*mdt.GameResultList
 		mdroom, err := cacher.GetRoom(thirteen.PassWord)
 		if err != nil {
 			log.Err("room get session failed, %v", err)
+			err = cachet.DeleteGame(thirteen)
+			if err != nil {
+				log.Err("thirteen room not exist delete  set session failed, %v",
+					err)
+			}
+			log.Err("thirteen room not exist delete  game, %v",
+				thirteen)
+			continue
 			continue
 		}
 		if mdroom == nil {
@@ -225,11 +233,12 @@ func UpdateGame(goLua *lua.LState) []*mdt.Thirteen { //[]*mdt.GameResultList
 		//fmt.Printf("GameParam:%v\n%v\n",thirteen.UserSubmitCards,room.GameParam)
 		if err := goLua.DoString(fmt.Sprintf("return G_GetResult('%s','%s')",
 			thirteen.UserSubmitCards, mdroom.GameParam)); err != nil {
-			log.Err("thirteen G_GetResult %v", err)
+			log.Err("thirteen G_GetResult submit card:%s, game param:%s,%v", thirteen.UserSubmitCards, mdroom.GameParam, err)
 			continue
 		}
 
 		luaResult := goLua.Get(-1)
+		goLua.Pop(1)
 		if err := json.Unmarshal([]byte(luaResult.String()), &results); err != nil {
 			log.Err("thirteen lua str do struct %v", err)
 			continue
@@ -557,14 +566,16 @@ func ThirteenRecovery(rid int32, uid int32) (*mdt.ThirteenRecovery, error) {
 	return recovery, nil
 }
 
-func ThirteenExist(uid int32, rid int32) (*pbt.ThirteenRecovery, error) {
-	out := &pbt.ThirteenRecovery{}
+func ThirteenExist(uid int32, rid int32) (*pbt.ThirteenRecoveryReply, error) {
+
+	out := &pbt.ThirteenRecoveryReply{}
 	_, roomRecovery, err := room.CheckRoomExist(uid, rid)
 	if err != nil {
 		return nil, err
 	}
 	out.RoomExist = roomRecovery.ToProto()
 	out.RoomExist.Room.CreateOrEnter = enumr.EnterRoom
+	out.RoomExist.Room.OwnerID = out.RoomExist.Room.UserList[0].UserID
 	if roomRecovery.Status < enumr.RecoveryGameStart && roomRecovery.Status != enumr.RecoveryInitNoReady {
 		return out, nil
 	}

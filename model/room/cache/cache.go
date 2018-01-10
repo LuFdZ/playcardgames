@@ -150,7 +150,7 @@ func GetRoom(pwd string) (*mdr.Room, error) {
 	key := RoomKey()
 	val, err := cache.KV().HGet(key, pwd).Bytes()
 	if err == redis.Nil {
-		return nil, errr.ErrRoomNotFind //errors.Internal("room not find", err)
+		return nil, errr.ErrRoomNotExisted //errors.Internal("room not find", err)
 	}
 
 	if err != nil && err != redis.Nil {
@@ -194,7 +194,7 @@ func SetRoomUser(rid int32, password string, uid int32) error {
 	value := fmt.Sprintf("%s:%d", password, rid)
 	f := func(tx *redis.Tx) error {
 		tx.Pipelined(func(p *redis.Pipeline) error {
-			tx.HSet(key, tools.String2int(uid), value)
+			tx.HSet(key, tools.IntToString(uid), value)
 			return nil
 		})
 		return nil
@@ -210,7 +210,7 @@ func DeleteRoomUser(uid int32) error {
 	key := UserKey()
 	f := func(tx *redis.Tx) error {
 		tx.Pipelined(func(p *redis.Pipeline) error {
-			tx.HDel(key, tools.String2int(uid))
+			tx.HDel(key, tools.IntToString(uid))
 			log.Info("delete room user:%d\n", uid)
 			return nil
 		})
@@ -233,14 +233,14 @@ func DeleteAllRoomUser(pwd string, callFrom string) error {
 			str := ""
 			if err == nil && room != nil {
 				for _, user := range room.Users {
-					value := tx.HGet(userkey, tools.String2int(user.UserID)).Val()
+					value := tx.HGet(userkey, tools.IntToString(user.UserID)).Val()
 					if len(value) == 0{
 						continue
 					}
 					rid := strings.Split(value, ":")[1]
 					roomid, _ := strconv.Atoi(rid)
 					if int32(roomid) == room.RoomID {
-						tx.HDel(userkey,tools.String2int(user.UserID) )
+						tx.HDel(userkey,tools.IntToString(user.UserID) )
 						str += fmt.Sprintf("|delthisroomuser:%s", user.UserID)
 					} else {
 						str += fmt.Sprintf("|nothisroomuser:%s,roomid:%d|", user.UserID, roomid)
@@ -281,12 +281,12 @@ func DeleteAllRoomUser(pwd string, callFrom string) error {
 
 func ExistRoomUser(uid int32) bool {
 	key := UserKey()
-	return cache.KV().HExists(key, tools.String2int(uid)).Val()
+	return cache.KV().HExists(key, tools.IntToString(uid)).Val()
 }
 
 func GetRoomUserID(uid int32) (*mdr.Room, error) {
 	key := UserKey()
-	value := cache.KV().HGet(key, tools.String2int(uid)).Val()
+	value := cache.KV().HGet(key, tools.IntToString(uid)).Val()
 	if len(value) == 0 {
 		return nil, errr.ErrUserNotInRoom
 	}
@@ -397,10 +397,14 @@ func FlushAll() {
 func GetAgentRoom(uid int32, gameType int32, rid int32, pwd string) (*mdr.Room, error) {
 	key := AgentRoomHKey()
 	subKey := AgentRoomHSubKey(uid, gameType, rid, pwd)
-	password := cache.KV().HGet(key, subKey).Val()
-	room, err := GetRoom(password)
+	val,err := cache.KV().HGet(key, subKey).Bytes()
 	if err != nil {
 		return nil, err
+	}
+
+	room := &mdr.Room{}
+	if err := json.Unmarshal(val, room); err != nil {
+		return nil, errors.Internal("get room failed", err)
 	}
 	return room, nil
 }

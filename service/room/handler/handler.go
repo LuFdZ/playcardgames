@@ -64,7 +64,7 @@ func (rs *RoomSrv) update(gt *gsync.GlobalTimer) {
 		for _, room := range rooms {
 			roomResults := mdr.RoomResults{
 				RoundNumber: room.RoundNumber,
-				RoundNow:    room.RoundNow,
+				RoundNow:    room.RoundNow-1,
 				Status:      room.Status,
 				Password:    room.Password,
 				List:        room.UserResults,
@@ -84,6 +84,7 @@ func (rs *RoomSrv) update(gt *gsync.GlobalTimer) {
 			}
 			msg := roomResults.ToProto()
 			msg.Ids = room.Ids
+			msg.OwnerID = room.Users[0].UserID
 			topic.Publish(rs.broker, msg, TopicRoomResult)
 		}
 
@@ -146,6 +147,10 @@ func (rs *RoomSrv) CreateRoom(ctx context.Context, req *pbr.Room,
 	}
 	msg := r.ToProto()
 	msg.UserID = u.UserID
+	if req.RoomType != enumr.RoomTypeAgent {
+		msg.OwnerID = u.UserID
+	}
+
 	msg.CreateOrEnter = enumr.CreateRoom
 	topic.Publish(rs.broker, msg, TopicRoomCreate)
 	return nil
@@ -183,6 +188,11 @@ func (rs *RoomSrv) CreateClubRoom(ctx context.Context, req *pbr.Room,
 	msg := mr.ToProto()
 	msg.UserID = u.UserID
 	msg.CreateOrEnter = enumr.CreateRoom
+	if len(mr.Users) > 0 {
+		msg.OwnerID = mr.Users[0].UserID
+	} else {
+		msg.OwnerID = u.UserID
+	}
 	topic.Publish(rs.broker, msg, TopicRoomCreate)
 	if mr.ClubID > 0 {
 		mClub, _ := club.GetClubInfo(u)
@@ -231,6 +241,7 @@ func (rs *RoomSrv) Renewal(ctx context.Context, req *pbr.RenewalRequest,
 
 	msgBack := r.ToProto()
 	msgBack.UserID = r.Users[0].UserID
+	msgBack.OwnerID = r.Users[0].UserID
 	msgBack.CreateOrEnter = enumr.CreateRoom
 	topic.Publish(rs.broker, msgBack, TopicRoomCreate)
 	return nil
@@ -272,8 +283,14 @@ func (rs *RoomSrv) EnterRoom(ctx context.Context, req *pbr.Room,
 	msgBack := r.ToProto()
 	msgBack.UserID = u.UserID
 	msgBack.CreateOrEnter = enumr.EnterRoom
+	if len(mr.Users) > 0 {
+		msgBack.OwnerID = mr.Users[0].UserID
+	} else {
+		msgBack.OwnerID = u.UserID
+	}
 	topic.Publish(rs.broker, msgBack, TopicRoomCreate)
 	msgAll := ru.ToProto()
+	msgAll.OwnerID = msgBack.OwnerID
 	msgAll.Ids = r.Ids
 	topic.Publish(rs.broker, msgAll, TopicRoomJoin)
 	if r.ClubID > 0 {
@@ -325,19 +342,22 @@ func (rs *RoomSrv) LeaveRoom(ctx context.Context, req *pbr.Room,
 	if r.Status == enumr.RoomStatusDestroy {
 		msg.Destroy = 1
 	}
+	if len(r.Users) > 0 {
+		msg.OwnerID = r.Users[0].UserID
+	}
 	topic.Publish(rs.broker, msg, TopicRoomUnJoin)
 	if r.ClubID > 0 {
 		msgLeave := &pbr.Room{
 			RoomID: r.RoomID,
 			UserID: u.UserID,
 			ClubID: r.ClubID,
-			BankerID:r.Users[0].UserID,
 		}
+
 		topic.Publish(rs.broker, msgLeave, TopicClubRoomUnJoin)
 		if r.Status == enumr.RoomStatusDestroy {
 			msgLeave.UserID = 0
 			mClub, _ := club.GetClubInfo(u)
-			msgLeave.Diamond = mClub.Diamond + r.Cost
+			msgLeave.Diamond = mClub.Diamond //+ r.Cost
 			topic.Publish(rs.broker, msgLeave, TopicClubRoomFinish)
 		}
 	}
@@ -629,7 +649,7 @@ func (rs *RoomSrv) DisbandAgentRoom(ctx context.Context, req *pbr.Room,
 		return err
 	}
 	msg := &pbr.RoomNotice{
-		Code: errorr.ErrDiamondNotEnough,
+		Code: errorr.ErrRoomDisband,
 		Ids:  r.Ids,
 	}
 
@@ -707,6 +727,9 @@ func (rs *RoomSrv) GameStart(ctx context.Context, req *pbr.Room,
 	if err != nil {
 		return err
 	}
+	if mr.GameType != enumr.NiuniuGameType {
+		return errorr.ErrGameType
+	}
 	lock := RoomLockKey(req.Password)
 	f := func() error {
 		err = room.GameStart(mr, u.UserID)
@@ -720,7 +743,11 @@ func (rs *RoomSrv) GameStart(ctx context.Context, req *pbr.Room,
 		log.Err("%s game start failed: %v", lock, err)
 		return err
 	}
-
+	msg := &pbr.Room{
+		Password: mr.Password,
+		ClubID:   mr.ClubID,
+	}
+	topic.Publish(rs.broker, msg, TopicRoomGameStart)
 	return nil
 }
 

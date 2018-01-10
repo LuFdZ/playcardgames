@@ -195,7 +195,7 @@ func GetWXToken(code string) (*mdu.AccessTokenResponse, error) {
 		if err != nil {
 			return nil, erru.ErrWXResponseJson
 		}
-		log.Err("Refresh WX Token :%v \n", ater)
+		log.Err("access_token refresh WX token :%v \n", ater)
 		return nil, erru.ErrWXParam
 	}
 	return atr, nil
@@ -229,7 +229,7 @@ func RefreshWXToken(refreshtoken string) (*mdu.AccessTokenResponse, error) {
 		if err != nil {
 			return nil, erru.ErrWXResponseJson
 		}
-		log.Err("Refresh WX Token :%v \n", ater)
+		log.Err("refresh_token refresh WX token :%v \n", ater)
 		return nil, erru.ErrWXParam
 	}
 	return atr, nil

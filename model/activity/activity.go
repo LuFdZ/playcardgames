@@ -16,6 +16,7 @@ import (
 	"time"
 
 	"github.com/jinzhu/gorm"
+	"playcards/utils/tools"
 )
 
 func Invite(u *mdu.User, inviterID int32) (int32, []*mbill.Balance, error) {
@@ -162,12 +163,12 @@ func Share(uid int32) (*mbill.Balance, error) { //*mda.PlayerShare,
 	return ub, nil
 }
 
-func InviteUserInfo(uid int32) (int32, error) {
+func InviteUserInfo(uid int32) (string, error) {
 	list, err := dbu.GetInvitedUserCount(db.DB(), uid)
 	if err != nil {
-		return 0, nil
+		return "0", nil
 	}
-	return int32(len(list)), nil
+	return tools.IntToString(int32(len(list))), nil
 }
 
 // message InviteReply{

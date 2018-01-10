@@ -630,3 +630,9 @@ class Client(object):
             "CardList": ['4_14'],
         })
         return ul
+
+    def DoudizhuList(self, rid):
+        ul = self.Request("/doudizhu/doudizhuSrv/GameResultList", {
+            "RoomID": rid,
+        })
+        return ul

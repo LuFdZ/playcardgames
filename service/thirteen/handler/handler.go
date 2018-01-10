@@ -126,20 +126,17 @@ func (ts *ThirteenSrv) GameResultList(ctx context.Context, req *pbt.GameResultLi
 	return nil
 }
 
-func (rs *ThirteenSrv) ThirteenRecovery(ctx context.Context, req *pbt.ThirteenRequest,
+func (rs *ThirteenSrv) ThirteenRecovery(ctx context.Context, req *pbt.ThirteenRecoveryRequest,
 	rsp *pbt.ThirteenRecoveryReply) error {
-	u, err := auth.GetUser(ctx)
+	_, err := auth.GetUser(ctx)
 	if err != nil {
 		return err
 	}
-	res := &pbt.ThirteenRecoveryReply{}
-	recovery, err := thirteen.ThirteenRecovery(req.RoomID, u.UserID)
+	recovery, err := thirteen.ThirteenExist(req.UserID,req.RoomID)
 
 	if err != nil {
 		return err
 	}
-	res = recovery.ToProto()
-	res.Result = 1
-	*rsp = *res
+	*rsp = *recovery
 	return nil
 }

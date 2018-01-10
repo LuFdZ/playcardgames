@@ -31,7 +31,6 @@ func NewWebHandler(c client.Client) *Web {
 	topic := publish.TopicServiceOnline
 	msg := c.NewPublication(topic, &pbweb.ServiceOnline{})
 	c.Publish(context.Background(), msg)
-
 	w := &Web{
 		client: c,
 		broker: c.Options().Broker,
@@ -49,7 +48,7 @@ func (w *Web) Subscribe(ws *websocket.Conn) {
 	var msg []byte
 
 	if err := websocket.Message.Receive(ws, &msg); err != nil {
-		log.Err("websocket recv error: %v", err)
+		log.Err("websocket recv error: %v|%s", err,string(msg))
 		return
 	}
 	//log.Err("Subscribe websocket recv\n: %+v", string(msg))

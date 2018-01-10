@@ -13,6 +13,7 @@ import (
 type Message struct {
 	Type string
 	Data interface{}
+	WsID string
 }
 
 type Client struct {
@@ -41,7 +42,7 @@ func NewClient(token string, u *mdu.User, ws *websocket.Conn) *Client {
 		cs = make(map[*Client]bool)
 		clients[u.UserID] = cs
 	}
-	log.Debug("add connection: %v", c)
+	log.Debug("connection count:%d, add connection: %v", len(cs), c)
 	cs[c] = true
 	return c
 }
@@ -113,30 +114,13 @@ func (c *Client) UnsubscribeAll() {
 }
 
 func (c *Client) SendMessage(topic, typ string, msg interface{}) {
-	m := &Message{Type: typ, Data: msg}
+	m := &Message{Type: typ, Data: msg, WsID: fmt.Sprintf("%v",&c.ws)}
 	select {
 	case c.channel <- m:
 	default:
 		log.Warn("drop message: %v, %v", c, m)
 	}
 }
-
-//func (c *Client) SendSimpleMessage(msgStr string) {
-//	select {
-//	case c.channel <- msgStr:
-//	default:
-//		log.Warn("drop message: %v, %v", c, msgStr)
-//	}
-//}
-
-//func (c *Client) SendHearbeatMessage() {
-//	select {
-//	case c.channel <- 1:
-//	default:
-//		log.Warn("drop hearbeat message: %v", c)
-//	}
-//}
-
 func (c *Client) ReadLoop(f func([]byte) error, onclose func(c *Client)) {
 	waitGroup.Add(1)
 	defer func() {
@@ -155,9 +139,8 @@ func (c *Client) ReadLoop(f func([]byte) error, onclose func(c *Client)) {
 				c, msg, err)
 			return
 		}
-
 		if err := f(msg); err != nil {
-			log.Err("client process error: %v, %v,%v", c, err,string(msg))
+			log.Err("client process error: %v, %v,%v", c, err, string(msg))
 			return
 		}
 	}

@@ -38,7 +38,7 @@ func SetGame(t *mdt.Thirteen) error {
 		tx.Pipelined(func(p *redis.Pipeline) error {
 			t.SearchKey = searchHKey
 			thirteen, _ := json.Marshal(t)
-			tx.HSet(key, tools.String2int(t.RoomID), string(thirteen))
+			tx.HSet(key, tools.IntToString(t.RoomID), string(thirteen))
 			tx.HSet(searchKey, searchHKey, t.RoomID)
 			return nil
 		})
@@ -62,7 +62,7 @@ func UpdateGame(t *mdt.Thirteen) error {
 			tx.HDel(searchKey, lastKey)
 			t.SearchKey = searchHKey
 			b, _ := json.Marshal(t)
-			tx.HSet(key, tools.String2int(t.RoomID), string(b))
+			tx.HSet(key, tools.IntToString(t.RoomID), string(b))
 			tx.HSet(searchKey, searchHKey, t.RoomID)
 			return nil
 		})
@@ -81,7 +81,7 @@ func DeleteGame(t *mdt.Thirteen) error {
 	searchKey := ThirteenSearcKey()
 	f := func(tx *redis.Tx) error {
 		tx.Pipelined(func(p *redis.Pipeline) error {
-			tx.HDel(key,tools.String2int(t.RoomID))
+			tx.HDel(key,tools.IntToString(t.RoomID))
 			tx.HDel(searchKey, t.SearchKey)
 			return nil
 		})
@@ -96,7 +96,7 @@ func DeleteGame(t *mdt.Thirteen) error {
 
 func GetGame(rid int32) (*mdt.Thirteen, error) {
 	key := ThirteenKey()
-	val, err := cache.KV().HGet(key, tools.String2int(rid)).Bytes()
+	val, err := cache.KV().HGet(key, tools.IntToString(rid)).Bytes()
 	if err == redis.Nil {
 		return nil, nil
 	}
@@ -139,7 +139,7 @@ func GetMatchThirteen(match string) ([]*mdt.Thirteen, error) {
 			if i%2==0{
 				rid := strings.Split(searchThirteen,"-")[1]
 				ridStr := strings.Split(rid,":")[1]
-				roomID,_:= tools.Int2String(ridStr)
+				roomID,_:= tools.StringToInt(ridStr)
 				room ,err:= GetGame(roomID)
 				if err!=nil{
 					log.Err("GetAllThirteenKeyErr match:%s,err:%v",match,err)

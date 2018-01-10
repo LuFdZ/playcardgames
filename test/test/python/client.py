@@ -51,7 +51,8 @@ class Client(object):
         if self.lock.acquire():
             _, rsp = req.request(path, "POST", data, headers={"Token": self.token})
             #print("req: {%s} -d '{%s}' -H Token:{%s}" % (path, data, self.token))
-            print("req: {%s} -H Token:{%s}" % (path, self.token))
+            #print("req: {%s} -H Token:{%s}" % (path, self.token))
+            print("UserID:{%s} req: {%s}" % (self.user_id ,path))
             print("rsp:", rsp)
             self.lock.release()
         return json.loads(rsp)
@@ -96,18 +97,18 @@ class Client(object):
                 if info["Type"] == "RoomCreate":
                     self.pwd = info["Data"]["Password"]
                     #print("create room:------------", self.pwd)
-                    time.sleep(5.0)
+                    #time.sleep(1.0)
                     self.SetReady(self.pwd)
                     self.status = 1
 
                 if info["Type"] == "RoomExist":
                     self.pwd = info["Data"]["Room"]["Password"]
                     #print("RoomExist:------------", self.pwd)
-                    time.sleep(5.0)
+                    #time.sleep(1.0)
                     self.SetReady(self.pwd)
                 if info["Type"] == "ThirteenGameStart":
                     self.status = 0
-                    time.sleep(5.0)
+                    #time.sleep(1.0)
                     self.SubmitCardT()
                     #print("SubmitCardT:------------", self.pwd)
                 if info["Type"] == "RoomResult":
@@ -117,7 +118,7 @@ class Client(object):
                     print("Round:", RN1, "/", RN2)
                     if ST == 5:
                         if self.owner == 1:
-                            time.sleep(5.0)
+                            time.sleep(1.0)
                             self.CreateTRoom(1, 2, 10)
                         #print("game over..")
                     else:

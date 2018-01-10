@@ -25,7 +25,7 @@ message InviteReply{
 
 message InviteUserInfoReply{
     int32 InviteUserID = 1;
-    int32 Count = 2;
+    string Count = 2;
 }
 
 service ActicitySrv {

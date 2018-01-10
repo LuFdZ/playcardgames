@@ -73,9 +73,9 @@ type NiuniuRoomResultList struct {
 
 func (bab *BankerAndBet) ToProto() *pbniu.BankerAndBet {
 	return &pbniu.BankerAndBet{
-		BankerScore: tools.String2int(bab.BankerScore),
-		BetScore:    tools.String2int(bab.BetScore),
-		Role:        tools.String2int(bab.Role),
+		BankerScore: tools.IntToString(bab.BankerScore),
+		BetScore:    tools.IntToString(bab.BetScore),
+		Role:        tools.IntToString(bab.Role),
 	}
 }
 
@@ -98,7 +98,7 @@ func (ur *NiuniuUserResult) ToProto() *pbniu.NiuniuUserResult {
 		Status: ur.Status,
 		Info:   info,
 		Cards:  ur.Cards.ToProto(),
-		Score:  tools.String2int(ur.Score),
+		Score:  tools.IntToString(ur.Score),
 	}
 }
 

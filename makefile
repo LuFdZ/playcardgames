@@ -85,6 +85,7 @@ gen: dep
 	${PROTO_BUILD} ./proto/club/club.proto
 	${PROTO_BUILD} ./proto/common/common.proto
 	${PROTO_BUILD} ./proto/doudizhu/doudizhu.proto
+	${PROTO_BUILD} ./proto/fourcard/fourcard.proto
 
 api-srv: gen
 	${BUILD} -o ./bin/api-srv service/api/main.go

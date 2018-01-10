@@ -5,7 +5,7 @@ import (
 	"playcards/model/activity/errors"
 	pba "playcards/proto/activity"
 	gctx "playcards/utils/context"
-
+	"playcards/utils/auth"
 	"golang.org/x/net/context"
 )
 
@@ -60,7 +60,10 @@ func (*ActivitySrv) Share(ctx context.Context, req *pba.ShareRequest,
 
 func (*ActivitySrv) InviteUserInfo(ctx context.Context, req *pba.InviteRequest,
 	rsp *pba.InviteUserInfoReply) error {
-	u := gctx.GetUser(ctx)
+	u, err := auth.GetUser(ctx)
+	if err != nil {
+		return err
+	}
 	count, err := activity.InviteUserInfo(u.UserID)
 	if err != nil{
 		return nil

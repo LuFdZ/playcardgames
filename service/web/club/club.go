@@ -20,6 +20,7 @@ var ClubEvent = []string{
 	srvroom.TopicClubRoomJoin,
 	srvroom.TopicClubRoomUnJoin,
 	srvroom.TopicClubRoomFinish,
+	srvroom.TopicRoomGameStart,
 }
 
 func ClubOnlineNotice(c *clients.Client) {

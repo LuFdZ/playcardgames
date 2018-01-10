@@ -15,6 +15,8 @@ const (
 	JournalTypeClubRecharge     = 12
 	JournalTypeDoudizhuFreeze   = 10
 	JournalTypeDoudizhuUnFreeze = 11
+	JournalTypeFourCardFreeze     = 10
+	JournalTypeFourCardUnFreeze   = 11
 )
 
 const (

@@ -25,7 +25,7 @@ message Room {
     int32 Flag = 18; //是否标记 1标记 2未标记
     int64 Diamond = 19;
     repeated GameUserResult ResultList = 20;
-    int32 BankerID = 21;
+    int32 OwnerID = 21;
 
 }
 
@@ -42,6 +42,7 @@ message RoomUser {
     string Location = 10;
     repeated int32 Ids = 13;
     int32 Diamond = 14;
+    int32 OwnerID = 15;
 }
 
 message ClubRoomUser {
@@ -83,6 +84,7 @@ message RoomResults {
     string GameParam = 10;
     int32 MaxPlayerNumber = 11;
     int32 PlayerNumberNow = 12;
+    int32 OwnerID = 13;
 }
 
 message Feedback {

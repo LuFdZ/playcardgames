@@ -16,6 +16,10 @@ CREATE TABLE `doudizhus` (
   `op_index`           INT           NOT NULL DEFAULT '0',
   `winer_id`           INT           NOT NULL DEFAULT '0',
   `winer_type`         INT           NOT NULL DEFAULT '0',
+  `spring`             INT           NOT NULL DEFAULT '0',
+  `common_bomb`        INT           NOT NULL DEFAULT '0',
+  `rocket_bomb`        INT           NOT NULL DEFAULT '0',
+  `eight_bomb`         INT           NOT NULL DEFAULT '0',
   `op_date_at`         DATETIME      NOT NULL,
   `created_at`         DATETIME      NOT NULL,
   `updated_at`         DATETIME      NOT NULL,
@@ -27,3 +31,24 @@ CREATE TABLE `doudizhus` (
   ENGINE = InnoDB
   AUTO_INCREMENT = 1
   DEFAULT CHARSET = utf8;
+
+
+CREATE TABLE `fourcards` (
+  `game_id`          INT           NOT NULL AUTO_INCREMENT,
+  `room_id`          INT           NOT NULL DEFAULT '0',
+  `index`            INT           NOT NULL DEFAULT '0',
+  `banker_id`        INT           NOT NULL DEFAULT '0',
+  `game_result_str` VARCHAR(3000) NOT NULL DEFAULT '',
+  `status`           INT           NOT NULL DEFAULT '0',
+  `op_date_at`       DATETIME      NOT NULL,
+  `created_at`       DATETIME      NOT NULL,
+  `updated_at`       DATETIME      NOT NULL,
+  PRIMARY KEY (`game_id`),
+  KEY `idx_status` (`status`),
+  KEY `idx_room` (`room_id`),
+  KEY `idx_created`(`created_at`)
+)
+  ENGINE = InnoDB
+  AUTO_INCREMENT = 1
+  DEFAULT CHARSET = utf8;
+

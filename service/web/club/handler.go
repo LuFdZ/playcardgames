@@ -52,6 +52,9 @@ func SubscribeAllClubMessage(brk broker.Broker) error {
 	subscribe.SrvSubscribe(brk, topic.Topic(srvroom.TopicClubRoomUnJoin),
 		ClubRoomUnJoinHandler,
 	)
+	subscribe.SrvSubscribe(brk, topic.Topic(srvroom.TopicRoomGameStart),
+		ClubRoomGameStartHandler,
+	)
 
 	return nil
 }
@@ -69,11 +72,9 @@ func ClubMemberJoinHandler(p broker.Publication) error {
 	if err != nil {
 		return err
 	}
-	for _, uid := range uks {
-		err = clients.SendToNoLog(uid, t, enum.MsgClubMemberJoin, rs)
-		if err != nil {
-			return err
-		}
+	err = clients.SendToUsers(uks, t, enum.MsgClubMemberJoin, rs)
+	if err != nil {
+		return err
 	}
 	return nil
 }
@@ -90,11 +91,9 @@ func ClubMemberLeaveHandler(p broker.Publication) error {
 	if err != nil {
 		return err
 	}
-	for _, uid := range uks {
-		err = clients.SendToNoLog(uid, t, enum.MsgClubMemberLeave, rs)
-		if err != nil {
-			return err
-		}
+	err = clients.SendToUsers(uks, t, enum.MsgClubMemberLeave, rs)
+	if err != nil {
+		return err
 	}
 
 	return nil
@@ -116,16 +115,14 @@ func ClubOnlineStatusHandler(p broker.Publication) error {
 	return nil
 }
 
-func ClubOnlineStatus(topic string, rs *pbclub.ClubMemberOnline) error {
+func ClubOnlineStatus(t string, rs *pbclub.ClubMemberOnline) error {
 	uks, err := cacheclub.ListClubMemberHKey(rs.ClubID, true)
 	if err != nil {
 		return err
 	}
-	for _, uid := range uks {
-		err = clients.SendToNoLog(uid, topic, enum.MsgClubOnlineStatus, rs)
-		if err != nil {
-			return err
-		}
+	err = clients.SendToUsers(uks, t, enum.MsgClubOnlineStatus, rs)
+	if err != nil {
+		return err
 	}
 	return nil
 }
@@ -157,11 +154,9 @@ func ClubRoomCreateaHandler(p broker.Publication) error {
 	if err != nil {
 		return err
 	}
-	for _, uid := range uks {
-		err = clients.SendToNoLog(uid, t, enum.MsgClubRoomCreate, rs)
-		if err != nil {
-			return err
-		}
+	err = clients.SendToUsers(uks, t, enum.MsgClubRoomCreate, rs)
+	if err != nil {
+		return err
 	}
 	return nil
 }
@@ -178,11 +173,9 @@ func ClubRoomFinishHandler(p broker.Publication) error {
 	if err != nil {
 		return err
 	}
-	for _, uid := range uks {
-		err = clients.SendToNoLog(uid, t, enum.MsgClubRoomFinish, rs)
-		if err != nil {
-			return err
-		}
+	err = clients.SendToUsers(uks, t, enum.MsgClubRoomFinish, rs)
+	if err != nil {
+		return err
 	}
 	return nil
 }
@@ -199,11 +192,9 @@ func ClubRoomJoinHandler(p broker.Publication) error {
 	if err != nil {
 		return err
 	}
-	for _, uid := range uks {
-		err = clients.SendToNoLog(uid, t, enum.MsgClubRoomJoin, rs)
-		if err != nil {
-			return err
-		}
+	err = clients.SendToUsers(uks, t, enum.MsgClubRoomJoin, rs)
+	if err != nil {
+		return err
 	}
 	return nil
 }
@@ -220,11 +211,28 @@ func ClubRoomUnJoinHandler(p broker.Publication) error {
 	if err != nil {
 		return err
 	}
-	for _, uid := range uks {
-		err = clients.SendToNoLog(uid, t, enum.MsgClubRoomUnJoin, rs)
-		if err != nil {
-			return err
-		}
+	err = clients.SendToUsers(uks, t, enum.MsgClubRoomUnJoin, rs)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func ClubRoomGameStartHandler(p broker.Publication) error {
+	t := p.Topic()
+	msg := p.Message()
+	rs := &pbroom.Room{}
+	err := proto.Unmarshal(msg.Body, rs)
+	if err != nil {
+		return err
+	}
+	uks, err := cacheclub.ListClubMemberHKey(rs.ClubID, true)
+	if err != nil {
+		return err
+	}
+	err = clients.SendToUsers(uks, t, enum.MsgClubRoomGameStart, rs)
+	if err != nil {
+		return err
 	}
 	return nil
 }

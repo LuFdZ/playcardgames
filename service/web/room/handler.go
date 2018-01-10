@@ -74,11 +74,14 @@ func HeartbeatCallback(c *clients.Client) {
 
 func CloseCallbackHandler(c *clients.Client) {
 	cacheuser.SetUserOnlineStatus(c.UserID(), 0)
-	msg := &pbroom.UserConnection{
-		UserID: c.UserID(),
-		Status: enum.SocketClose,
+	cs :=clients.GetClientByUserID(c.UserID())
+	if len(cs) == 0{
+		msg := &pbroom.UserConnection{
+			UserID: c.UserID(),
+			Status: enum.SocketClose,
+		}
+		topic.Publish(brok, msg, srvroom.TopicRoomUserConnection)
 	}
-	topic.Publish(brok, msg, srvroom.TopicRoomUserConnection)
 }
 
 func ReceiveTestLogMessage(c *clients.Client, req *request.Request) error {
@@ -101,5 +104,5 @@ func init() {
 	request.RegisterHandler("ReceiveTestLog", auth.RightsPlayer,
 		ReceiveTestLogMessage)
 	request.RegisterCloseHandler(CloseCallbackHandler)
-	request.RegisterHeartbeatHandler(HeartbeatCallback)
+	//request.RegisterHeartbeatHandler(HeartbeatCallback)
 }

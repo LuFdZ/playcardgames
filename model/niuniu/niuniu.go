@@ -168,21 +168,21 @@ func CreateNiuniu(goLua *lua.LState) []*mdniu.Niuniu {
 
 func InitUserCard(room *mdr.Room, bankerID int32, userResults []*mdr.GameUserResult,
 	niuUsers []*mdniu.NiuniuUserResult, goLua *lua.LState) ([]*mdr.GameUserResult, []*mdniu.NiuniuUserResult, error) {
+	if err := goLua.DoString("return G_Reset()"); err != nil {
+		log.Err("niuniu G_Reset %+v", err)
+		return nil, nil, errorsniu.ErrGoLua
+	}
 	for _, user := range room.Users {
 		if room.RoundNow == 1 {
 			userResult := &mdr.GameUserResult{
 				UserID:   user.UserID,
-				Nickname: user.Nickname,
+				//Nickname: user.Nickname,
 				Win:      0,
 				Lost:     0,
 				Tie:      0,
 				Score:    0,
 			}
 			userResults = append(userResults, userResult)
-		}
-		if err := goLua.DoString("return G_Reset()"); err != nil {
-			log.Err("niuniu G_Reset %+v", err)
-			return nil, nil, errorsniu.ErrGoLua
 		}
 		if err := goLua.DoString("return G_GetCards()"); err != nil {
 			log.Err("niuniu G_GetCards err %v", err)
@@ -279,6 +279,9 @@ func UpdateGame(goLua *lua.LState) []*mdniu.Niuniu {
 				getBankers = append(getBankers, gb)
 				if userResult.UserID == niuniu.BankerID {
 					userResult.Info.Role = enumniu.Banker
+					//if userResult.Info.BankerScore == 0{
+					//	userResult.Info.BankerScore =1
+					//}
 					userResult.Status = enumniu.
 					UserStatusSetBet
 				}
@@ -322,6 +325,13 @@ func UpdateGame(goLua *lua.LState) []*mdniu.Niuniu {
 			if err != nil {
 				//print(err)
 				log.Err("niuniu room get session failed, roomid:%d,pwd:%s,err:%v", niuniu.RoomID, niuniu.PassWord, err)
+				err = cacheniu.DeleteGame(niuniu)
+				if err != nil {
+					log.Err("niuniu room not exist delete  set session failed, %v",
+						err)
+				}
+				log.Err("niuniu room not exist delete  game, %v",
+					niuniu)
 				continue
 			}
 			if room == nil {
@@ -346,7 +356,8 @@ func UpdateGame(goLua *lua.LState) []*mdniu.Niuniu {
 				&results); err != nil {
 				log.Err("niuniu lua str do struct %v", err)
 			}
-			niuniu.Result = results
+			//niuniu.Result = results
+
 			var roomparam *mdr.NiuniuRoomParam
 			if err := json.Unmarshal([]byte(room.GameParam),
 				&roomparam); err != nil {
@@ -354,7 +365,9 @@ func UpdateGame(goLua *lua.LState) []*mdniu.Niuniu {
 					err)
 				continue
 			}
-			for _, result := range niuniu.Result.List {
+			for i, result := range niuniu.Result.List {
+				result.Score = results.List[i].Score
+				result.Cards.CardType = results.List[i].Cards.CardType
 				m := InitNiuniuTypeMap()
 				for _, userResult := range room.UserResults {
 					if userResult.UserID == result.UserID {
@@ -479,7 +492,9 @@ func GetBanker(uid int32, key int32, room *mdr.Room) error {
 	}
 
 	niu, err := cacheniu.GetGame(room.RoomID)
-
+	if niu == nil {
+		return errorsniu.ErrGameNoFind
+	}
 	if niu.Status != enumniu.GameStatusInit {
 		return errorsniu.ErrBankerDone
 	}
@@ -677,7 +692,9 @@ func AutoSetBankerScore(niu *mdniu.Niuniu) {
 func AutoSetBetScore(niu *mdniu.Niuniu) {
 	for _, userResult := range niu.Result.List {
 		if userResult.Info.BetScore == 0 {
-			userResult.Info.BetScore = enumniu.MinSetBet
+			if userResult.Info.Role != enumr.UserRoleMaster{
+				userResult.Info.BetScore = enumniu.MinSetBet
+			}
 			userResult.Status = enumniu.UserStatusSetBet
 		}
 	}
@@ -762,7 +779,7 @@ func NiuniuRecovery(rid int32) (*mdniu.Niuniu,
 
 func CleanGame() error {
 	var gids []int32
-	rids, err := cacher.GetAllDeleteRoomKey(enumniu.GameID)
+	rids, err := cacher.GetAllDeleteRoomKey(enumr.NiuniuGameType)
 	if err != nil {
 		log.Err("get niuniu clean room err:%v", err)
 		return err
@@ -837,14 +854,15 @@ func InitNiuniuTypeMap() map[string]int32 {
 //	return niu.Status, niu.Result, nil
 //}
 
-func NiuniuExist(uid int32,rid int32) (*pbniu.NiuniuRecovery, error) {
-	out := &pbniu.NiuniuRecovery{}
-	_, roomRecovery, err := room.CheckRoomExist(uid,rid)
+func NiuniuExist(uid int32, rid int32) (*pbniu.NiuniuRecoveryReply, error) {
+	out := &pbniu.NiuniuRecoveryReply{}
+	_, roomRecovery, err := room.CheckRoomExist(uid, rid)
 	if err != nil {
 		return nil, err
 	}
 	out.RoomExist = roomRecovery.ToProto()
 	out.RoomExist.Room.CreateOrEnter = enumr.EnterRoom
+	out.RoomExist.Room.OwnerID = out.RoomExist.Room.UserList[0].UserID
 	if roomRecovery.Status < enumr.RecoveryGameStart && roomRecovery.Status != enumr.RecoveryInitNoReady {
 		return out, nil
 	}
@@ -873,5 +891,6 @@ func NiuniuExist(uid int32,rid int32) (*pbniu.NiuniuRecovery, error) {
 		ServerTime: niu.OpDateAt.Unix(),
 		Count:      time,
 	}
+	out.NiuniuExist.Status = enumniu.ToBetScoreMap[niu.Status]
 	return out, nil
 }

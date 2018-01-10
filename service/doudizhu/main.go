@@ -17,8 +17,10 @@ import (
 )
 
 var FuncRights = map[string]int32{
-	"DoudizhuSrv.GetBanker":  auth.RightsPlayer,
-	"DoudizhuSrv.SubmitCard": auth.RightsPlayer,
+	"DoudizhuSrv.GetBanker":        auth.RightsPlayer,
+	"DoudizhuSrv.SubmitCard":       auth.RightsPlayer,
+	"DoudizhuSrv.DoudizhuRecovery": auth.RightsPlayer,
+	"DoudizhuSrv.GameResultList":   auth.RightsPlayer,
 }
 
 func main() {

@@ -29,17 +29,17 @@ func RoomLockKey(pwd string) string {
 	return fmt.Sprintf("playcards.room.op.lock:%s", pwd)
 }
 
-func NewHandler(s server.Server, gt *gsync.GlobalTimer,gl *lua.LState) *NiuniuSrv {
+func NewHandler(s server.Server, gt *gsync.GlobalTimer, gl *lua.LState) *NiuniuSrv {
 	n := &NiuniuSrv{
 		server: s,
 		broker: s.Options().Broker,
 	}
 	//niuniu.InitGoLua(gl)
-	n.update(gt,gl)
+	n.update(gt, gl)
 	return n
 }
 
-func (ns *NiuniuSrv) update(gt *gsync.GlobalTimer,gl *lua.LState) {
+func (ns *NiuniuSrv) update(gt *gsync.GlobalTimer, gl *lua.LState) {
 	lock := "playcards.niu.update.lock"
 
 	f := func() error {
@@ -57,9 +57,12 @@ func (ns *NiuniuSrv) update(gt *gsync.GlobalTimer,gl *lua.LState) {
 						UserID:     UserResult.UserID,
 						BankerID:   game.BankerID,
 						RoomStatus: enumr.RoomStatusStarted,
-						CardList:   cardlist,
+						CardList:   cardlist,//[]string{"4_11","3_11","2_1","4_4"},//
 						GameStatus: game.Status,
-						CountDown:&pbniu.CountDown{game.OpDateAt.Unix(),enumniu.GetBankerTime},
+						CountDown: &pbniu.CountDown{
+							ServerTime: game.OpDateAt.Unix(),
+							Count:      enumniu.GetBankerTime,
+						},
 					}
 					topic.Publish(ns.broker, msg, TopicNiuniuGameStart)
 				}
@@ -112,7 +115,7 @@ func (ns *NiuniuSrv) update(gt *gsync.GlobalTimer,gl *lua.LState) {
 							BankerID:   game.BankerID,
 							GameStatus: enumniu.ToBetScoreMap[game.Status],
 							Ids:        game.Ids,
-							CountDown:&pbniu.CountDown{game.OpDateAt.Unix(),enumniu.SetBetTime},
+							CountDown:  &pbniu.CountDown{game.OpDateAt.Unix(), enumniu.SetBetTime},
 						}
 						utilproto.ProtoSlice(game.GetBankerList, &msg.List)
 						topic.Publish(ns.broker, msg, TopicNiuniuBeBanker)
@@ -120,10 +123,10 @@ func (ns *NiuniuSrv) update(gt *gsync.GlobalTimer,gl *lua.LState) {
 				} else if game.BroStatus == enumniu.GameStatusAllSetBet {
 					for _, UserResult := range game.Result.List {
 						msg := &pbniu.AllBet{
-							UserID: UserResult.UserID,
-							Status: enumniu.ToBetScoreMap[game.Status],
-							Card:   UserResult.Cards.CardList[4],
-							CountDown:&pbniu.CountDown{game.OpDateAt.Unix(),enumniu.SubmitCardTime},
+							UserID:    UserResult.UserID,
+							Status:    enumniu.ToBetScoreMap[game.Status],
+							Card:      UserResult.Cards.CardList[4],
+							CountDown: &pbniu.CountDown{game.OpDateAt.Unix(), enumniu.SubmitCardTime},
 						}
 						topic.Publish(ns.broker, msg, TopicNiuniuAllBet)
 					}
@@ -137,7 +140,7 @@ func (ns *NiuniuSrv) update(gt *gsync.GlobalTimer,gl *lua.LState) {
 				}
 			}
 		}
-		if ns.count == 3{
+		if ns.count == 3 {
 			err := niuniu.CleanGame()
 			if err != nil {
 				log.Err("clean give up game loop err:%v", err)
@@ -263,21 +266,17 @@ func (ns *NiuniuSrv) GameResultList(ctx context.Context, req *pbniu.GameResultLi
 	return nil
 }
 
-func (ns *NiuniuSrv) NiuniuRecovery(ctx context.Context, req *pbniu.NiuniuRequest,
-	rsp *pbniu.NiuniuReply) error {
+func (ns *NiuniuSrv) NiuniuRecovery(ctx context.Context, req *pbniu.NiuniuRecoveryRequest,
+	rsp *pbniu.NiuniuRecoveryReply) error {
 	_, err := auth.GetUser(ctx)
 	if err != nil {
 		return err
 	}
 
-	niu, err := niuniu.NiuniuRecovery(req.RoomID)
+	result, err := niuniu.NiuniuExist(req.UserID,req.RoomID)
 	if err != nil {
 		return err
 	}
-	res := &pbniu.NiuniuReply{
-		Result: niu.Result.ToProto(),
-	}
-	res.Result.Status = enumniu.ToBetScoreMap[niu.Status]
-	*rsp = *res
+	*rsp = *result
 	return nil
 }

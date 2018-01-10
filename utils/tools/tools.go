@@ -13,7 +13,7 @@ func JsonStrToMap(jsonStr string) (map[string]interface{}, error) {
 	return m, nil
 }
 
-func String2int(n int32) string {
+func IntToString(n int32) string {
 	buf := [11]byte{}
 	pos := len(buf)
 	i := int64(n)
@@ -34,12 +34,17 @@ func String2int(n int32) string {
 	}
 }
 
-func Int2String(s string) (int32, error) {
+func StringToInt(s string) (int32, error) {
 	i, err := strconv.ParseInt(s, 10, 32)
 	if err != nil {
 		return -1, err
 	}
 	return int32(i), nil
+}
+
+func StringParseInt(s string) int32 {
+	i, _ := strconv.ParseInt(s, 10, 32)
+	return int32(i)
 }
 
 //func MergeSlice(s1 []string, s2 []string) []string {

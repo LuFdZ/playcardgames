@@ -3,7 +3,7 @@ package cache
 import (
 	"encoding/json"
 	"fmt"
-	mdniu "playcards/model/niuniu/mod"
+	mdfour "playcards/model/fourcard/mod"
 	"playcards/utils/cache"
 	"playcards/utils/errors"
 	"playcards/utils/log"
@@ -13,33 +13,33 @@ import (
 	"strings"
 )
 
-func NiuniuKey() string {
-	return fmt.Sprintf(cache.KeyPrefix("NIUNIUMAP"))
+func FourCardKey() string {
+	return fmt.Sprintf(cache.KeyPrefix("FOURCARDMAP"))
 }
 
-func NiuniuSearchKey() string {
-	return fmt.Sprintf(cache.KeyPrefix("NIUNIUSEARCH"))
+func FourCardSearchKey() string {
+	return fmt.Sprintf(cache.KeyPrefix("FOURCARDSEARCH"))
 }
 
-func NiuniuSearchHKey(status int32, rid int32) string {
+func FourCardSearchHKey(status int32, rid int32) string {
 	return fmt.Sprintf("status:%d-rid:%d-", status, rid)
 }
 
-func ThirteenLockKey(rid int32) string {
-	return fmt.Sprintf("THIRTEENLOCK:%d", rid)
+func FourCardLockKey(rid int32) string {
+	return fmt.Sprintf("FOURCARDLOCK:%d", rid)
 }
 
-func SetGame(n *mdniu.Niuniu) error {
-	lockKey := ThirteenLockKey(n.RoomID)
-	key := NiuniuKey()
-	searchKey := NiuniuSearchKey()
+func SetGame(fc *mdfour.FourCard) error {
+	lockKey := FourCardLockKey(fc.RoomID)
+	key := FourCardKey()
+	searchKey := FourCardSearchKey()
 	f := func(tx *redis.Tx) error {
 		tx.Pipelined(func(p *redis.Pipeline) error {
-			searchHKey := NiuniuSearchHKey(n.Status, n.RoomID)
-			n.SearchKey = searchHKey
-			niuniu, _ := json.Marshal(n)
-			tx.HSet(key, tools.IntToString(n.RoomID), string(niuniu))
-			tx.HSet(searchKey, searchHKey, n.RoomID)
+			searchHKey := FourCardSearchHKey(fc.Status, fc.RoomID)
+			fc.SearchKey = searchHKey
+			niuniu, _ := json.Marshal(fc)
+			tx.HSet(key, tools.IntToString(fc.RoomID), string(niuniu))
+			tx.HSet(searchKey, searchHKey, fc.RoomID)
 			return nil
 		})
 		return nil
@@ -51,19 +51,19 @@ func SetGame(n *mdniu.Niuniu) error {
 	return nil
 }
 
-func UpdateGame(n *mdniu.Niuniu) error {
-	lockKey := ThirteenLockKey(n.RoomID)
-	key := NiuniuKey()
-	searchKey := NiuniuSearchKey()
+func UpdateGame(fc *mdfour.FourCard) error {
+	lockKey := FourCardLockKey(fc.RoomID)
+	key := FourCardKey()
+	searchKey := FourCardSearchKey()
 	f := func(tx *redis.Tx) error {
 		tx.Pipelined(func(p *redis.Pipeline) error {
-			searchHKey := NiuniuSearchHKey(n.Status, n.RoomID)
-			lastKey := n.SearchKey
+			searchHKey := FourCardSearchHKey(fc.Status, fc.RoomID)
+			lastKey := fc.SearchKey
 			tx.HDel(searchKey, lastKey)
-			n.SearchKey = searchHKey
-			niuniu, _ := json.Marshal(n)
-			tx.HSet(key, tools.IntToString(n.RoomID), string(niuniu))
-			tx.HSet(searchKey, searchHKey, n.RoomID)
+			fc.SearchKey = searchHKey
+			niuniu, _ := json.Marshal(fc)
+			tx.HSet(key, tools.IntToString(fc.RoomID), string(niuniu))
+			tx.HSet(searchKey, searchHKey, fc.RoomID)
 			return nil
 		})
 		return nil
@@ -76,14 +76,14 @@ func UpdateGame(n *mdniu.Niuniu) error {
 	return nil
 }
 
-func DeleteGame(n *mdniu.Niuniu) error {
-	lockKey := ThirteenLockKey(n.RoomID)
-	key := NiuniuKey()
-	searchKey := NiuniuSearchKey()
+func DeleteGame(fc *mdfour.FourCard) error {
+	lockKey := FourCardLockKey(fc.RoomID)
+	key := FourCardKey()
+	searchKey := FourCardSearchKey()
 	f := func(tx *redis.Tx) error {
 		tx.Pipelined(func(p *redis.Pipeline) error {
-			tx.HDel(key, tools.IntToString(n.RoomID))
-			tx.HDel(searchKey, n.SearchKey)
+			tx.HDel(key, tools.IntToString(fc.RoomID))
+			tx.HDel(searchKey, fc.SearchKey)
 			return nil
 		})
 		return nil
@@ -95,8 +95,8 @@ func DeleteGame(n *mdniu.Niuniu) error {
 	return nil
 }
 
-func GetGame(rid int32) (*mdniu.Niuniu, error) {
-	key := NiuniuKey()
+func GetGame(rid int32) (*mdfour.FourCard, error) {
+	key := FourCardKey()
 	val, err := cache.KV().HGet(key, tools.IntToString(rid)).Bytes()
 	if err == redis.Nil {
 		return nil, nil
@@ -105,19 +105,19 @@ func GetGame(rid int32) (*mdniu.Niuniu, error) {
 	if err != nil && err != redis.Nil {
 		return nil, errors.Internal("get niuniu failed", err)
 	}
-	niuniu := &mdniu.Niuniu{}
+	niuniu := &mdfour.FourCard{}
 	if err := json.Unmarshal(val, niuniu); err != nil {
 		return nil, errors.Internal("get niuniu failed", err)
 	}
 	return niuniu, nil
 }
 
-func GetAllNiuniuByStatus(status int32) ([]*mdniu.Niuniu, error) {
+func GetAllGameByStatus(status int32) ([]*mdfour.FourCard, error) {
 	var curson uint64
-	var ns []*mdniu.Niuniu
+	var ns []*mdfour.FourCard
 	var count int64
 	count = 999
-	key := NiuniuSearchKey()
+	key := FourCardSearchKey()
 	for {
 		scan := cache.KV().HScan(key, curson, "*", count)
 		keysValues, cur, err := scan.Result()

@@ -47,8 +47,8 @@ func SetGame(ddz *mdddz.Doudizhu) error {
 			searchHKey := DoudizhuSearchHKey(ddz.Status, ddz.RoomID)
 			ddz.SearchKey = searchHKey
 			d, _ := json.Marshal(ddz)
-			tx.HSet(key, tools.String2int(ddz.RoomID), string(d))
-			tx.HSet(searchKey, searchKey, ddz.RoomID)
+			tx.HSet(key, tools.IntToString(ddz.RoomID), string(d))
+			tx.HSet(searchKey, searchHKey, ddz.RoomID)
 			return nil
 		})
 		return nil
@@ -71,7 +71,7 @@ func UpdateGame(ddz *mdddz.Doudizhu) error {
 			tx.HDel(searchKey, lastKey)
 			ddz.SearchKey = searchHKey
 			niuniu, _ := json.Marshal(ddz)
-			tx.HSet(key, tools.String2int(ddz.RoomID), string(niuniu))
+			tx.HSet(key, tools.IntToString(ddz.RoomID), string(niuniu))
 			tx.HSet(searchKey, searchHKey, ddz.RoomID)
 			return nil
 		})
@@ -91,7 +91,7 @@ func DeleteGame(ddz *mdddz.Doudizhu) error {
 	searchKey := DoudizhuSearcKey()
 	f := func(tx *redis.Tx) error {
 		tx.Pipelined(func(p *redis.Pipeline) error {
-			tx.HDel(key, tools.String2int(ddz.RoomID))
+			tx.HDel(key, tools.IntToString(ddz.RoomID))
 			tx.HDel(searchKey, ddz.SearchKey)
 			return nil
 		})
@@ -106,7 +106,7 @@ func DeleteGame(ddz *mdddz.Doudizhu) error {
 
 func GetGame(rid int32) (*mdddz.Doudizhu, error) {
 	key := DoudizhuKey()
-	val, err := cache.KV().HGet(key, tools.String2int(rid)).Bytes()
+	val, err := cache.KV().HGet(key, tools.IntToString(rid)).Bytes()
 	if err == redis.Nil {
 		return nil, nil
 	}
@@ -126,7 +126,7 @@ func GetAllDoudizhuByStatus(status int32) ([]*mdddz.Doudizhu, error) {
 	var ddz []*mdddz.Doudizhu
 	var count int64
 	count = 999
-	key := DoudizhuKey()
+	key := DoudizhuSearcKey()
 	for {
 		scan := cache.KV().HScan(key, curson, "*", count)
 		keysValues, cur, err := scan.Result()
@@ -134,13 +134,13 @@ func GetAllDoudizhuByStatus(status int32) ([]*mdddz.Doudizhu, error) {
 			return nil, errors.Internal("list doudizhu list failed", err)
 		}
 		for i, searchDoudizhu := range keysValues {
-			if i%2 == 0 {
+			if i%2 == 0{
 				search := strings.Split(searchDoudizhu, "-")
 				statusStr := strings.Split(search[0], ":")[1]
-				statusValue, _ := tools.Int2String(statusStr)
+				statusValue, _ := tools.StringToInt(statusStr)
 				if statusValue < status {
 					ridStr := strings.Split(search[1], ":")[1]
-					roomID, _ := tools.Int2String(ridStr)
+					roomID, _ := tools.StringToInt(ridStr)
 					niu, err := GetGame(roomID)
 					if err != nil {
 						log.Err("GetAllDoudizhuKeyErr rid:%s,err:%v", ridStr, err)

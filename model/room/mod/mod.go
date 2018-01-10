@@ -34,6 +34,7 @@ type Room struct {
 	ClubID         int32
 	Cost           int64
 	CostType       int32
+	StartMaxNumber int32             `gorm:"-"`
 	UserResults    []*GameUserResult `gorm:"-"`
 	Users          []*RoomUser       `gorm:"-"`
 	GiveupGame     GiveUpGameResult  `gorm:"-"`
@@ -128,6 +129,10 @@ type DoudizhuRoomParam struct {
 	BaseScore      int32
 	PreBankerID    int32
 	PreBankerIndex int32
+}
+
+type FourCardRoomParam struct {
+	BaseScore      int32
 }
 
 //func (r *Room) String() string {

@@ -1,0 +1,166 @@
+syntax = "proto3";
+import "playcards/proto/room/room.proto";
+
+package fourcard;
+
+//***********************************************结构体***********************************************
+
+//四张玩家结构
+message UserInfo {
+    int32 UserID = 1;
+    int32 Bet = 2;//下注分
+    int32 Role = 3;//角色 1庄家 2闲家
+    repeated string CardList = 4;//玩家初始牌
+    UserCard HeadCards = 5; //玩家头道牌组信息
+    UserCard TailCards = 6; //玩家尾道牌组信息
+    string TotalScore = 7; //总分
+    int32 Status = 8; //玩家状态
+}
+
+//四张玩家牌组信息
+message UserCard {
+    int32 WayType = 1; //1头道 2尾道
+    string CardType = 2; //牌型
+    repeated string CardList = 3; //牌组列表
+    string Score = 4; //牌组得分
+}
+
+//随机开始玩家结构体
+message UserDice {
+    int32 UserID = 1; //开始玩家id
+    int32 DiceAPoints = 2; //骰子A点数
+    int32 DiceBPoints = 3; //骰子B点数
+}
+
+//倒计时结构体
+message CountDown {
+    int64 ServerTime = 1; //服务器时间
+    int32 Count = 2; //倒计时秒数
+}
+
+//游戏开始结构体
+message GameStart {
+    int32 GameID = 1;
+    int32 UserID = 2;
+    int32 GameStatus = 3;//游戏状态
+    int32 BankerID = 4; //庄家id
+    repeated string CardList = 5; //玩家总牌组
+    CountDown CountDown = 6;
+}
+
+//玩家下注结构体
+message SetBet {
+    int32 GameID = 1;
+    int32 GameStatus = 2;//游戏状态
+    int32 UserID = 3;
+    int32 Key = 4;
+    CountDown CountDown = 5;
+}
+
+//下发随机开始玩家结构体
+message UserDiceInfo {
+    int32 GameID = 1;
+    UserDice UserDice = 2;
+    CountDown CountDown = 3;
+    int32 GameStatus = 4;//游戏状态
+}
+
+//玩家出牌结构体
+message SubmitCard {
+    int32 GameID = 1;
+    int32 UserID = 2;
+    int32 GameStatus = 3;//游戏状态
+}
+
+//结算结构体
+message RoomResult {
+    int32 RoomID = 1;
+    int32 GameID = 2;
+    int32 GameStatus = 3; //游戏状态
+    UserDice UserDice = 4;
+    repeated UserInfo List = 5; //用户信息
+}
+
+
+//***********************************************请求***********************************************
+message SetBetRequest {
+    int32 Key = 1; //分数键值
+}
+
+message SubmitCardRequest {
+    repeated string Head = 1;
+    repeated string Tail = 2;
+}
+
+message GameResultListRequest {
+    int32 RoomID = 1;
+}
+
+//游戏恢复
+message RecoveryRequest {
+    int32 UserID = 1;
+    int32 RoomID = 2;
+}
+
+//***********************************************回应***********************************************
+
+//通用回复
+message DefaultReply {
+    int32 GameID = 1;
+    int32 Result = 2; //1 成功 //失败返回通用报错结构
+    int32 Code = 3;
+}
+
+message GameResultListReply {
+    repeated RoomResult List = 1;
+}
+
+//游戏恢复
+message RecoveryReply {
+    room.CheckRoomExistReply RoomExist = 1; //房间信息
+    RoomResult FourCardExist = 2; //四张信息结构体
+    CountDown CountDown = 3;
+}
+
+//***********************************************广播***********************************************
+
+//开始游戏广播
+message GameStartBro {
+    GameStart Context = 1;
+    repeated int32 Ids = 2;
+}
+
+//下注广播
+message SetBetBro {
+    SetBet Context = 1;
+    repeated int32 Ids = 2;
+}
+
+//随机玩家开始广播
+message UserDiceBro {
+    UserDiceInfo Context = 1;
+    repeated int32 Ids = 2;
+}
+
+//玩家出牌广播
+message SubmitCardBro {
+    SubmitCard Context= 1;
+    repeated int32 Ids = 2;
+}
+
+//结算广播
+message RoomResultBro {
+    RoomResult Context= 1;
+    repeated int32 Ids = 2;
+}
+
+service FourCardSrv {
+    rpc SetBet (SetBetRequest) returns (DefaultReply) {
+    }
+    rpc Submit (SubmitCardRequest) returns (DefaultReply) {
+    }
+    rpc GameResultList (GameResultListRequest) returns (GameResultListReply) {
+    }
+    rpc FourCardRecovery (RecoveryRequest) returns (RecoveryReply) {
+    }
+}

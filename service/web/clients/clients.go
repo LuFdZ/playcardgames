@@ -5,6 +5,8 @@ import (
 	"playcards/utils/log"
 	"sync"
 	"fmt"
+	"bytes"
+	"playcards/utils/tools"
 )
 
 var waitGroup = new(sync.WaitGroup)
@@ -77,13 +79,19 @@ func SendTo(uid int32, topic, typ string, msg interface{}) error {
 	})
 }
 
-func SendToNoLog(uid int32,topic, typ string, msg interface{}) error {
+func SendToBackLog(uid int32,topic, typ string, msg interface{}, b *bytes.Buffer) error {
 	cs := GetLockClients(topic)
 	defer Done()
 	for c, _ := range cs {
 		if c.UserID() != uid {
 			continue
 		}
+		b.WriteString(tools.IntToString(c.UserID()))
+		b.WriteString("|")
+		ws := fmt.Sprintf("%v",&c.ws)
+		b.WriteString(ws)
+		b.WriteString(",")
+
 		c.SendMessage(topic, typ, msg)
 	}
 	return nil
@@ -91,32 +99,27 @@ func SendToNoLog(uid int32,topic, typ string, msg interface{}) error {
 
 func SendWhere(topic, typ string, msg interface{},
 	f func(*Client) bool) error {
-	//s := time.Now()
 	cs := GetLockClients(topic)
-	//e := time.Now().Sub(s).Nanoseconds()/1000000
-	//log.Info("SendTimesLock:%s|%d\n", topic,e)
 	defer Done()
-	str := fmt.Sprintf("SendWhere:%s,",topic)
-	//s = time.Now()
+	str := fmt.Sprintf("sendwhere:%s,",topic)
 	for c, _ := range cs {
 		if f != nil && !f(c) {
-			//str+=fmt.Sprintf("@@@ %d @@@",c.UserID())
 			continue
 		}
-		str+=fmt.Sprintf("### %d ###",c.UserID())
+		str+=fmt.Sprintf("### %d|%v ###",c.UserID(),&c.ws)
 		c.SendMessage(topic, typ, msg)
 	}
-	//e = time.Now().Sub(s).Nanoseconds()/1000000
-	//log.Info("SendTimes:%s|%d\n", topic,e)
 	log.Debug(str)
 	return nil
 }
 
-func SendRoomUsers(ids []int32, topic, typ string, msg interface{}) error {
+func SendToUsers(ids []int32, topic, typ string, msg interface{}) error {
+	b := &bytes.Buffer{}
+
 	for _,id := range ids{
-		SendTo(id,topic,typ,msg)
+		SendToBackLog(id,topic,typ,msg,b)
 	}
-	log.Debug("SendRoomUsers SentTo:%v,Typ:%s,Msg:%v",ids,typ,msg)
+	log.Debug("send to users sent:%v,success:%s,typ:%s,msg:%v",ids,b.String(),typ,msg)
 	return nil
 }
 

@@ -5,7 +5,8 @@ import (
 	srvniu "playcards/service/niuniu/handler"
 	srvroom "playcards/service/room/handler"
 	pbroom "playcards/proto/room"
-	"playcards/model/niuniu"
+	apienum "playcards/service/api/enum"
+	"github.com/micro/go-micro/client"
 	"playcards/service/web/clients"
 	"playcards/service/web/enum"
 	"playcards/utils/subscribe"
@@ -13,7 +14,10 @@ import (
 
 	"github.com/micro/go-micro/broker"
 	"github.com/micro/protobuf/proto"
+	gctx "playcards/utils/context"
 )
+
+var rpc pbniu.NiuniuSrvClient
 
 var (
 	brok broker.Broker
@@ -24,6 +28,10 @@ func Init(brk broker.Broker) error {
 	if err := SubscribeAllNiuniuMessage(brk); err != nil {
 		return err
 	}
+	rpc = pbniu.NewNiuniuSrvClient(
+		apienum.NiuniuServiceName,
+		client.DefaultClient,
+	)
 	return nil
 }
 
@@ -88,7 +96,7 @@ func NiuniuBeBankerHandler(p broker.Publication) error {
 	}
 	ids := rs.Ids
 	rs.Ids = nil
-	err = clients.SendRoomUsers(ids, t, enum.MsgNiuniuBeBanker, rs)
+	err = clients.SendToUsers(ids, t, enum.MsgNiuniuBeBanker, rs)
 	if err != nil {
 		return err
 	}
@@ -105,7 +113,7 @@ func NiuniuSetBetHandler(p broker.Publication) error {
 	}
 	ids := rs.Ids
 	rs.Ids = nil
-	err = clients.SendRoomUsers(ids, t, enum.MsgNiuniuSetBet, rs)
+	err = clients.SendToUsers(ids, t, enum.MsgNiuniuSetBet, rs)
 	if err != nil {
 		return err
 	}
@@ -137,7 +145,7 @@ func NiuniuGameReadyHandler(p broker.Publication) error {
 	}
 	ids := rs.Ids
 	rs.Ids = nil
-	err = clients.SendRoomUsers(ids, t, enum.MsgNiuniuGameReady, rs)
+	err = clients.SendToUsers(ids, t, enum.MsgNiuniuGameReady, rs)
 	if err != nil {
 		return err
 	}
@@ -154,29 +162,12 @@ func NiuniuGameResultHandler(p broker.Publication) error {
 	}
 	ids := rs.Ids
 	rs.Ids = nil
-	err = clients.SendRoomUsers(ids, t, enum.MsgNiuniuGameResult, rs)
+	err = clients.SendToUsers(ids, t, enum.MsgNiuniuGameResult, rs)
 	if err != nil {
 		return err
 	}
 	return nil
 }
-
-//func NiuniuCountDownHandler(p broker.Publication) error {
-//	t := p.Topic()
-//	msg := p.Message()
-//	rs := &pbniu.CountDown{}
-//	err := proto.Unmarshal(msg.Body, rs)
-//	if err != nil {
-//		return err
-//	}
-//	ids := rs.Ids
-//	rs.Ids = nil
-//	err = clients.SendRoomUsers(ids, t, enum.MsgNiuniuCountDown, rs)
-//	if err != nil {
-//		return err
-//	}
-//	return nil
-//}
 
 func NiuniuExistHandle(p broker.Publication) error {
 	t := p.Topic()
@@ -186,11 +177,16 @@ func NiuniuExistHandle(p broker.Publication) error {
 	if err != nil {
 		return err
 	}
-	recovery, err := niuniu.NiuniuExist(rs.UserID,rs.RoomID)
+	ctx := gctx.NewContext(clients.GetClientByUserID(rs.UserID)[0].Token())
+	dr := &pbniu.NiuniuRecoveryRequest{
+		UserID: rs.UserID,
+		RoomID: rs.RoomID,
+	}
+	reply, err := rpc.NiuniuRecovery(ctx, dr)
 	if err != nil {
 		return err
 	}
-	err = clients.SendTo(rs.UserID, t, enum.MsgNiuniuExist, recovery)
+	err = clients.SendTo(rs.UserID, t, enum.MsgNiuniuExist, reply)
 	if err != nil {
 		return err
 	}

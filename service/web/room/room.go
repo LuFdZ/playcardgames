@@ -1,7 +1,7 @@
 package room
 
 import (
-	apienum "gdc/service/api/enum"
+	apienum "playcards/service/api/enum"
 	pbroom "playcards/proto/room"
 	srvroom "playcards/service/room/handler"
 	cacheroom "playcards/model/room/cache"
@@ -101,7 +101,7 @@ func RoomJoinHandler(p broker.Publication) error {
 	ids := rs.Ids
 	rs.Ids = nil
 	//fmt.Printf("RoomJoinHandler:%v",ids)
-	err = clients.SendRoomUsers(ids, t, enum.MsgRoomJoin, rs)
+	err = clients.SendToUsers(ids, t, enum.MsgRoomJoin, rs)
 	if err != nil {
 		return err
 	}
@@ -118,7 +118,11 @@ func RoomUnJoinHandler(p broker.Publication) error {
 	}
 	ids := rs.Ids
 	rs.Ids = nil
-	err = clients.SendRoomUsers(ids, t, enum.MsgRoomUnJoin, rs)
+	err = clients.SendToUsers(ids, t, enum.MsgRoomUnJoin, rs)
+	if err != nil {
+		return err
+	}
+	err = clients.SendTo(rs.UserID, t, enum.MsgRoomUnJoin, rs)
 	if err != nil {
 		return err
 	}
@@ -136,7 +140,7 @@ func RoomReadyHandler(p broker.Publication) error {
 	ids := rs.Ids
 	rs.Ids = nil
 	//fmt.Printf("RoomReadyHandler:%v\n",ids)
-	err = clients.SendRoomUsers(ids, t, enum.MsgRoomReady, rs)
+	err = clients.SendToUsers(ids, t, enum.MsgRoomReady, rs)
 	if err != nil {
 		return err
 	}
@@ -153,7 +157,7 @@ func RoomResultHandler(p broker.Publication) error {
 	}
 	ids := rs.Ids
 	rs.Ids = nil
-	err = clients.SendRoomUsers(ids, t, enum.MsgRoomResult, rs)
+	err = clients.SendToUsers(ids, t, enum.MsgRoomResult, rs)
 	if err != nil {
 		return err
 	}
@@ -170,7 +174,7 @@ func RoomGiveupHandler(p broker.Publication) error {
 	}
 	ids := rs.Ids
 	rs.Ids = nil
-	err = clients.SendRoomUsers(ids, t, enum.MsgRoomGiveup, rs)
+	err = clients.SendToUsers(ids, t, enum.MsgRoomGiveup, rs)
 	if err != nil {
 		return err
 	}
@@ -202,7 +206,7 @@ func RoomRenewalHandler(p broker.Publication) error {
 	}
 	ids := rs.Ids
 	rs.Ids = nil
-	err = clients.SendRoomUsers(ids, t, enum.MsgRoomRenewal, rs)
+	err = clients.SendToUsers(ids, t, enum.MsgRoomRenewal, rs)
 	if err != nil {
 		return err
 	}
@@ -219,7 +223,7 @@ func RoomVoiceChatHandler(p broker.Publication) error {
 	}
 	ids := rs.Ids
 	rs.Ids = nil
-	err = clients.SendRoomUsers(ids, t, enum.MsgRoomVoiceChat, rs)
+	err = clients.SendToUsers(ids, t, enum.MsgRoomVoiceChat, rs)
 	if err != nil {
 		return err
 	}
@@ -251,7 +255,7 @@ func RoomNoticeHandler(p broker.Publication) error {
 	}
 	ids := rs.Ids
 	rs.Ids = nil
-	err = clients.SendRoomUsers(ids, t, enum.MsgRoomNotice, rs)
+	err = clients.SendToUsers(ids, t, enum.MsgRoomNotice, rs)
 	if err != nil {
 		return err
 	}
@@ -302,7 +306,7 @@ func UserConnectionHandler(p broker.Publication) error {
 			return nil
 		}
 		rs.Ids = nil
-		err = clients.SendRoomUsers(ids, t, enum.MsgRoomUserConnection, rs)
+		err = clients.SendToUsers(ids, t, enum.MsgRoomUserConnection, rs)
 		if err != nil {
 			return err
 		}
