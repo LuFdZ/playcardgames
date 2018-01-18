@@ -10,7 +10,7 @@ import (
 	"playcards/service/web/enum"
 	"playcards/utils/subscribe"
 	"playcards/utils/topic"
-
+	"playcards/utils/log"
 	"github.com/micro/go-micro/broker"
 	"github.com/micro/go-micro/client"
 	"github.com/micro/protobuf/proto"
@@ -64,7 +64,7 @@ func DoudizhuGameStartHandler(p broker.Publication) error {
 	if err != nil {
 		return err
 	}
-	err = clients.SendTo(rs.UserID, t, enum.MsgDDZGameStart, rs)
+	err = clients.SendTo(rs.UserID, t, enum.MsgDDZGameStart, rs, enum.MsgDDZGameStartCode)
 	if err != nil {
 		return err
 	}
@@ -79,7 +79,7 @@ func DoudizhuBeBankerHandler(p broker.Publication) error {
 	if err != nil {
 		return err
 	}
-	err = clients.SendToUsers(rs.Ids, t, enum.MsgDDZBeBanker, rs.Content)
+	err = clients.SendToUsers(rs.Ids, t, enum.MsgDDZBeBanker, rs.Content, enum.MsgDDZBeBankerCode)
 	if err != nil {
 		return err
 	}
@@ -94,7 +94,7 @@ func DoudizhuSubmitCardHandler(p broker.Publication) error {
 	if err != nil {
 		return err
 	}
-	err = clients.SendToUsers(rs.Ids, t, enum.MsgDDZSubmitCard, rs.Content)
+	err = clients.SendToUsers(rs.Ids, t, enum.MsgDDZSubmitCard, rs.Content, enum.MsgDDZSubmitCardCode)
 	if err != nil {
 		return err
 	}
@@ -109,7 +109,7 @@ func DoudizhuGameResultHandler(p broker.Publication) error {
 	if err != nil {
 		return err
 	}
-	err = clients.SendToUsers(rs.Ids, t, enum.MsgDDZGameResult, rs.Content)
+	err = clients.SendToUsers(rs.Ids, t, enum.MsgDDZGameResult, rs.Content,enum.MsgDDZGameResultCode)
 	if err != nil {
 		return err
 	}
@@ -131,9 +131,10 @@ func DoudizhuExistHandle(p broker.Publication) error {
 	}
 	reply, err := rpc.DoudizhuRecovery(ctx, dr)
 	if err != nil {
+		log.Err("doudizhu exist handle http err:%v|%v\n", rs, err)
 		return err
 	}
-	err = clients.SendTo(rs.UserID, t, enum.MsgDoudizhuExist, reply)
+	err = clients.SendTo(rs.UserID, t, enum.MsgDoudizhuExist, reply,enum.MsgDoudizhuExistCode)
 	if err != nil {
 		return err
 	}

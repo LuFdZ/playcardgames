@@ -154,9 +154,10 @@ func GetInvitedUserCount(tx *gorm.DB, uid int32) ([]mdu.User, error) {
 	return out, nil
 }
 
-func FindAndGetUser(tx *gorm.DB, u *mdu.User) (*mdu.User, error) {
+func FindAndGetUser(tx *gorm.DB, openID string) (*mdu.User, error) {
 	//fmt.Printf("WXLogin:%v", u)
-	found, err := db.FoundRecord(tx.Where("open_id = ?", u.OpenID).Find(&u).Error)
+	u:= &mdu.User{}
+	found, err := db.FoundRecord(tx.Where("open_id = ?", openID).Find(&u).Error)
 	if err != nil {
 		return nil, errors.Internal("get user failed ", err)
 	}

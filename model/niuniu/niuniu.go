@@ -15,10 +15,7 @@ import (
 	errroom "playcards/model/room/errors"
 	mdr "playcards/model/room/mod"
 	pbniu "playcards/proto/niuniu"
-	enumbill "playcards/model/bill/enum"
-	mdbill "playcards/model/bill/mod"
 	"playcards/model/room"
-	"playcards/model/bill"
 	"playcards/utils/db"
 	"playcards/utils/log"
 	"time"
@@ -105,13 +102,13 @@ func CreateNiuniu(goLua *lua.LState) []*mdniu.Niuniu {
 
 		f := func(tx *gorm.DB) error {
 			if room.RoundNow == 1 {
-				if room.RoomType != enumr.RoomTypeClub && room.Cost != 0 {
-					err := bill.GainGameBalance(room.PayerID, room.RoomID, enumbill.JournalTypeNiuniu,
-						enumbill.JournalTypeNiuniuUnFreeze, &mdbill.Balance{Amount: room.Cost, CoinType: room.CostType})
-					if err != nil {
-						return err
-					}
-				}
+				//if room.RoomType != enumr.RoomTypeClub && room.Cost != 0 {
+				//	err := bill.GainGameBalance(room.PayerID, room.RoomID, enumbill.JournalTypeNiuniu,
+				//		enumbill.JournalTypeNiuniuUnFreeze, &mdbill.Balance{Amount: room.Cost, CoinType: room.CostType})
+				//	if err != nil {
+				//		return err
+				//	}
+				//}
 
 				for _, user := range room.Users {
 					pr := &mdr.PlayerRoom{
@@ -871,7 +868,7 @@ func NiuniuExist(uid int32, rid int32) (*pbniu.NiuniuRecoveryReply, error) {
 		return nil, err
 	}
 	out.NiuniuExist = niu.Result.ToProto()
-	out.NiuniuExist.Status = enumniu.ToBetScoreMap[niu.Status]
+	//out.NiuniuExist.Status = enumniu.ToBetScoreMap[niu.Status]
 	var time int32
 	switch niu.Status {
 	case enumniu.GameStatusInit:

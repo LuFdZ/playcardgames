@@ -32,7 +32,6 @@ CREATE TABLE `doudizhus` (
   AUTO_INCREMENT = 1
   DEFAULT CHARSET = utf8;
 
-
 CREATE TABLE `fourcards` (
   `game_id`          INT           NOT NULL AUTO_INCREMENT,
   `room_id`          INT           NOT NULL DEFAULT '0',
@@ -52,3 +51,4 @@ CREATE TABLE `fourcards` (
   AUTO_INCREMENT = 1
   DEFAULT CHARSET = utf8;
 
+alter table rooms add shuffle int default 0 not null after giveup;

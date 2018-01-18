@@ -15,6 +15,7 @@ const (
 	RoomCodeMax            = 999999
 	RoomCodeMin            = 100000
 	RoomGiveupCleanMinutes = 5.0
+	ShuffleDelaySeconds    = 3
 )
 
 //db config
@@ -35,6 +36,7 @@ const (
 	RoomStatusGiveUp          = 8  //房间投票放弃
 	RoomStatusOverTimeClean   = 9  //房间长时间无人操作被超时清除
 	RoomStatusDiamondNoEnough = 10 //房间开始时付费人水晶不足 取消房间数据
+	RoomStatusShuffle         = 11 //洗牌
 )
 
 // room type desc
@@ -110,7 +112,7 @@ const (
 	RecoveryInitNoReady      = 2 //房间初始化玩家未准备 有上一局
 	RecoveryInitReady        = 3 //房间初始化玩家已准备
 	RecoveryGameStart        = 4 //游戏开始
-	RecoveryGameDone        = 5 //游戏开始
+	RecoveryGameDone         = 5 //游戏开始
 )
 
 const (
@@ -129,4 +131,4 @@ const (
 	RoomNoFlag = 2
 )
 
-var GameType = []int32{1001,1002,1003}
+var GameType = []int32{1001, 1002, 1003}

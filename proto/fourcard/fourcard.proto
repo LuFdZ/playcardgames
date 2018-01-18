@@ -15,18 +15,19 @@ message UserInfo {
     UserCard TailCards = 6; //玩家尾道牌组信息
     string TotalScore = 7; //总分
     int32 Status = 8; //玩家状态
+    string NickName = 10;//历史查询时才发
+    string Icon = 11;//历史查询时才发
 }
 
 //四张玩家牌组信息
 message UserCard {
-    int32 WayType = 1; //1头道 2尾道
-    string CardType = 2; //牌型
-    repeated string CardList = 3; //牌组列表
-    string Score = 4; //牌组得分
+    string CardType = 1; //牌型
+    repeated string CardList = 2; //牌组列表
+    string Score = 3; //牌组得分
 }
 
 //随机开始玩家结构体
-message UserDice {
+message UserDice{
     int32 UserID = 1; //开始玩家id
     int32 DiceAPoints = 2; //骰子A点数
     int32 DiceBPoints = 3; //骰子B点数
@@ -42,10 +43,11 @@ message CountDown {
 message GameStart {
     int32 GameID = 1;
     int32 UserID = 2;
-    int32 GameStatus = 3;//游戏状态
-    int32 BankerID = 4; //庄家id
-    repeated string CardList = 5; //玩家总牌组
-    CountDown CountDown = 6;
+    int32 RoomStatus = 3;//房间状态
+    int32 GameStatus = 4;//游戏状态
+    int32 BankerID = 5; //庄家id
+    repeated string CardList = 6; //玩家总牌组
+    CountDown CountDown = 7;
 }
 
 //玩家下注结构体
@@ -57,14 +59,6 @@ message SetBet {
     CountDown CountDown = 5;
 }
 
-//下发随机开始玩家结构体
-message UserDiceInfo {
-    int32 GameID = 1;
-    UserDice UserDice = 2;
-    CountDown CountDown = 3;
-    int32 GameStatus = 4;//游戏状态
-}
-
 //玩家出牌结构体
 message SubmitCard {
     int32 GameID = 1;
@@ -73,12 +67,13 @@ message SubmitCard {
 }
 
 //结算结构体
-message RoomResult {
+message GameResult {
     int32 RoomID = 1;
     int32 GameID = 2;
     int32 GameStatus = 3; //游戏状态
     UserDice UserDice = 4;
     repeated UserInfo List = 5; //用户信息
+    int32 UserID = 6;
 }
 
 
@@ -112,23 +107,17 @@ message DefaultReply {
 }
 
 message GameResultListReply {
-    repeated RoomResult List = 1;
+    repeated GameResult List = 1;
 }
 
 //游戏恢复
 message RecoveryReply {
     room.CheckRoomExistReply RoomExist = 1; //房间信息
-    RoomResult FourCardExist = 2; //四张信息结构体
+    GameResult FourCardExist = 2; //四张信息结构体
     CountDown CountDown = 3;
 }
 
 //***********************************************广播***********************************************
-
-//开始游戏广播
-message GameStartBro {
-    GameStart Context = 1;
-    repeated int32 Ids = 2;
-}
 
 //下注广播
 message SetBetBro {
@@ -136,11 +125,11 @@ message SetBetBro {
     repeated int32 Ids = 2;
 }
 
-//随机玩家开始广播
-message UserDiceBro {
-    UserDiceInfo Context = 1;
-    repeated int32 Ids = 2;
-}
+////玩家下注额、开始顺序、发牌广播
+//message UserBetDiceCardBro {
+//    GameResult Context = 1;
+//    repeated int32 Ids = 2;
+//}
 
 //玩家出牌广播
 message SubmitCardBro {
@@ -149,15 +138,15 @@ message SubmitCardBro {
 }
 
 //结算广播
-message RoomResultBro {
-    RoomResult Context= 1;
+message GameResultBro {
+    GameResult Context= 1;
     repeated int32 Ids = 2;
 }
 
 service FourCardSrv {
     rpc SetBet (SetBetRequest) returns (DefaultReply) {
     }
-    rpc Submit (SubmitCardRequest) returns (DefaultReply) {
+    rpc SubmitCard (SubmitCardRequest) returns (DefaultReply) {
     }
     rpc GameResultList (GameResultListRequest) returns (GameResultListReply) {
     }

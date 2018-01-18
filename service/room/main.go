@@ -32,9 +32,10 @@ var FuncRights = map[string]int32{
 	"RoomSrv.CreateFeedback":        auth.RightsPlayer,
 	"RoomSrv.GetRoomRecovery":       auth.RightsPlayer,
 	"RoomSrv.GameStart":             auth.RightsPlayer,
-	//"RoomSrv.CheckRoomExist":        auth.RightsPlayer,
-	"RoomSrv.PageRoomList":     auth.RightsNoticeAdmin,
-	"RoomSrv.PageFeedbackList": auth.RightsRoomAdmin,
+	"RoomSrv.ShuffleCard":           auth.RightsPlayer,
+	"RoomSrv.PageRoomList":          auth.RightsNoticeAdmin,
+	"RoomSrv.PageFeedbackList":      auth.RightsRoomAdmin,
+
 }
 
 func main() {

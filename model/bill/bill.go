@@ -52,20 +52,19 @@ func GainBalance(uid int32, aid int64, balanceType int32, balance *mdbill.Balanc
 	}
 
 	b, err := cachebill.GetUserBalance(uid, balance.CoinType)
-	//b, err := dbbill.GetUserBalance(db.DB(), uid, balance.CoinType)
 	if err != nil {
 		return nil, err
 	}
 	return b, nil
 }
 
-func GainGameBalance(uid int32, aid int32, balanceType int32, FreezeType int32, balance *mdbill.Balance) error {
+func GainGameBalance(uid int32, aid int32, balanceType int32, balance *mdbill.Balance) error {
 	fid := strconv.Itoa(int(aid))
 	f := func(tx *gorm.DB) error {
-		err := dbbill.SetBalanceFreeze(tx, uid, balance, FreezeType, fid, enumbill.SystemOpUserID)
-		if err != nil {
-			return err
-		}
+		//err := dbbill.SetBalanceFreeze(tx, uid, balance, FreezeType, fid, enumbill.SystemOpUserID)
+		//if err != nil {
+		//	return err
+		//}
 		ub, err := dbbill.GainBalance(tx, uid, balance, balanceType,
 			fid, enumbill.SystemOpUserID, enumbill.DefaultChannel)
 		if err != nil {

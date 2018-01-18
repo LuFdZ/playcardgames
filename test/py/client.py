@@ -266,13 +266,17 @@ class Client(object):
         })
         return ul
 
-    def GetRoomRecovery(self,rid,gtype):
+    def GetRoomRecovery(self, rid, gtype):
         ul = self.Request("/room/roomSrv/GetRoomRecovery", {
-            "RoomID":rid,
-            "GameType":gtype,
+            "RoomID": rid,
+            "GameType": gtype,
         })
         return ul
 
+    def ShuffleCard(self, rid, gtype):
+        ul = self.Request("/room/roomSrv/ShuffleCard", {
+        })
+        return ul
 
     """
     充值相关操作
@@ -323,13 +327,10 @@ class Client(object):
         })
         return ul
 
-
     def TestClean(self):
         ul = self.Request("/room/roomSrv/TestClean", {
         })
         return ul
-
-
 
     def GetNotice(self, version):
         ul = self.Request("/notice/NoticeSrv/GetNotice", {
@@ -364,8 +365,6 @@ class Client(object):
         })
         return ul
 
-
-
     def PageNoticeList(self, page, pagesize):
         ul = self.Request("/notice/noticeSrv/PageNoticeList", {
             "Page": {
@@ -381,7 +380,6 @@ class Client(object):
         })
         return ul
 
-
     def Share(self):
         ul = self.Request("/activity/ActivitySrv/Share", {
         })
@@ -392,8 +390,6 @@ class Client(object):
             "UserID": uid,
         })
         return ul
-
-
 
     def ThirteenRecovery(self, rid):
         ul = self.Request("/thirteen/thirteenSrv/ThirteenRecovery", {
@@ -607,6 +603,7 @@ class Client(object):
     """
     斗地主相关操作
     """
+
     def CreateDRoom(self, roomType, maxNumber, roundNumber):
         ul = self.Request("/room/roomSrv/CreateRoom", {
             "RoundNumber": roundNumber,
@@ -617,14 +614,14 @@ class Client(object):
         })
         return ul
 
-    def GetBanker(self,gid,type ):
+    def GetBanker(self, gid, type):
         ul = self.Request("/doudizhu/doudizhuSrv/GetBanker", {
             "GameID": gid,
             "GetBanker": type,
         })
         return ul
 
-    def SubmitCardD(self,gid):
+    def SubmitCardD(self, gid):
         ul = self.Request("/doudizhu/doudizhuSrv/SubmitCard", {
             "GameID": gid,
             "CardList": ['4_14'],
@@ -634,5 +631,32 @@ class Client(object):
     def DoudizhuList(self, rid):
         ul = self.Request("/doudizhu/doudizhuSrv/GameResultList", {
             "RoomID": rid,
+        })
+        return ul
+
+    """
+    四张相关操作
+    """
+
+    def CRFour(self, roomType, maxNumber, roundNumber, scoreType):
+        ul = self.Request("/room/roomSrv/CreateRoom", {
+            "RoundNumber": roundNumber,
+            "MaxNumber": maxNumber,
+            "GameType": 1004,
+            "RoomType": roomType,
+            "GameParam": '{\"ScoreType\":%d}' % (scoreType)
+        })
+        return ul
+
+    def SBFour(self, value):
+        ul = self.Request("/fourcard/FourCardSrv/SetBet", {
+            "Key": value,
+        })
+        return ul
+
+    def SCFour(self):
+        ul = self.Request("/fourcard/FourCardSrv/SubmitCard", {
+            "Head": ['1_8', '3_8'],
+            "Tail": ['1_4', '3_4']
         })
         return ul

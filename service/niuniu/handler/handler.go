@@ -57,7 +57,7 @@ func (ns *NiuniuSrv) update(gt *gsync.GlobalTimer, gl *lua.LState) {
 						UserID:     UserResult.UserID,
 						BankerID:   game.BankerID,
 						RoomStatus: enumr.RoomStatusStarted,
-						CardList:   cardlist,//[]string{"4_11","3_11","2_1","4_4"},//
+						CardList:   cardlist,
 						GameStatus: game.Status,
 						CountDown: &pbniu.CountDown{
 							ServerTime: game.OpDateAt.Unix(),

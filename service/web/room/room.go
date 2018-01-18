@@ -72,6 +72,9 @@ func SubscribeAllRoomMessage(brk broker.Broker) error {
 	subscribe.SrvSubscribe(brk, topic.Topic(srvroom.TopicRoomNotice),
 		RoomNoticeHandler,
 	)
+	subscribe.SrvSubscribe(brk, topic.Topic(srvroom.TopicRoomGShuffleCardBro),
+		ShuffleCardHandler,
+	)
 	return nil
 }
 
@@ -83,7 +86,7 @@ func RoomCreateHandler(p broker.Publication) error {
 	if err != nil {
 		return err
 	}
-	err = clients.SendTo(rs.UserID, t, enum.MsgRoomCreate, rs)
+	err = clients.SendTo(rs.UserID, t, enum.MsgRoomCreate, rs,enum.MsgRoomCreateCode)
 	if err != nil {
 		return err
 	}
@@ -101,7 +104,7 @@ func RoomJoinHandler(p broker.Publication) error {
 	ids := rs.Ids
 	rs.Ids = nil
 	//fmt.Printf("RoomJoinHandler:%v",ids)
-	err = clients.SendToUsers(ids, t, enum.MsgRoomJoin, rs)
+	err = clients.SendToUsers(ids, t, enum.MsgRoomJoin, rs,enum.MsgRoomJoinCode)
 	if err != nil {
 		return err
 	}
@@ -118,11 +121,11 @@ func RoomUnJoinHandler(p broker.Publication) error {
 	}
 	ids := rs.Ids
 	rs.Ids = nil
-	err = clients.SendToUsers(ids, t, enum.MsgRoomUnJoin, rs)
+	err = clients.SendToUsers(ids, t, enum.MsgRoomUnJoin, rs,enum.MsgRoomUnJoinCode)
 	if err != nil {
 		return err
 	}
-	err = clients.SendTo(rs.UserID, t, enum.MsgRoomUnJoin, rs)
+	err = clients.SendTo(rs.UserID, t, enum.MsgRoomUnJoin, rs,enum.MsgRoomUnJoinCode)
 	if err != nil {
 		return err
 	}
@@ -140,7 +143,7 @@ func RoomReadyHandler(p broker.Publication) error {
 	ids := rs.Ids
 	rs.Ids = nil
 	//fmt.Printf("RoomReadyHandler:%v\n",ids)
-	err = clients.SendToUsers(ids, t, enum.MsgRoomReady, rs)
+	err = clients.SendToUsers(ids, t, enum.MsgRoomReady, rs,enum.MsgRoomReadyCode)
 	if err != nil {
 		return err
 	}
@@ -157,7 +160,7 @@ func RoomResultHandler(p broker.Publication) error {
 	}
 	ids := rs.Ids
 	rs.Ids = nil
-	err = clients.SendToUsers(ids, t, enum.MsgRoomResult, rs)
+	err = clients.SendToUsers(ids, t, enum.MsgRoomResult, rs,enum.MsgRoomResultCode)
 	if err != nil {
 		return err
 	}
@@ -174,7 +177,7 @@ func RoomGiveupHandler(p broker.Publication) error {
 	}
 	ids := rs.Ids
 	rs.Ids = nil
-	err = clients.SendToUsers(ids, t, enum.MsgRoomGiveup, rs)
+	err = clients.SendToUsers(ids, t, enum.MsgRoomGiveup, rs,enum.MsgRoomGiveupCode,)
 	if err != nil {
 		return err
 	}
@@ -189,7 +192,7 @@ func RoomShockHandler(p broker.Publication) error {
 	if err != nil {
 		return err
 	}
-	err = clients.SendTo(rs.UserIDTo, t, enum.MsgRoomShock, rs)
+	err = clients.SendTo(rs.UserIDTo, t, enum.MsgRoomShock, rs,enum.MsgRoomShockCode)
 	if err != nil {
 		return err
 	}
@@ -206,7 +209,7 @@ func RoomRenewalHandler(p broker.Publication) error {
 	}
 	ids := rs.Ids
 	rs.Ids = nil
-	err = clients.SendToUsers(ids, t, enum.MsgRoomRenewal, rs)
+	err = clients.SendToUsers(ids, t, enum.MsgRoomRenewal, rs,enum.MsgRoomRenewalCode)
 	if err != nil {
 		return err
 	}
@@ -223,7 +226,7 @@ func RoomVoiceChatHandler(p broker.Publication) error {
 	}
 	ids := rs.Ids
 	rs.Ids = nil
-	err = clients.SendToUsers(ids, t, enum.MsgRoomVoiceChat, rs)
+	err = clients.SendToUsers(ids, t, enum.MsgRoomVoiceChat, rs,enum.MsgRoomRenewalCode)
 	if err != nil {
 		return err
 	}
@@ -255,7 +258,7 @@ func RoomNoticeHandler(p broker.Publication) error {
 	}
 	ids := rs.Ids
 	rs.Ids = nil
-	err = clients.SendToUsers(ids, t, enum.MsgRoomNotice, rs)
+	err = clients.SendToUsers(ids, t, enum.MsgRoomNotice, rs,enum.MsgRoomRenewalCode)
 	if err != nil {
 		return err
 	}
@@ -306,7 +309,7 @@ func UserConnectionHandler(p broker.Publication) error {
 			return nil
 		}
 		rs.Ids = nil
-		err = clients.SendToUsers(ids, t, enum.MsgRoomUserConnection, rs)
+		err = clients.SendToUsers(ids, t, enum.MsgRoomUserConnection, rs,enum.MsgRoomUserConnectionCode)
 		if err != nil {
 			return err
 		}
@@ -314,6 +317,23 @@ func UserConnectionHandler(p broker.Publication) error {
 		//	rs := &pbroom.RoomExist{rs.UserID, mdroom.RoomID, mdroom.GameType}
 		//	topic.Publish(brok, rs, srvroom.TopicRoomExist)
 		//}
+	}
+	return nil
+}
+
+func ShuffleCardHandler(p broker.Publication) error {
+	t := p.Topic()
+	msg := p.Message()
+	rs := &pbroom.UserConnection{}
+	err := proto.Unmarshal(msg.Body, rs)
+	if err != nil {
+		return err
+	}
+	ids := rs.Ids
+	rs.Ids = nil
+	err = clients.SendToUsers(ids, t, enum.MsgShuffleCard, rs,enum.MsgShuffleCardCode)
+	if err != nil {
+		return err
 	}
 	return nil
 }

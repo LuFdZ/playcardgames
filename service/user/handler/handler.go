@@ -171,6 +171,7 @@ func (us *UserSrv) WXLogin(ctx context.Context, req *pbu.WXLoginRequest,
 		list := strings.Split(addresslist, ",")
 		address = list[0]
 	}
+
 	diamond, u, err := user.WXLogin(mdu.UserFromWXLoginRequestProto(req), req.Code, address)
 	if err != nil {
 		return err

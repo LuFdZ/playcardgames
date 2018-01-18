@@ -13,6 +13,7 @@ import (
 type Message struct {
 	Type string
 	Data interface{}
+	Cmd  int
 	WsID string
 }
 
@@ -41,6 +42,10 @@ func NewClient(token string, u *mdu.User, ws *websocket.Conn) *Client {
 	if !ok {
 		cs = make(map[*Client]bool)
 		clients[u.UserID] = cs
+	} else {
+		for k, _ := range cs {
+			k.Close()
+		}
 	}
 	log.Debug("connection count:%d, add connection: %v", len(cs), c)
 	cs[c] = true
@@ -113,8 +118,8 @@ func (c *Client) UnsubscribeAll() {
 	c.topics = make(map[string]bool)
 }
 
-func (c *Client) SendMessage(topic, typ string, msg interface{}) {
-	m := &Message{Type: typ, Data: msg, WsID: fmt.Sprintf("%v",&c.ws)}
+func (c *Client) SendMessage(topic, typ string, msg interface{}, code int) {
+	m := &Message{Type: typ, Data: msg, WsID: fmt.Sprintf("%v", &c.ws), Cmd: code}
 	select {
 	case c.channel <- m:
 	default:

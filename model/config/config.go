@@ -11,6 +11,7 @@ import (
 
 	"github.com/jinzhu/gorm"
 	"strconv"
+	"playcards/utils/log"
 )
 
 func UpdateConfig(co *mdconf.Config) error {
@@ -45,12 +46,16 @@ func CreateConfig(co *mdconf.Config) error {
 }
 
 func GetConfigs(channel string, version string, mobileOs string) map[int32]*mdconf.Config {
+	log.Debug("AAAAGetConfigs:%s|%s|%s\n",channel,version,mobileOs)
 	f := func(co *mdconf.Config) bool {
 		if co.Status == enumc.ConfigOpenStatusAble &&
 			(co.Channel == channel || len(co.Channel) == 0) &&
 			(co.Version == version || len(co.Version) == 0) &&
 			(co.MobileOs == mobileOs || len(co.MobileOs) == 0) {
+				log.Debug("GetConfigsOk:%v\n",co)
 			return true
+		}else{
+			log.Debug("GetConfigsNotOk:%v\n",co)
 		}
 		return false
 	}

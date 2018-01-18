@@ -11,7 +11,7 @@ import (
 	"playcards/service/web/enum"
 	"playcards/utils/subscribe"
 	"playcards/utils/topic"
-
+	"playcards/utils/log"
 	"github.com/micro/go-micro/broker"
 	"github.com/micro/protobuf/proto"
 	gctx "playcards/utils/context"
@@ -64,7 +64,7 @@ func ThirteenGameStartHandler(p broker.Publication) error {
 		return err
 	}
 
-	err = clients.SendTo(rs.UserID, t, enum.MsgThireteenGameStart, rs)
+	err = clients.SendTo(rs.UserID, t, enum.MsgThireteenGameStart, rs,enum.MsgThireteenGameStartCode)
 	if err != nil {
 		return err
 	}
@@ -81,7 +81,7 @@ func ThirteenGameResultHandler(p broker.Publication) error {
 	}
 	ids := rs.Ids
 	rs.Ids = nil
-	err = clients.SendToUsers(ids, t, enum.MsgThireteenGameResult, rs)
+	err = clients.SendToUsers(ids, t, enum.MsgThireteenGameResult, rs,enum.MsgThireteenGameResultCode)
 	if err != nil {
 		return err
 	}
@@ -98,7 +98,7 @@ func ThirteenReadyHandler(p broker.Publication) error {
 	}
 	ids := rs.Ids
 	rs.Ids = nil
-	err = clients.SendToUsers(ids, t, enum.MsgThireteenGameReady, rs)
+	err = clients.SendToUsers(ids, t, enum.MsgThireteenGameReady, rs,enum.MsgThireteenGameReadyCode)
 	if err != nil {
 		return err
 	}
@@ -121,9 +121,10 @@ func ThirteenExistHandle(p broker.Publication) error {
 
 	reply, err := rpc.ThirteenRecovery(ctx, dr)
 	if err != nil {
+		log.Err("thirteen exist handle http err:%v|%v\n", rs, err)
 		return err
 	}
-	err = clients.SendTo(rs.UserID, t, enum.MsgThireteenExist, reply)
+	err = clients.SendTo(rs.UserID, t, enum.MsgThireteenExist, reply,enum.MsgThireteenExistCode)
 	if err != nil {
 		return err
 	}

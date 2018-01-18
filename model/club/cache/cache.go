@@ -226,7 +226,7 @@ func SetAllClub(mclubs []*mdclub.Club) error {
 			return errors.Internal("set club member failed", err)
 		}
 	}
-	log.Err("redis reset all club list")
+	log.Info("redis reset all club list")
 	return nil
 }
 

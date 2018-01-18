@@ -15,6 +15,7 @@ import (
 	"github.com/micro/go-micro/broker"
 	"github.com/micro/protobuf/proto"
 	gctx "playcards/utils/context"
+	"playcards/utils/log"
 )
 
 var rpc pbniu.NiuniuSrvClient
@@ -79,7 +80,7 @@ func NiuniuGameStartHandler(p broker.Publication) error {
 	if err != nil {
 		return err
 	}
-	err = clients.SendTo(rs.UserID, t, enum.MsgNiuniuGameStart, rs)
+	err = clients.SendTo(rs.UserID, t, enum.MsgNiuniuGameStart, rs,enum.MsgNiuniuGameStartCode)
 	if err != nil {
 		return err
 	}
@@ -96,7 +97,7 @@ func NiuniuBeBankerHandler(p broker.Publication) error {
 	}
 	ids := rs.Ids
 	rs.Ids = nil
-	err = clients.SendToUsers(ids, t, enum.MsgNiuniuBeBanker, rs)
+	err = clients.SendToUsers(ids, t, enum.MsgNiuniuBeBanker, rs,enum.MsgNiuniuBeBankerCode)
 	if err != nil {
 		return err
 	}
@@ -113,7 +114,7 @@ func NiuniuSetBetHandler(p broker.Publication) error {
 	}
 	ids := rs.Ids
 	rs.Ids = nil
-	err = clients.SendToUsers(ids, t, enum.MsgNiuniuSetBet, rs)
+	err = clients.SendToUsers(ids, t, enum.MsgNiuniuSetBet, rs,enum.MsgNiuniuSetBetCode)
 	if err != nil {
 		return err
 	}
@@ -128,7 +129,7 @@ func NiuniuAllBetHandler(p broker.Publication) error {
 	if err != nil {
 		return err
 	}
-	err = clients.SendTo(rs.UserID, t, enum.MsgNiuniuAllBet, rs)
+	err = clients.SendTo(rs.UserID, t, enum.MsgNiuniuAllBet, rs,enum.MsgNiuniuAllBetCode)
 	if err != nil {
 		return err
 	}
@@ -145,7 +146,7 @@ func NiuniuGameReadyHandler(p broker.Publication) error {
 	}
 	ids := rs.Ids
 	rs.Ids = nil
-	err = clients.SendToUsers(ids, t, enum.MsgNiuniuGameReady, rs)
+	err = clients.SendToUsers(ids, t, enum.MsgNiuniuGameReady, rs,enum.MsgNiuniuAllBetCode)
 	if err != nil {
 		return err
 	}
@@ -162,7 +163,7 @@ func NiuniuGameResultHandler(p broker.Publication) error {
 	}
 	ids := rs.Ids
 	rs.Ids = nil
-	err = clients.SendToUsers(ids, t, enum.MsgNiuniuGameResult, rs)
+	err = clients.SendToUsers(ids, t, enum.MsgNiuniuGameResult, rs,enum.MsgNiuniuGameResultCode)
 	if err != nil {
 		return err
 	}
@@ -184,9 +185,10 @@ func NiuniuExistHandle(p broker.Publication) error {
 	}
 	reply, err := rpc.NiuniuRecovery(ctx, dr)
 	if err != nil {
+		log.Err("niuniu exist handle http err:%v|%v\n", rs, err)
 		return err
 	}
-	err = clients.SendTo(rs.UserID, t, enum.MsgNiuniuExist, reply)
+	err = clients.SendTo(rs.UserID, t, enum.MsgNiuniuExist, reply,enum.MsgNiuniuExistCode)
 	if err != nil {
 		return err
 	}

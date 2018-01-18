@@ -38,4 +38,5 @@ var (
 	ErrRoomMaxRound         = errors.Forbidden(40026, "房间轮数不正确！")
 	ErrPlayerNumberNoEnough = errors.NotFound(40027, "玩家人数不足！")
 	ErrGameType             = errors.NotFound(40028, "游戏类型不允许改操作！")
+	ErrShuffle             = errors.Forbidden(40029, "您不能洗牌！")
 )

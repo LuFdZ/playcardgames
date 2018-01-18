@@ -14,11 +14,7 @@ import (
 	errorst "playcards/model/thirteen/errors"
 	mdt "playcards/model/thirteen/mod"
 	pbt "playcards/proto/thirteen"
-	enumbill "playcards/model/bill/enum"
-	mdbill "playcards/model/bill/mod"
 	"playcards/model/room"
-	//"playcards/utils/env"
-	"playcards/model/bill"
 	"playcards/utils/db"
 	"playcards/utils/log"
 	"strconv"
@@ -118,14 +114,14 @@ func CreateThirteen(goLua *lua.LState) []*mdt.Thirteen {
 		mdroom.Status = enumr.RoomStatusStarted
 		f := func(tx *gorm.DB) error {
 			if mdroom.RoundNow == 1 {
-				if mdroom.RoomType != enumr.RoomTypeClub && mdroom.Cost != 0 {
-					err := bill.GainGameBalance(mdroom.PayerID, mdroom.RoomID, enumbill.JournalTypeThirteen,
-						enumbill.JournalTypeThirteenUnFreeze, &mdbill.Balance{Amount: -mdroom.Cost, CoinType: mdroom.CostType})
-					if err != nil {
-						log.Err("thirteen create user balance failed,%v | %+v", mdroom.PayerID, err)
-						return err
-					}
-				}
+				//if mdroom.RoomType != enumr.RoomTypeClub && mdroom.Cost != 0 {
+				//	err := bill.GainGameBalance(mdroom.PayerID, mdroom.RoomID, enumbill.JournalTypeThirteen,
+				//		enumbill.JournalTypeThirteenUnFreeze, &mdbill.Balance{Amount: -mdroom.Cost, CoinType: mdroom.CostType})
+				//	if err != nil {
+				//		log.Err("thirteen create user balance failed,%v | %+v", mdroom.PayerID, err)
+				//		return err
+				//	}
+				//}
 
 				for _, user := range mdroom.Users {
 					pr := &mdr.PlayerRoom{

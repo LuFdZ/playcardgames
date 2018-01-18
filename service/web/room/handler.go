@@ -30,12 +30,13 @@ var RoomEvent = []string{
 	srvroom.TopicRoomNiuniuExist,
 	srvroom.TopicRoomDoudizhuExist,
 	srvroom.TopicRoomNotice,
+	srvroom.TopicRoomGShuffleCardBro,
 }
 
 func SubscribeRoomMessage(c *clients.Client, req *request.Request) error {
 	cacheuser.SetUserOnlineStatus(c.UserID(), 1)
 	c.Subscribe(RoomEvent)
-	c.SendMessage("",enum.MsgSubscribeSuccess,nil)
+	c.SendMessage("", enum.MsgSubscribeSuccess, nil, enum.MsgSubscribeSuccessCode)
 
 	msg := &pbroom.UserConnection{
 		UserID: c.UserID(),
@@ -51,7 +52,7 @@ func UnsubscribeRoomMessage(c *clients.Client, req *request.Request) error {
 }
 
 func ClinetHearbeatMessage(c *clients.Client, req *request.Request) error {
-	var ctime  int64 = 0
+	var ctime int64 = 0
 
 	err := json.Unmarshal(req.Args, &ctime)
 	if err != nil {
@@ -62,7 +63,7 @@ func ClinetHearbeatMessage(c *clients.Client, req *request.Request) error {
 		msg.Stime = time.Now().Unix()
 		msg.Ctime = ctime
 	}
-	c.SendMessage("", enum.MsgHeartbeat, msg)
+	c.SendMessage("", enum.MsgHeartbeat, msg, enum.MsgSubscribeCode)
 	return nil
 }
 
@@ -74,8 +75,8 @@ func HeartbeatCallback(c *clients.Client) {
 
 func CloseCallbackHandler(c *clients.Client) {
 	cacheuser.SetUserOnlineStatus(c.UserID(), 0)
-	cs :=clients.GetClientByUserID(c.UserID())
-	if len(cs) == 0{
+	cs := clients.GetClientByUserID(c.UserID())
+	if len(cs) == 0 {
 		msg := &pbroom.UserConnection{
 			UserID: c.UserID(),
 			Status: enum.SocketClose,
@@ -85,12 +86,12 @@ func CloseCallbackHandler(c *clients.Client) {
 }
 
 func ReceiveTestLogMessage(c *clients.Client, req *request.Request) error {
-	var RecType  string
+	var RecType string
 	err := json.Unmarshal(req.Args, &RecType)
 	if err != nil {
 		RecType = "Err"
 	}
-	log.Debug("ReceiveTestLog:%d|%v",c.UserID(),RecType)
+	log.Debug("ReceiveTestLog:%d|%v", c.UserID(), RecType)
 	return nil
 }
 

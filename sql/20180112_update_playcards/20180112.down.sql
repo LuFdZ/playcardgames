@@ -1,0 +1,2 @@
+DROP TABLE IF EXISTS `doudizhus`;
+DROP TABLE IF EXISTS `fourcards`;

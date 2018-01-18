@@ -318,7 +318,7 @@ func WXLogin(u *mdu.User, code string, address string) (int64, *mdu.User, error)
 	if err != nil {
 		return 0, nil, err
 	}
-	newUser, err := dbu.FindAndGetUser(db.DB(), u)
+	newUser, err := dbu.FindAndGetUser(db.DB(), u.OpenID)
 
 	if err != nil {
 		return 0, nil, err
@@ -348,6 +348,7 @@ func WXLogin(u *mdu.User, code string, address string) (int64, *mdu.User, error)
 	}
 	now := gorm.NowFunc()
 	u.LastLoginAt = &now
+
 	u, err = UpdateUser(u)
 	if err != nil {
 		return 0, nil, err

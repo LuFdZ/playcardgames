@@ -5,9 +5,9 @@ package niuniu;
 
 //结构体
 message BankerAndBet {
-    string BankerScore = 1;
-    string BetScore = 2;
-    string Role = 3;
+    int32 BankerScore = 1;
+    int32 BetScore = 2;
+    int32 Role = 3;
 }
 
 message UserCard {

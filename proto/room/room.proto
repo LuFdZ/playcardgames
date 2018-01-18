@@ -26,7 +26,7 @@ message Room {
     int64 Diamond = 19;
     repeated GameUserResult ResultList = 20;
     int32 OwnerID = 21;
-
+    int32 Shuffle = 22;
 }
 
 message RoomUser {
@@ -101,6 +101,12 @@ message Feedback {
     int64 UpdatedAt = 11;
 }
 
+//倒计时结构体
+message CountDown {
+    int64 ServerTime = 1; //服务器时间
+    int32 Count = 2; //倒计时秒数
+}
+
 //请求
 message GiveUpGameRequest {
     string Password = 1;
@@ -116,6 +122,7 @@ message GiveUpGameResult {
     int32 Status = 2;
     repeated UserState UserStateList = 3;
     repeated int32 Ids = 4;
+    CountDown CountDown = 5;
 }
 
 message PageFeedbackListRequest {
@@ -244,6 +251,11 @@ message RoomExist{
     int32 RoomID = 2;
 }
 
+message ShuffleCardBro{
+    int32 UserID = 1;
+    repeated int32 Ids = 3;
+}
+
 service RoomSrv {
     rpc CreateRoom (Room) returns (RoomReply) {
     }
@@ -290,6 +302,8 @@ service RoomSrv {
     rpc GetRoomRecovery(Room) returns (RoomReply) {
     }
     rpc GameStart(Room) returns (RoomReply) {
+    }
+    rpc ShuffleCard(Room) returns (RoomReply) {
     }
 }
 

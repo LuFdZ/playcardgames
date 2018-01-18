@@ -11,7 +11,7 @@ import (
 	"github.com/jinzhu/gorm"
 )
 
-func CreateGame(tx *gorm.DB, game *mdfour.FourCard) error {
+func CreateGame(tx *gorm.DB, game *mdfour.Fourcard) error {
 	now := gorm.NowFunc()
 	game.UpdatedAt = &now
 	if err := tx.Create(game).Error; err != nil {
@@ -20,10 +20,10 @@ func CreateGame(tx *gorm.DB, game *mdfour.FourCard) error {
 	return nil
 }
 
-func UpdateGame(tx *gorm.DB, game *mdfour.FourCard) (*mdfour.FourCard, error) {
+func UpdateGame(tx *gorm.DB, game *mdfour.Fourcard) (*mdfour.Fourcard, error) {
 	now := gorm.NowFunc()
-	fourcard := &mdfour.FourCard{
-		GameResult: game.GameResult,
+	fourcard := &mdfour.Fourcard{
+		GameResultStr: game.GameResultStr,
 		Status:     game.Status,
 		UpdatedAt:  &now,
 		OpDateAt:   game.OpDateAt,
@@ -34,9 +34,9 @@ func UpdateGame(tx *gorm.DB, game *mdfour.FourCard) (*mdfour.FourCard, error) {
 	return game, nil
 }
 
-func GetFourCardByStatus(tx *gorm.DB, status int32) ([]*mdfour.FourCard, error) {
+func GetFourCardByStatus(tx *gorm.DB, status int32) ([]*mdfour.Fourcard, error) {
 	var (
-		out []*mdfour.FourCard
+		out []*mdfour.Fourcard
 	)
 	if err := tx.Where("status = ?", status).Order("created_at").
 		Find(&out).Error; err != nil {
@@ -45,9 +45,9 @@ func GetFourCardByStatus(tx *gorm.DB, status int32) ([]*mdfour.FourCard, error) 
 	return out, nil
 }
 
-func GetFourCardAline(tx *gorm.DB) ([]*mdfour.FourCard, error) {
+func GetFourCardAline(tx *gorm.DB) ([]*mdfour.Fourcard, error) {
 	var (
-		out []*mdfour.FourCard
+		out []*mdfour.Fourcard
 	)
 	if err := tx.Where("status < ?", enumfour.GameStatusDone).Order("created_at").
 		Find(&out).Error; err != nil {
@@ -56,9 +56,9 @@ func GetFourCardAline(tx *gorm.DB) ([]*mdfour.FourCard, error) {
 	return out, nil
 }
 
-func GetFourCardByID(tx *gorm.DB, gid int32) (*mdfour.FourCard, error) {
+func GetFourCardByID(tx *gorm.DB, gid int32) (*mdfour.Fourcard, error) {
 	var (
-		out mdfour.FourCard
+		out mdfour.Fourcard
 	)
 	out.GameID = gid
 	found, err := db.FoundRecord(tx.Find(&out).Error)
@@ -72,8 +72,8 @@ func GetFourCardByID(tx *gorm.DB, gid int32) (*mdfour.FourCard, error) {
 	return &out, nil
 }
 
-func GetFourCardByRoomID(tx *gorm.DB, rid int32) ([]*mdfour.FourCard, error) {
-	var out []*mdfour.FourCard
+func GetFourCardByRoomID(tx *gorm.DB, rid int32) ([]*mdfour.Fourcard, error) {
+	var out []*mdfour.Fourcard
 	if err := tx.Where(" room_id = ? ", rid).
 		Order("created_at").Find(&out).Error; err != nil {
 		return nil, errors.Internal("get four card by room_id failed", err)
@@ -81,8 +81,8 @@ func GetFourCardByRoomID(tx *gorm.DB, rid int32) ([]*mdfour.FourCard, error) {
 	return out, nil
 }
 
-func GetLastFourCardByRoomID(tx *gorm.DB, rid int32) (*mdfour.FourCard, error) {
-	out := &mdfour.FourCard{}
+func GetLastFourCardByRoomID(tx *gorm.DB, rid int32) (*mdfour.Fourcard, error) {
+	out := &mdfour.Fourcard{}
 	if err := tx.Where(" room_id = ? ", rid).
 		Order("game_id desc").Limit(1).Find(&out).Error; err != nil {
 		return nil, errors.Internal("get last four card by room_id failed", err)

@@ -69,17 +69,17 @@ func Unlock() {
 	lock.Unlock()
 }
 
-func Send(topic, typ string, msg interface{}) error {
-	return SendWhere(topic, typ, msg, nil)
+func Send(topic, typ string, msg interface{}, code int) error {
+	return SendWhere(topic, typ, msg, nil, code)
 }
 
-func SendTo(uid int32, topic, typ string, msg interface{}) error {
+func SendTo(uid int32, topic, typ string, msg interface{}, code int) error {
 	return SendWhere(topic, typ, msg, func(c *Client) bool {
 		return c.UserID() == uid
-	})
+	}, code)
 }
 
-func SendToBackLog(uid int32,topic, typ string, msg interface{}, b *bytes.Buffer) error {
+func SendToBackLog(uid int32, topic, typ string, msg interface{}, b *bytes.Buffer, code int) error {
 	cs := GetLockClients(topic)
 	defer Done()
 	for c, _ := range cs {
@@ -88,38 +88,38 @@ func SendToBackLog(uid int32,topic, typ string, msg interface{}, b *bytes.Buffer
 		}
 		b.WriteString(tools.IntToString(c.UserID()))
 		b.WriteString("|")
-		ws := fmt.Sprintf("%v",&c.ws)
+		ws := fmt.Sprintf("%v", &c.ws)
 		b.WriteString(ws)
 		b.WriteString(",")
 
-		c.SendMessage(topic, typ, msg)
+		c.SendMessage(topic, typ, msg, code)
 	}
 	return nil
 }
 
 func SendWhere(topic, typ string, msg interface{},
-	f func(*Client) bool) error {
+	f func(*Client) bool, code int) error {
 	cs := GetLockClients(topic)
 	defer Done()
-	str := fmt.Sprintf("sendwhere:%s,",topic)
+	str := fmt.Sprintf("sendwhere:%s,", topic)
 	for c, _ := range cs {
 		if f != nil && !f(c) {
 			continue
 		}
-		str+=fmt.Sprintf("### %d|%v ###",c.UserID(),&c.ws)
-		c.SendMessage(topic, typ, msg)
+		str += fmt.Sprintf("### %d|%v ###", c.UserID(), &c.ws)
+		c.SendMessage(topic, typ, msg, code)
 	}
 	log.Debug(str)
 	return nil
 }
 
-func SendToUsers(ids []int32, topic, typ string, msg interface{}) error {
+func SendToUsers(ids []int32, topic, typ string, msg interface{}, code int) error {
 	b := &bytes.Buffer{}
 
-	for _,id := range ids{
-		SendToBackLog(id,topic,typ,msg,b)
+	for _, id := range ids {
+		SendToBackLog(id, topic, typ, msg, b, code)
 	}
-	log.Debug("send to users sent:%v,success:%s,typ:%s,msg:%v",ids,b.String(),typ,msg)
+	log.Debug("send to users sent:%v,success:%s,typ:%s,msg:%v", ids, b.String(), typ, msg)
 	return nil
 }
 
@@ -145,7 +145,7 @@ func DeleteClient(c *Client) {
 func CloseAll() {
 	Lock()
 	for _, cs := range clients {
-		if len(cs)== 0{
+		if len(cs) == 0 {
 			break
 		}
 		for c, _ := range cs {
@@ -155,4 +155,3 @@ func CloseAll() {
 	Unlock()
 	waitGroup.Wait()
 }
-

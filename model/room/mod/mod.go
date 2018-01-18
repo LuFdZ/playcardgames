@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	mdtime "playcards/model/time"
 	cacheuser "playcards/model/user/cache"
+	enumr "playcards/model/room/enum"
 	pbr "playcards/proto/room"
 	"playcards/utils/log"
 	utilproto "playcards/utils/proto"
@@ -15,7 +16,7 @@ import (
 
 type Room struct {
 	RoomID         int32             `gorm:"primary_key"`
-	Password       string //`reg:"required,min=6,max=32,excludesall= 	"`
+	Password       string //`reg:"required,min=6,max=32,excludesall="`
 	Status         int32
 	Giveup         int32
 	MaxNumber      int32 //`reg:"required"`
@@ -25,15 +26,17 @@ type Room struct {
 	RoomType       int32 //`reg:"required"`
 	PayerID        int32
 	GameType       int32  //`reg:"required"`
-	GameParam      string //`reg:"required,min=1,excludesall= 	"`
+	GameParam      string //`reg:"required,min=1,excludesall="`
 	GameUserResult string
 	CreatedAt      *time.Time
 	UpdatedAt      *time.Time
 	GiveupAt       *time.Time
+	Shuffle        int32
 	Flag           int32
 	ClubID         int32
 	Cost           int64
 	CostType       int32
+	ShuffleAt      *time.Time        `gorm:"-"`
 	StartMaxNumber int32             `gorm:"-"`
 	UserResults    []*GameUserResult `gorm:"-"`
 	Users          []*RoomUser       `gorm:"-"`
@@ -132,7 +135,7 @@ type DoudizhuRoomParam struct {
 }
 
 type FourCardRoomParam struct {
-	BaseScore      int32
+	ScoreType int32
 }
 
 //func (r *Room) String() string {
@@ -174,6 +177,7 @@ func (r *Room) ToProto() *pbr.Room {
 		RoomType:    r.RoomType,
 		Flag:        r.Flag,
 		ClubID:      r.ClubID,
+		Shuffle:     r.Shuffle,
 		//GameUserResult:r.GameUserResult,
 		CreatedAt: mdtime.TimeToProto(r.CreatedAt),
 		UpdatedAt: mdtime.TimeToProto(r.UpdatedAt),
@@ -277,6 +281,10 @@ func (cre *CheckRoomExist) ToProto() *pbr.CheckRoomExistReply {
 		out.GiveupResult = nil
 	} else {
 		out.GiveupResult = cre.GiveupResult.ToProto()
+		out.GiveupResult.CountDown = &pbr.CountDown{
+			ServerTime: cre.Room.GiveupAt.Unix(),
+			Count:      enumr.RoomGiveupCleanMinutes * 60,
+		}
 	}
 	if &cre.GameResult == nil {
 		out.GameResult = nil

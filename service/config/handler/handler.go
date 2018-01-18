@@ -10,6 +10,7 @@ import (
 	utilproto "playcards/utils/proto"
 
 	"golang.org/x/net/context"
+	"playcards/utils/log"
 )
 
 type ConfigSrv struct {
@@ -60,6 +61,7 @@ func (cs *ConfigSrv) GetConfigsBeforeLogin(ctx context.Context,
 	reply := &pbconf.GetConfigsReply{}
 	utilproto.ProtoSlice(cos, &reply.List)
 	*rsp = *reply
+	log.Debug("AAAGetConfigsBeforeLogin:%s|%s|%s\n%v",req.Channel,req.Version,req.MobileOs,rsp)
 	return nil
 }
 
@@ -72,6 +74,7 @@ func (cs *ConfigSrv) GetConfigs(ctx context.Context,
 	}
 	utilproto.ProtoSlice(cos, &reply.List)
 	*rsp = *reply
+	log.Debug("BBBGetConfigsBeforeLogin:%s|%s|%s\n%v",u.Channel, u.Version,u.MobileOs,rsp)
 	return nil
 }
 

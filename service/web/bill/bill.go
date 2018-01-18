@@ -40,7 +40,7 @@ func BillChangeHandler(p broker.Publication) error {
 	if err != nil {
 		return err
 	}
-	err = clients.SendTo(rs.UserID, t, enum.MsgBillChange, rs)
+	err = clients.SendTo(rs.UserID, t, enum.MsgBillChange, rs, enum.MsgBillChangeCode)
 	if err != nil {
 		return err
 	}

@@ -22,6 +22,7 @@ all:  api-srv           \
       club-srv          \
       common-srv        \
       doudizhu-srv      \
+      fourcard-srv      \
 
 dev:
 	-${GOGET} github.com/golang/lint
@@ -129,6 +130,8 @@ common-srv: gen
 doudizhu-srv: gen
 	${BUILD} -o ./bin/doudizhu-srv service/doudizhu/main.go
 
+fourcard-srv: gen
+	${BUILD} -o ./bin/fourcard-srv service/fourcard/main.go
 
 db-reset-init:
 	${MIGRATE_CMD} goto 1

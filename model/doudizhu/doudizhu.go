@@ -11,10 +11,7 @@ import (
 	errddz "playcards/model/doudizhu/errors"
 	cacheddz "playcards/model/doudizhu/cache"
 	enumddz "playcards/model/doudizhu/enum"
-	enumbill "playcards/model/bill/enum"
-	mdbill "playcards/model/bill/mod"
 	pbddz "playcards/proto/doudizhu"
-	"playcards/model/bill"
 	"playcards/model/room"
 	"encoding/json"
 	"playcards/utils/db"
@@ -81,13 +78,13 @@ func CreateDoudizhu() []*mdddz.Doudizhu {
 
 		f := func(tx *gorm.DB) error {
 			if mdr.RoundNow == 1 {
-				if mdr.RoomType != enumroom.RoomTypeClub && mdr.Cost != 0 {
-					err := bill.GainGameBalance(mdr.PayerID, mdr.RoomID, enumbill.JournalTypeNiuniu,
-						enumbill.JournalTypeNiuniuUnFreeze, &mdbill.Balance{Amount: mdr.Cost, CoinType: mdr.CostType})
-					if err != nil {
-						return err
-					}
-				}
+				//if mdr.RoomType != enumroom.RoomTypeClub && mdr.Cost != 0 {
+				//	err := bill.GainGameBalance(mdr.PayerID, mdr.RoomID, enumbill.JournalTypeNiuniu,
+				//		enumbill.JournalTypeNiuniuUnFreeze, &mdbill.Balance{Amount: mdr.Cost, CoinType: mdr.CostType})
+				//	if err != nil {
+				//		return err
+				//	}
+				//}
 
 				for _, user := range mdr.Users {
 					pr := &mdroom.PlayerRoom{

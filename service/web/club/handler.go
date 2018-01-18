@@ -1,238 +1,71 @@
 package club
 
 import (
-	cacheclub "playcards/model/club/cache"
+	cacheuser "playcards/model/user/cache"
 	pbclub "playcards/proto/club"
-	pbroom "playcards/proto/room"
 	srvclub "playcards/service/club/handler"
 	srvroom "playcards/service/room/handler"
 	"playcards/service/web/clients"
-	"playcards/service/web/enum"
-	"playcards/utils/subscribe"
-	"playcards/utils/topic"
-
-	"github.com/micro/go-micro/broker"
-	"github.com/micro/protobuf/proto"
+	enumweb "playcards/service/web/enum"
+	"playcards/service/web/request"
+	"playcards/utils/auth"
 )
 
-var (
-	brok broker.Broker
-)
+var ClubEvent = []string{
+	srvclub.TopicClubMemberJoin,
+	srvclub.TopicClubMemberLeave,
+	srvclub.TopicClubInfo,
+	srvclub.TopicClubOnlineStatus,
+	srvroom.TopicClubRoomCreate,
+	srvroom.TopicClubRoomJoin,
+	srvroom.TopicClubRoomUnJoin,
+	srvroom.TopicClubRoomFinish,
+	srvroom.TopicRoomGameStart,
+}
 
-func Init(brk broker.Broker) error {
-	brok = brk
-	if err := SubscribeAllClubMessage(brk); err != nil {
-		return err
+func ClubOnlineNotice(c *clients.Client) {
+	ClubUserOlineChange(c.UserID(), c.User().ClubID, enumweb.SocketAline)
+}
+
+func SubscribeClubMessage(c *clients.Client, req *request.Request) error {
+	c.Subscribe(ClubEvent)
+	_, user := cacheuser.GetUserByID(c.UserID())
+	mo := &pbclub.ClubMemberOnline{}
+	if user != nil {
+		mo.UserID = user.UserID
+		mo.ClubID = user.ClubID
 	}
+
+	c.SendMessage("", "ClubSubscribeSuccess",mo, enumweb.MsgSubscribeSuccessCode)
+	//ClubUserOlineChange(c.UserID(), c.User().ClubID, enumweb.SocketAline)
 	return nil
 }
 
-func SubscribeAllClubMessage(brk broker.Broker) error {
-	subscribe.SrvSubscribe(brk, topic.Topic(srvclub.TopicClubMemberJoin),
-		ClubMemberJoinHandler,
-	)
-	subscribe.SrvSubscribe(brk, topic.Topic(srvclub.TopicClubMemberLeave),
-		ClubMemberLeaveHandler,
-	)
-	subscribe.SrvSubscribe(brk, topic.Topic(srvclub.TopicClubInfo),
-		ClubInfoHandler,
-	)
-	subscribe.SrvSubscribe(brk, topic.Topic(srvclub.TopicClubOnlineStatus),
-		ClubOnlineStatusHandler,
-	)
-	subscribe.SrvSubscribe(brk, topic.Topic(srvroom.TopicClubRoomCreate),
-		ClubRoomCreateaHandler,
-	)
-	subscribe.SrvSubscribe(brk, topic.Topic(srvroom.TopicClubRoomFinish),
-		ClubRoomFinishHandler,
-	)
-	subscribe.SrvSubscribe(brk, topic.Topic(srvroom.TopicClubRoomJoin),
-		ClubRoomJoinHandler,
-	)
-	subscribe.SrvSubscribe(brk, topic.Topic(srvroom.TopicClubRoomUnJoin),
-		ClubRoomUnJoinHandler,
-	)
-	subscribe.SrvSubscribe(brk, topic.Topic(srvroom.TopicRoomGameStart),
-		ClubRoomGameStartHandler,
-	)
-
+func UnsubscribeClubMessage(c *clients.Client, req *request.Request) error {
+	c.Unsubscribe(ClubEvent)
 	return nil
 }
 
-func ClubMemberJoinHandler(p broker.Publication) error {
-	t := p.Topic()
-	msg := p.Message()
-	rs := &pbclub.ClubMember{}
-	err := proto.Unmarshal(msg.Body, rs)
-	if err != nil {
-		return err
-	}
-
-	uks, err := cacheclub.ListClubMemberHKey(rs.ClubID, true)
-	if err != nil {
-		return err
-	}
-	err = clients.SendToUsers(uks, t, enum.MsgClubMemberJoin, rs)
-	if err != nil {
-		return err
-	}
-	return nil
+func CloseCallbackHandler(c *clients.Client) {
+	ClubUserOlineChange(c.UserID(), c.User().ClubID, enumweb.SocketClose)
 }
 
-func ClubMemberLeaveHandler(p broker.Publication) error {
-	t := p.Topic()
-	msg := p.Message()
-	rs := &pbclub.ClubMember{}
-	err := proto.Unmarshal(msg.Body, rs)
-	if err != nil {
-		return err
+func ClubUserOlineChange(uid int32, clubid int32, status int32) {
+	if clubid == 0 {
+		return
 	}
-	uks, err := cacheclub.ListClubMemberHKey(rs.ClubID, true)
-	if err != nil {
-		return err
+	mo := &pbclub.ClubMemberOnline{
+		UserID: uid,
+		Status: status,
+		ClubID: clubid,
 	}
-	err = clients.SendToUsers(uks, t, enum.MsgClubMemberLeave, rs)
-	if err != nil {
-		return err
-	}
-
-	return nil
+	ClubOnlineStatus(srvclub.TopicClubOnlineStatus, mo)
 }
 
-func ClubOnlineStatusHandler(p broker.Publication) error {
-	t := p.Topic()
-	msg := p.Message()
-	rs := &pbclub.ClubMemberOnline{}
-	err := proto.Unmarshal(msg.Body, rs)
-	if err != nil {
-		return err
-	}
-	err = ClubOnlineStatus(t, rs)
-
-	if err != nil {
-		return nil
-	}
-	return nil
-}
-
-func ClubOnlineStatus(t string, rs *pbclub.ClubMemberOnline) error {
-	uks, err := cacheclub.ListClubMemberHKey(rs.ClubID, true)
-	if err != nil {
-		return err
-	}
-	err = clients.SendToUsers(uks, t, enum.MsgClubOnlineStatus, rs)
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
-func ClubInfoHandler(p broker.Publication) error {
-	t := p.Topic()
-	msg := p.Message()
-	rs := &pbclub.ClubInfo{}
-	err := proto.Unmarshal(msg.Body, rs)
-	if err != nil {
-		return err
-	}
-	err = clients.SendTo(rs.UserID, t, enum.MsgClubInfo, rs)
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
-func ClubRoomCreateaHandler(p broker.Publication) error {
-	t := p.Topic()
-	msg := p.Message()
-	rs := &pbroom.Room{}
-	err := proto.Unmarshal(msg.Body, rs)
-	if err != nil {
-		return err
-	}
-	uks, err := cacheclub.ListClubMemberHKey(rs.ClubID, true)
-	if err != nil {
-		return err
-	}
-	err = clients.SendToUsers(uks, t, enum.MsgClubRoomCreate, rs)
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
-func ClubRoomFinishHandler(p broker.Publication) error {
-	t := p.Topic()
-	msg := p.Message()
-	rs := &pbroom.Room{}
-	err := proto.Unmarshal(msg.Body, rs)
-	if err != nil {
-		return err
-	}
-	uks, err := cacheclub.ListClubMemberHKey(rs.ClubID, true)
-	if err != nil {
-		return err
-	}
-	err = clients.SendToUsers(uks, t, enum.MsgClubRoomFinish, rs)
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
-func ClubRoomJoinHandler(p broker.Publication) error {
-	t := p.Topic()
-	msg := p.Message()
-	rs := &pbroom.ClubRoomUser{}
-	err := proto.Unmarshal(msg.Body, rs)
-	if err != nil {
-		return err
-	}
-	uks, err := cacheclub.ListClubMemberHKey(rs.ClubID, true)
-	if err != nil {
-		return err
-	}
-	err = clients.SendToUsers(uks, t, enum.MsgClubRoomJoin, rs)
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
-func ClubRoomUnJoinHandler(p broker.Publication) error {
-	t := p.Topic()
-	msg := p.Message()
-	rs := &pbroom.Room{}
-	err := proto.Unmarshal(msg.Body, rs)
-	if err != nil {
-		return err
-	}
-	uks, err := cacheclub.ListClubMemberHKey(rs.ClubID, true)
-	if err != nil {
-		return err
-	}
-	err = clients.SendToUsers(uks, t, enum.MsgClubRoomUnJoin, rs)
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
-func ClubRoomGameStartHandler(p broker.Publication) error {
-	t := p.Topic()
-	msg := p.Message()
-	rs := &pbroom.Room{}
-	err := proto.Unmarshal(msg.Body, rs)
-	if err != nil {
-		return err
-	}
-	uks, err := cacheclub.ListClubMemberHKey(rs.ClubID, true)
-	if err != nil {
-		return err
-	}
-	err = clients.SendToUsers(uks, t, enum.MsgClubRoomGameStart, rs)
-	if err != nil {
-		return err
-	}
-	return nil
+func init() {
+	request.RegisterHandler("SubscribeClubMessage", auth.RightsPlayer,
+		SubscribeClubMessage)
+	request.RegisterHandler("UnSubscribeClubMessage", auth.RightsPlayer,
+		UnsubscribeClubMessage)
+	request.RegisterCloseHandler(CloseCallbackHandler)
 }

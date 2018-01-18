@@ -10,6 +10,7 @@ import (
 	sq "github.com/Masterminds/squirrel"
 	"github.com/jinzhu/gorm"
 	"strconv"
+	"fmt"
 )
 
 func CreateAllBalance(tx *gorm.DB, uid int32) error {
@@ -152,7 +153,7 @@ func SetBalanceFreeze(tx *gorm.DB, uid int32, b *mdbill.Balance, typ int32,
 	if err != nil {
 		return err
 	}
-
+	fmt.Printf("SetBalanceFreezeTest:%+v|%+v\n",b,ub)
 	freeze := ub.Freeze + b.Amount
 	if freeze < 0 {
 		return errbill.ErrFreezeAmount

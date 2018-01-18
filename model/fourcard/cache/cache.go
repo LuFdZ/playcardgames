@@ -29,7 +29,7 @@ func FourCardLockKey(rid int32) string {
 	return fmt.Sprintf("FOURCARDLOCK:%d", rid)
 }
 
-func SetGame(fc *mdfour.FourCard) error {
+func SetGame(fc *mdfour.Fourcard) error {
 	lockKey := FourCardLockKey(fc.RoomID)
 	key := FourCardKey()
 	searchKey := FourCardSearchKey()
@@ -51,7 +51,7 @@ func SetGame(fc *mdfour.FourCard) error {
 	return nil
 }
 
-func UpdateGame(fc *mdfour.FourCard) error {
+func UpdateGame(fc *mdfour.Fourcard) error {
 	lockKey := FourCardLockKey(fc.RoomID)
 	key := FourCardKey()
 	searchKey := FourCardSearchKey()
@@ -76,7 +76,7 @@ func UpdateGame(fc *mdfour.FourCard) error {
 	return nil
 }
 
-func DeleteGame(fc *mdfour.FourCard) error {
+func DeleteGame(fc *mdfour.Fourcard) error {
 	lockKey := FourCardLockKey(fc.RoomID)
 	key := FourCardKey()
 	searchKey := FourCardSearchKey()
@@ -95,7 +95,7 @@ func DeleteGame(fc *mdfour.FourCard) error {
 	return nil
 }
 
-func GetGame(rid int32) (*mdfour.FourCard, error) {
+func GetGame(rid int32) (*mdfour.Fourcard, error) {
 	key := FourCardKey()
 	val, err := cache.KV().HGet(key, tools.IntToString(rid)).Bytes()
 	if err == redis.Nil {
@@ -105,16 +105,16 @@ func GetGame(rid int32) (*mdfour.FourCard, error) {
 	if err != nil && err != redis.Nil {
 		return nil, errors.Internal("get niuniu failed", err)
 	}
-	niuniu := &mdfour.FourCard{}
+	niuniu := &mdfour.Fourcard{}
 	if err := json.Unmarshal(val, niuniu); err != nil {
 		return nil, errors.Internal("get niuniu failed", err)
 	}
 	return niuniu, nil
 }
 
-func GetAllGameByStatus(status int32) ([]*mdfour.FourCard, error) {
+func GetAllGameByStatus(status int32) ([]*mdfour.Fourcard, error) {
 	var curson uint64
-	var ns []*mdfour.FourCard
+	var ns []*mdfour.Fourcard
 	var count int64
 	count = 999
 	key := FourCardSearchKey()

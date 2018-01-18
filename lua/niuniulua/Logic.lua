@@ -50,7 +50,7 @@ end
 
 --初始化牌
 function Logic:InitCards()
-    for t = 1, 4 do
+    for t = 1, 5 do
         for v = 1, 13 do
             local card = Card:new(t, v)
             table.insert(self.cards, card)
@@ -85,8 +85,8 @@ roomData = {
 --  计算结果
 function Logic:CalculateRes(playerTbl, roomData)
 
-    print(playerTbl)
-    print(roomData)
+    --print(playerTbl)
+    --print(roomData)
     playerTbl = json.decode(playerTbl)
     roomData = json.decode(roomData)
 

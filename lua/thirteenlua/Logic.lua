@@ -1,14 +1,13 @@
 
---  package.path = os.getenv("PWD") ..'/?.lua;'
---  require "lua/thirteenlua/CardGroup"
---  require "lua/thirteenlua/Card"
---  require "lua/thirteenlua/Tools"
---  require "/lua/thirteenlua/json"
+ package.path = os.getenv("PWD") ..'/?.lua;'
+ require "lua/thirteenlua/CardGroup"
+ require "lua/thirteenlua/Card"
+ require "lua/thirteenlua/Tools"
+ require "/lua/thirteenlua/json"
 
-require "CardGroup"
-require "Card"
-require "Tools"
-require "json"
+--require "app.scenes.CardGroup"
+ --require "app.scenes.Card"
+ --require "app.Tools"
 
 function G_Init(s)
     math.randomseed(s)
@@ -185,10 +184,12 @@ function Logic:GetResult( data, roomData )
         else
             ThirteenResult.Banker = false
         end
-
+        -- dump(value.Head)
         Result.Head = self:GetGroup(String2Cards(value.Head))
         Result.Middle = self:GetGroup(String2Cards(value.Middle))
         Result.Tail = self:GetGroup(String2Cards(value.Tail))
+
+        -- dump(Result, "===", 1000)
 
         ThirteenResult.Result = Result
         ThirteenResult.Result.Shoot = {}
@@ -530,7 +531,8 @@ function Logic:GetResult( data, roomData )
         local result = {Result = res, Settle = settle, UserID = value.UserID, Role = role }
         table.insert(results, result)
     end
-    --dump(results, "results", 100)
+
+    dump(aa, "results", 100)
     local str = json.encode(results)
     --print(str)
     -- dump(ThirteenResultList, "ThirteenResultList", 100)
@@ -576,20 +578,24 @@ function Logic:GetGroup( cards )
             local res = false
             for k, v in pairs(combs) do
                 res, keycards = self:IsCouple(v)
+                -- dump(keycards, "------------------------------------|||||", 1000)
                 if res then
                     --是对子牌
                     --取出跟keycard不同的牌，此处为对子，只可能有一张不同的
-                    local tempcards = self:GetNotEqualsInTableCards(cards, keycards[1])
+                    local tempcards = self:GetNotEqualsInTableCards(cards, keycards)
                     if #tempcards ~= 0 then
                         --tempcards数量不为0，找到了
-                        table.insert(keycards, tempcards[1])
+                        table.insert(keycards, tempcards[1])                       
                     end
+
+                    -- dump(keycards, "", 1000)
                     break
                 end
             end
 
             if res then
                 --有对子，创建牌组
+                -- dump(keycards, "对子关键牌", 100)
                 local group = CardGroup:new(cards, GroupType.Couple, keycards)
                 return group
             end
@@ -660,16 +666,21 @@ function Logic:GetGroup( cards )
             res, keycards = self:IsTwoCouple(v)
             if res then
                 --是两对，找到最后一张牌加到关键组
-                for key, vcard in pairs(cards) do
-                    for kk, keycard in pairs(keycards) do
-                        if vcard._value ~= keycard._value then
-                            table.insert( keycards, vcard )
-                            --找到了那张牌
-                            local group = CardGroup:new(cards, GroupType.TwoCouple, keycards)
-                            return group
-                        end
-                    end
-                end
+                local tempList = self:GetNotEqualsInTableCards(cards,keycards)
+                TableInsert2Table(keycards,tempList)
+
+                local group = CardGroup:new(cards, GroupType.TwoCouple, keycards)
+                return group
+                -- for key, vcard in pairs(cards) do
+                --     for kk, keycard in pairs(keycards) do
+                --         if vcard._value ~= keycard._value then
+                --             table.insert( keycards, vcard )
+                --             --找到了那张牌
+                --             local group = CardGroup:new(cards, GroupType.TwoCouple, keycards)
+                --             return group
+                --         end
+                --     end
+                -- end
                 --如果运行到此，说明代码sb了，请检查代码
                 --MyLog("明代码sb了，请检查代码 a")
                 --dump(cards)
@@ -748,10 +759,18 @@ function Logic:TempCards2Cards( tempcards)
 end
 
 --取出在table里跟card不同的牌
-function Logic:GetNotEqualsInTableCards(cards, card)
+function Logic:GetNotEqualsInTableCards(cards, list)
     local res = {}
     for k, v in pairs(cards) do
-        if v._value ~= card._value and v._type ~= card._type then
+        local same = false
+        for i = 1, #list do 
+            local card = list[i]
+            if v._value == card._value and v._type == card._type then     
+                same = true
+            end
+        end
+
+        if not same then
             table.insert( res, v )
         end
     end
