@@ -135,6 +135,7 @@ func GetAllNiuniuByStatus(status int32) ([]*mdniu.Niuniu, error) {
 					niu, err := GetGame(roomID)
 					if err != nil {
 						log.Err("GetAllDoudizhuKeyErr rid:%s,err:%v", ridStr, err)
+						continue
 					}
 					ns = append(ns, niu)
 				}

@@ -17,23 +17,23 @@ const (
 )
 
 const (
-	GameStatusInit       = 1 //游戏初始化发牌开始抢庄
-	GameStatusGetBanker  = 2 //游戏抢庄结束
-	GameStatusSetBet     = 3 //游戏开始下注抢
-	GameStatusAllSetBet  = 4 //游戏下注结束
-	GameStatusSubmitCard = 5 //游戏开始交牌
-	GameStatusStarted    = 6 //计算结果
-	GameStatusDone       = 7 //游戏已结算
-	GameStatusGiveUp     = 8 //游戏被放弃
-	GameStatusCountDown  = 9 //游戏倒计时
+	GameStatusInit       = 110 //游戏初始化发牌开始抢庄
+	GameStatusGetBanker  = 120 //游戏抢庄结束
+	GameStatusSetBet     = 130 //游戏开始下注抢
+	GameStatusAllSetBet  = 140 //游戏下注结束
+	GameStatusSubmitCard = 150 //游戏开始交牌
+	GameStatusStarted    = 160 //计算结果
+	GameStatusDone       = 170 //游戏已结算
+	GameStatusGiveUp     = 180 //游戏被放弃
+	GameStatusCountDown  = 190 //游戏倒计时
 )
 
 const (
-	UserStatusInit       = 1 //获得发牌
-	UserStatusGetBanker  = 2 //已抢庄
-	UserStatusSetBet     = 3 //已下注
-	UserStatusSubmitCard = 4 //已提交
-	UserStatusDone       = 5 //结束游戏
+	UserStatusInit       = 110 //获得发牌
+	UserStatusGetBanker  = 120 //已抢庄
+	UserStatusSetBet     = 130 //已下注
+	UserStatusSubmitCard = 140 //已提交
+	UserStatusDone       = 150 //结束游戏
 )
 
 const (
@@ -80,4 +80,4 @@ var BetScoreMap = map[int32]int32{1: 5, 2: 10, 3: 15, 4: 20, 5: 25}
 
 var ToBankerScoreMap = map[int32]int32{0: 1, 1: 2, 2: 3, 3: 4, 4: 5}
 
-var ToBetScoreMap = map[int32]int32{1: 1, 2: 2, 3: 2, 4: 3, 5: 3, 6: 4, 7: 4, 8: 4}
+var ToBetScoreMap = map[int32]int32{110: 110, 120: 120, 130: 120, 140: 130, 150: 130, 160: 140, 170: 140, 180: 140}

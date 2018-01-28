@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"playcards/model/niuniu"
 	enumniu "playcards/model/niuniu/enum"
-	"playcards/model/room"
+	cacheroom "playcards/model/room/cache"
 	enumr "playcards/model/room/enum"
 	pbniu "playcards/proto/niuniu"
 	"playcards/utils/auth"
@@ -165,15 +165,18 @@ func (ns *NiuniuSrv) GetBanker(ctx context.Context, req *pbniu.GetBankerRequest,
 	reply := &pbniu.DefaultReply{
 		Result: enumniu.Success,
 	}
-	r, err := room.GetRoomByUserID(u.UserID)
+	mdr, err := cacheroom.GetRoomUserID(u.UserID)
+	if err != nil{
+		return err
+	}
 	f := func() error {
-		err = niuniu.GetBanker(u.UserID, req.Key, r)
+		err = niuniu.GetBanker(u.UserID, req.Key)
 		if err != nil {
 			return err
 		}
 		return nil
 	}
-	lock := RoomLockKey(r.Password)
+	lock := RoomLockKey(mdr.Password)
 	err = gsync.GlobalTransaction(lock, f)
 	if err != nil {
 		log.Err("%s get banker failed: %v", lock, err)
@@ -193,16 +196,18 @@ func (ns *NiuniuSrv) SetBet(ctx context.Context, req *pbniu.SetBetRequest,
 	reply := &pbniu.DefaultReply{
 		Result: enumniu.Success,
 	}
-	r, err := room.GetRoomByUserID(u.UserID)
-	var ids []int32
+	mdr, err := cacheroom.GetRoomUserID(u.UserID)
+	if err != nil{
+		return err
+	}
 	f := func() error {
-		ids, err = niuniu.SetBet(u.UserID, req.Key, r)
+		err = niuniu.SetBet(u.UserID, req.Key)
 		if err != nil {
 			return err
 		}
 		return nil
 	}
-	lock := RoomLockKey(r.Password)
+	lock := RoomLockKey(mdr.Password)
 	err = gsync.GlobalTransaction(lock, f)
 	if err != nil {
 		log.Err("%s set banker failed: %v", lock, err)
@@ -212,7 +217,7 @@ func (ns *NiuniuSrv) SetBet(ctx context.Context, req *pbniu.SetBetRequest,
 	msg := &pbniu.SetBet{
 		UserID: u.UserID,
 		Key:    req.Key,
-		Ids:    ids,
+		Ids:    mdr.Ids,
 	}
 	topic.Publish(ns.broker, msg, TopicNiuniuSetBet)
 	return nil
@@ -228,16 +233,18 @@ func (ns *NiuniuSrv) SubmitCard(ctx context.Context, req *pbniu.SubmitCardReques
 	reply := &pbniu.DefaultReply{
 		Result: enumniu.Success,
 	}
-	r, err := room.GetRoomByUserID(u.UserID)
-	var ids []int32
+	mdr, err := cacheroom.GetRoomUserID(u.UserID)
+	if err != nil{
+		return err
+	}
 	f := func() error {
-		ids, err = niuniu.SubmitCard(u.UserID, r)
+		err = niuniu.SubmitCard(u.UserID)
 		if err != nil {
 			return err
 		}
 		return nil
 	}
-	lock := RoomLockKey(r.Password)
+	lock := RoomLockKey(mdr.Password)
 	err = gsync.GlobalTransaction(lock, f)
 	if err != nil {
 		log.Err("%s set banker failed: %v", lock, err)
@@ -246,7 +253,7 @@ func (ns *NiuniuSrv) SubmitCard(ctx context.Context, req *pbniu.SubmitCardReques
 	*rsp = *reply
 	msg := &pbniu.GameReady{
 		UserID: u.UserID,
-		Ids:    ids,
+		Ids:    mdr.Ids,
 	}
 	topic.Publish(ns.broker, msg, TopicNiuniuGameReady)
 	return nil

@@ -77,6 +77,12 @@ func CreateGame() []*mdgame.Fourcard {
 			mdr.UserResults = userResults
 		}
 		now := gorm.NowFunc()
+
+		var roomParam *mdroom.FourCardRoomParam
+		if err := json.Unmarshal([]byte(mdr.GameParam), &roomParam); err != nil {
+			log.Err("create fourcard unmarshal room param failed, %v", err)
+			continue
+		}
 		game := &mdgame.Fourcard{
 			RoomID:     mdr.RoomID,
 			BankerID:   bankerID,
@@ -84,6 +90,7 @@ func CreateGame() []*mdgame.Fourcard {
 			Index:      mdr.RoundNow,
 			PassWord:   mdr.Password,
 			GameResult: newGameResult,
+			BetType:    roomParam.BetType,
 			OpDateAt:   &now,
 			Ids:        mdr.Ids,
 		}
@@ -161,7 +168,7 @@ func UpdateGame(goLua *lua.LState) []*mdgame.Fourcard {
 	for _, game := range games {
 		if game.Status == enumgame.GameStatusInit {
 			sub := time.Now().Sub(*game.OpDateAt)
-			if sub.Seconds() > enumgame.SetBetTime {
+			if sub.Seconds() > enumgame.SetBetTime || game.BetType == enumgame.BetTypeHave {
 				autoSetBankerScore(game)
 				game.Status = enumgame.GameStatusAllBet
 				err := cachegame.UpdateGame(game)
@@ -348,7 +355,7 @@ func initUserCard(game *mdgame.Fourcard, goLua *lua.LState) error {
 func autoSetBankerScore(game *mdgame.Fourcard) {
 	for _, userResult := range game.GameResult.List {
 		if userResult.Status == enumgame.UserStatusInit {
-			userResult.Bet = 0
+			userResult.Bet = 1
 			userResult.Status = enumgame.UserStatusSetBet
 		}
 	}
@@ -369,10 +376,10 @@ func SetBet(uid int32, key int32, mdr *mdroom.Room) error {
 		return errroom.ErrInGiveUp
 	}
 	game, err := cachegame.GetGame(mdr.RoomID)
-	if err != nil{
+	if err != nil {
 		return err
 	}
-	if game == nil{
+	if game == nil {
 		return errgame.ErrGameNotExist
 	}
 	if game.Status != enumgame.GameStatusInit {
@@ -451,11 +458,11 @@ func SubmitCard(uid int32, room *mdroom.Room, head []string, tail []string) (*md
 	sort.Strings(head)
 	sort.Strings(tail)
 	mdHeadCard := &mdgame.UserCard{
-		CardList:head,
+		CardList: head,
 	}
 	userResult.HeadCards = mdHeadCard
 	mdTailCard := &mdgame.UserCard{
-		CardList:tail,
+		CardList: tail,
 	}
 	userResult.TailCards = mdTailCard
 	userResult.Status = enumgame.UserStatusSubmitCard
@@ -581,6 +588,13 @@ func GameExist(uid int32, rid int32) (*pbfour.RecoveryReply, error) {
 		return nil, err
 	}
 	out.FourCardExist = game.ToProto()
+	for _, gr := range out.FourCardExist.List {
+		if gr.UserID != uid {
+			gr.CardList = nil
+			gr.TailCards = nil
+			gr.HeadCards = nil
+		}
+	}
 	var time int32
 	switch game.Status {
 	case enumgame.GameStatusInit:

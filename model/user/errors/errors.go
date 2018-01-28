@@ -13,4 +13,5 @@ var (
 	ErrWXLoginParam       = errors.BadRequest(10008, "OpenID或Code为空！")
 	ErrWXParam            = errors.BadRequest(10009, "微信登录参数错误！")
 	ErrParamTooLong            = errors.BadRequest(10010, "参数过长！")
+	ErrNameOrPasswordNotExisted     = errors.NotFound(10011, "账号名或密码错误！")
 )

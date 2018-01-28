@@ -8,6 +8,7 @@ import (
 	"playcards/utils/log"
 	"time"
 	"golang.org/x/net/websocket"
+	"bytes"
 )
 
 type Message struct {
@@ -80,6 +81,7 @@ func (c *Client) Close() {
 func (c *Client) Subscribe(tpc []string) {
 	Lock()
 	defer Unlock()
+	b := &bytes.Buffer{}
 	for _, t := range tpc {
 		cs, ok := topics[t]
 		if !ok {
@@ -87,8 +89,11 @@ func (c *Client) Subscribe(tpc []string) {
 		}
 		c.topics[t] = true
 		cs[c] = true
-		log.Debug("%v subscribe topic [%v]", c, t)
+		b.WriteString(t)
+		b.WriteString("|")
+		//log.Debug("%v subscribe topic [%v]", c, t)
 	}
+	log.Debug("%v subscribe topic [%s]", c, b.String())
 }
 
 func (c *Client) Unsubscribe(tpc []string) {

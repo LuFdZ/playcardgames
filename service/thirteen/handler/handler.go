@@ -3,7 +3,7 @@ package handler
 import (
 	"context"
 	"fmt"
-	"playcards/model/room"
+	cacheroom "playcards/model/room/cache"
 	"playcards/model/thirteen"
 	"playcards/model/thirteen/enum"
 	mdt "playcards/model/thirteen/mod"
@@ -79,16 +79,18 @@ func (ts *ThirteenSrv) SubmitCard(ctx context.Context, req *pbt.SubmitCard,
 	if err != nil {
 		return err
 	}
-	r, err := room.GetRoomByUserID(u.UserID)
-	var ids []int32
+	mdr, err := cacheroom.GetRoomUserID(u.UserID)
+	if err != nil{
+		return err
+	}
 	f := func() error {
-		ids, err = thirteen.SubmitCard(u.UserID, mdt.SubmitCardFromProto(req, u.UserID), r)
+		err = thirteen.SubmitCard(u.UserID, mdt.SubmitCardFromProto(req, u.UserID))
 		if err != nil {
 			return err
 		}
 		return nil
 	}
-	lock := RoomLockKey(r.Password)
+	lock := RoomLockKey(mdr.Password)
 	err = gsync.GlobalTransaction(lock, f)
 	if err != nil {
 		log.Err("%s enter room failed: %v", lock, err)
@@ -100,7 +102,7 @@ func (ts *ThirteenSrv) SubmitCard(ctx context.Context, req *pbt.SubmitCard,
 	*rsp = *reply
 
 	msg := &pbt.GameReady{
-		Ids:    ids,
+		Ids:    mdr.Ids,
 		UserID: u.UserID,
 	}
 	topic.Publish(ts.broker, msg, TopicThirteenGameReady)

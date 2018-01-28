@@ -1,6 +1,10 @@
 package auth
 
+import "time"
+
 const RightsNone = 0
+const SessionExpireTime = 1800 * time.Second
+
 const (
 	RightsPlayer       = 1 << iota
 	RightsUserView

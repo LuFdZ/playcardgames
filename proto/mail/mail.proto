@@ -1,0 +1,150 @@
+syntax = "proto3";
+import "playcards/proto/page/page.proto";
+
+package mail;
+
+//***********************************************结构体***********************************************
+
+//邮件模板结构体
+message MailInfo {
+    int32 MailID = 1; //模板ID
+    string MailName = 2; //邮件模板名称（唯一）
+    string MailTitle = 3; //邮件标题
+    string MailContent = 4; //邮件内容
+    int32 MailType = 5; //邮件类型 1 系统通知邮件 2 异常通知邮件 3活动奖励邮件...
+    string ItemList = 6; //附件道具信息 一级分类_二级分类_ID_数量|...
+    int64 CreatedAt = 7; //创建时间
+    int64 UpdatedAt = 8; //更新时间
+}
+
+//邮件发送记录结构体
+message MailSendLog {
+    int32 SendLogID = 1; //记录ID
+    int32 MailID = 2; //模板ID
+    int32 SendID = 3; //发送人ID
+    int32 MailType = 4; //邮件类型 1 系统模板邮件 2 系统自定义邮件 3 自动邮件 4 个人邮件
+    int32 Status = 5; //1 生效 2过期
+    MailInfo MailInfo = 6; //邮件内容 系统模板邮件直接从内存中去，其他类型需填写邮件内容
+    int32 SendCount = 7; //成功发送人数
+    int32 TotalCount = 8; //预计发送总人数
+    int64 CreatedAt = 9; //创建时间
+    int64 UpdatedAt = 10; //更新时间
+}
+
+//用户邮件结构体
+message PlayerMail {
+    int32 PlayerMailID = 1; //用户邮件实例id
+    int32 SendLogID = 2; //邮件发送记录id
+    int32 UserID = 3;
+    int32 Status = 4; //1 已读 2未读
+    string SendName = 5; //发送人名称
+    int32 MailType = 6; //邮件类型 1 系统模板邮件 2 系统自定义邮件 3 个人邮件
+    string MailTitle = 7; //邮件标题
+    string MailContent = 8; //邮件内容
+    string ItemList = 9; //附件道具信息 一级分类_二级分类_ID_数量|...
+    int64 CreatedAt = 10;
+    int64 UpdatedAt = 11;
+}
+
+//***********************************************请求***********************************************
+//发送邮件请求
+message SendMailRequest {
+    MailSendLog MailSend = 1;
+    repeated int32 Ids = 2;
+    int32 SendAll = 3; //1 全体邮件 2 非全体邮件
+}
+
+//领取邮件物品请求
+message GetMailItemsRequest {
+    int32 PlayerMailID = 1;
+}
+
+//邮件模板分页请求请求
+message PageMailInfoRequest {
+    page.PageOption Page = 1;
+    MailInfo MailInfo = 2;
+}
+
+//邮件发送记录分页请求请求
+message PageMailSendLogRequest {
+    page.PageOption Page = 1;
+    MailSendLog MailSendLog = 2;
+}
+
+//邮件发送记录分页请求请求
+message PagePlayerMailRequest {
+    page.PageOption Page = 1;
+    PlayerMail PlayerMail = 2;
+}
+
+//玩家邮件查询请求请求
+message GetPlayerMailsRequest {
+    page.PageOption Page = 1;
+}
+
+//***********************************************回应***********************************************
+
+//领取邮件物品回复
+message GetMailItemsReply {
+    string ItemList = 8; //附件道具信息 一级分类_二级分类_ID_数量|...
+}
+
+message PageMailListReply {
+    int32 Result = 1;
+    repeated MailInfo List = 2;
+    int64 Count = 3;
+}
+
+message PageMailSendLogReply {
+    int32 Result = 1;
+    repeated MailSendLog List = 2;
+    int64 Count = 3;
+}
+
+message PagePlayerMailReply {
+    int32 Result = 1;
+    repeated PlayerMail List = 2;
+    int64 Count = 3;
+}
+
+//通用回复
+message DefaultReply {
+    int32 Result = 1; //1 成功 //失败返回通用报错结构
+    int32 Code = 2;
+}
+
+//***********************************************广播***********************************************
+
+//新邮件通知广播
+message NewMailNoticeBro {
+    MailSendLog Context = 1;
+    repeated int32 Ids = 2;
+}
+
+service MailSrv {
+    rpc SendMail (SendMailRequest) returns (DefaultReply) {
+    }
+    rpc GetMailItems (GetMailItemsRequest) returns (GetMailItemsReply) {
+    }
+    rpc CreateMailInfo (MailInfo) returns (DefaultReply) {
+    }
+    rpc UpdateMailInfo (MailInfo) returns (DefaultReply) {
+    }
+    rpc PageMailInfo (PageMailInfoRequest) returns (PageMailListReply) {
+    }
+    rpc PageMailLog (PageMailSendLogRequest) returns (PageMailSendLogReply) {
+    }
+    rpc PagePlayerMail (PagePlayerMailRequest) returns (PagePlayerMailReply) {
+    }
+    rpc GetPlayerMails (GetPlayerMailsRequest) returns (PagePlayerMailReply) {
+    }
+    rpc CreatePlayersMails (NewMailNoticeBro) returns (DefaultReply) {
+    }
+
+    rpc RefreshAllMailInfoFromDB (MailInfo) returns (DefaultReply) {
+    }
+    rpc RefreshAllMailSendLogFromDB (MailSendLog) returns (DefaultReply) {
+    }
+    rpc RefreshAllPlayerMailFromDB (PlayerMail) returns (DefaultReply) {
+    }
+}

@@ -144,14 +144,15 @@ message VoiceChatRequest {
     string FileCode = 1;
 }
 
+message RoomChatRequest {
+    string ChatCode = 1;
+}
+
 message CheckRoomExistRequest {
 }
 
 message RenewalRequest {
     string Password = 2;
-}
-
-message HeartbeatRequest {
 }
 
 //回应
@@ -197,9 +198,6 @@ message RoomReply {
     int32 Result = 1;
 }
 
-message HeartbeatReply {
-}
-
 message RoomUsersReply {
     repeated RoomUser List = 1;
 }
@@ -235,15 +233,17 @@ message VoiceChat {
     repeated int32 Ids = 4;
 }
 
+message RoomChat {
+    int32 UserID = 1;
+    int32 RoomID = 2;
+    string ChatCode = 3;
+    repeated int32 Ids = 4;
+}
+
 message RoomNotice {
     int32 Code = 1;
     string Message = 2;
     repeated int32 Ids = 3;
-}
-
-message HeartBeat{
-    int64 Ctime = 1;
-    int64 Stime = 2;
 }
 
 message RoomExist{
@@ -285,8 +285,6 @@ service RoomSrv {
     }
     rpc VoiceChat (VoiceChatRequest) returns (RoomReply) {
     }
-    rpc Heartbeat (HeartbeatRequest) returns (HeartbeatReply) {
-    }
     rpc AgentRoomList (GetAgentRoomListRequest) returns (GetAgentRoomListReply) {
     }
     rpc DeleteAgentRoomRecord (Room) returns (RoomReply) {
@@ -304,6 +302,8 @@ service RoomSrv {
     rpc GameStart(Room) returns (RoomReply) {
     }
     rpc ShuffleCard(Room) returns (RoomReply) {
+    }
+    rpc RoomChat(RoomChatRequest) returns (RoomReply) {
     }
 }
 

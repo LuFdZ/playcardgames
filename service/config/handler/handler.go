@@ -6,11 +6,12 @@ import (
 	mdpage "playcards/model/page"
 	pbconf "playcards/proto/config"
 	gctx "playcards/utils/context"
-	utilpb "playcards/utils/proto"
+	//utilpb "playcards/utils/proto"
 	utilproto "playcards/utils/proto"
 
 	"golang.org/x/net/context"
 	"playcards/utils/log"
+	//"strings"
 )
 
 type ConfigSrv struct {
@@ -57,11 +58,18 @@ func (cs *ConfigSrv) UpdateConfig(ctx context.Context,
 func (cs *ConfigSrv) GetConfigsBeforeLogin(ctx context.Context,
 	req *pbconf.Config, rsp *pbconf.GetConfigsReply) error {
 	//u := gctx.GetUser(ctx)
+	forwarded := ctx.Value("X-Forwarded-For")
+	//address := ""
+	//if forwarded != nil {
+	//	addresslist, _ := forwarded.(string) //ctx.Value("X-Real-Ip").(string)
+	//	list := strings.Split(addresslist, ",")
+	//	address = list[0]
+	//}
 	cos := config.GetUniqueConfigByItemID(req.Channel, req.Version, req.MobileOs)
 	reply := &pbconf.GetConfigsReply{}
 	utilproto.ProtoSlice(cos, &reply.List)
 	*rsp = *reply
-	log.Debug("AAAGetConfigsBeforeLogin:%s|%s|%s\n%v",req.Channel,req.Version,req.MobileOs,rsp)
+	log.Debug("handler get configs before login ip:%s,req:%+v,rsp:%+v", forwarded, req, rsp)
 	return nil
 }
 
@@ -74,7 +82,7 @@ func (cs *ConfigSrv) GetConfigs(ctx context.Context,
 	}
 	utilproto.ProtoSlice(cos, &reply.List)
 	*rsp = *reply
-	log.Debug("BBBGetConfigsBeforeLogin:%s|%s|%s\n%v",u.Channel, u.Version,u.MobileOs,rsp)
+	log.Debug("handler get configs uid:%d,channel:%s,version:%s,mos:%s,rsp:%+v", u.UserID,u.Channel, u.Version, u.MobileOs,rsp)
 	return nil
 }
 
@@ -90,7 +98,7 @@ func (cs *ConfigSrv) RefreshAllConfigsFromDB(ctx context.Context,
 	return nil
 }
 
-func (rs *ConfigSrv) PageConfigs(ctx context.Context,
+func (cs *ConfigSrv) PageConfigs(ctx context.Context,
 	req *pbconf.PageConfigsRequest, rsp *pbconf.PageConfigListReply) error {
 	page := mdpage.PageOptionFromProto(req.Page)
 	rsp.Result = 2
@@ -99,10 +107,8 @@ func (rs *ConfigSrv) PageConfigs(ctx context.Context,
 	if err != nil {
 		return err
 	}
-
-	err = utilpb.ProtoSlice(l, &rsp.List)
-	if err != nil {
-		return err
+	for _, co := range l {
+		rsp.List = append(rsp.List,co.ToDetailProto())
 	}
 	rsp.Count = rows
 	rsp.Result = 1

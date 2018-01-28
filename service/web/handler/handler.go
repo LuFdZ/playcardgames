@@ -13,6 +13,8 @@ import (
 	webthirteen "playcards/service/web/thirteen"
 	webdoudizhu "playcards/service/web/doudizhu"
 	webfour "playcards/service/web/fourcard"
+	webuser "playcards/service/web/user"
+	webmail "playcards/service/web/mail"
 	"playcards/utils/auth"
 	"playcards/utils/log"
 
@@ -36,6 +38,7 @@ func NewWebHandler(c client.Client) *Web {
 		client: c,
 		broker: c.Options().Broker,
 	}
+	webuser.Init(w.broker)
 	webbill.Init(w.broker)
 	webroom.Init(w.broker)
 	webthirteen.Init(w.broker)
@@ -50,7 +53,7 @@ func (w *Web) Subscribe(ws *websocket.Conn) {
 	var msg []byte
 
 	if err := websocket.Message.Receive(ws, &msg); err != nil {
-		log.Err("websocket recv error: %v|%s", err,string(msg))
+		log.Err("websocket recv error: %v|%s", err, string(msg))
 		return
 	}
 	//log.Err("Subscribe websocket recv\n: %+v", string(msg))
@@ -65,12 +68,14 @@ func (w *Web) Subscribe(ws *websocket.Conn) {
 		return
 	}
 	c := clients.NewClient(token, u, ws)
+
 	webroom.SubscribeRoomMessage(c, nil)
 	webbill.SubscribeBillMessage(c, nil)
 	webthirteen.SubscribeThirteenMessage(c, nil)
 	webniu.SubscribeNiuniuMessage(c, nil)
-	webdoudizhu.SubscribeDoudizhuMessage(c,nil)
+	webdoudizhu.SubscribeDoudizhuMessage(c, nil)
 	webfour.SubscribeFourCardMessage(c, nil)
+	webmail.SubscribeMailMessage(c, nil)
 	webclub.ClubOnlineNotice(c)
 
 	log.Debug("new client: %v", c)
@@ -96,9 +101,26 @@ func UnsubscribeAll(c *clients.Client, req *request.Request) error {
 	return nil
 }
 
+func UserWebScoketList(c *clients.Client, req *request.Request) error {
+	cs := clients.GetClients()
+	count := int32(len(cs))
+	var ids []int32
+	for k, _ := range cs {
+		ids = append(ids, k)
+	}
+	msg := &pbweb.UserWebScoketList{
+		Count: count,
+		Ids:   ids,
+	}
+	c.SendMessage("WebScoketCount", "WebScoketCount", msg, 0)
+	return nil
+}
+
 func init() {
 	request.RegisterHandler("UnsubscribeAll", auth.RightsPlayer,
 		UnsubscribeAll)
+	request.RegisterHandler("UserWebScoketList", auth.RightsAdmin,
+		UserWebScoketList)
 }
 
 func (w *Web) Stop() {

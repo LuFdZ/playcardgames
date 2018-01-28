@@ -1,5 +1,5 @@
 package handler
 
 const (
-	TopicUpdateProperty = "playcards.user.%v.update.property"
+	TopicHeartbeatTimeout = "playcards.user.HeartbeatTimeout"
 )

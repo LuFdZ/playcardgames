@@ -358,25 +358,29 @@ func initThirteenGameTypeMap() map[string]int32 {
 	return m
 }
 
-func SubmitCard(uid int32, submitCard *mdt.SubmitCard, mdroom *mdr.Room) ([]int32, error) {
-	if mdroom.Status > enumr.RoomStatusStarted {
-		return nil, errors.ErrGameIsDone
+func SubmitCard(uid int32, submitCard *mdt.SubmitCard) error {
+	mdr, err := cacher.GetRoomUserID(uid)
+	if err != nil{
+		return err
 	}
-	if mdroom.Giveup == enumr.WaitGiveUp {
-		return nil, errors.ErrInGiveUp
+	if mdr.Status > enumr.RoomStatusStarted {
+		return errors.ErrGameIsDone
+	}
+	if mdr.Giveup == enumr.WaitGiveUp {
+		return errors.ErrInGiveUp
 	}
 
-	thirteen, err := cachet.GetGame(mdroom.RoomID)
+	thirteen, err := cachet.GetGame(mdr.RoomID)
 	if err != nil {
-		return nil, err
+		return err
 	}
 	if thirteen == nil {
-		return nil, errorst.ErrGameNotExist
+		return errorst.ErrGameNotExist
 	}
 
 	for _, uc := range thirteen.SubmitCards {
 		if uc.UserID == uid {
-			return nil, errorst.ErrAlreadySubmitCard
+			return errorst.ErrAlreadySubmitCard
 		}
 	}
 	if cacher.GetRoomTestConfigKey("ThirteenCheckHasCards") != "0" {
@@ -389,11 +393,11 @@ func SubmitCard(uid int32, submitCard *mdt.SubmitCard, mdroom *mdr.Room) ([]int3
 
 		checkHasCard := checkHasCards(submitCard, checkCards)
 		if !checkHasCard {
-			return nil, errorst.ErrCardNotExist
+			return errorst.ErrCardNotExist
 		}
 	}
 
-	for _, user := range mdroom.Users {
+	for _, user := range mdr.Users {
 		if user.UserID == uid {
 			submitCard.Role = user.Role
 		}
@@ -402,10 +406,10 @@ func SubmitCard(uid int32, submitCard *mdt.SubmitCard, mdroom *mdr.Room) ([]int3
 	submitCard.UserID = uid
 	thirteen.SubmitCards = append(thirteen.SubmitCards, submitCard)
 	if thirteen.Status > enumt.GameStatusInit {
-		return nil, errors.ErrGameIsDone
+		return errors.ErrGameIsDone
 	}
 
-	if mdroom.MaxNumber == int32(len(thirteen.SubmitCards)) {
+	if mdr.MaxNumber == int32(len(thirteen.SubmitCards)) {
 		thirteen.Status = enumt.GameStatusStarted
 	}
 
@@ -429,9 +433,9 @@ func SubmitCard(uid int32, submitCard *mdt.SubmitCard, mdroom *mdr.Room) ([]int3
 	err = cachet.UpdateGame(thirteen)
 	if err != nil {
 		log.Err("thirteen set session failed, %v", err)
-		return nil, err
+		return err
 	}
-	return thirteen.Ids, nil //
+	return nil //
 
 }
 

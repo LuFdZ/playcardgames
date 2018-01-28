@@ -33,9 +33,9 @@ var FuncRights = map[string]int32{
 	"RoomSrv.GetRoomRecovery":       auth.RightsPlayer,
 	"RoomSrv.GameStart":             auth.RightsPlayer,
 	"RoomSrv.ShuffleCard":           auth.RightsPlayer,
+	"RoomSrv.RoomChat":              auth.RightsPlayer,
 	"RoomSrv.PageRoomList":          auth.RightsNoticeAdmin,
 	"RoomSrv.PageFeedbackList":      auth.RightsRoomAdmin,
-
 }
 
 func main() {

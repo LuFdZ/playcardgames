@@ -16,6 +16,7 @@ import (
 
 	"github.com/twinj/uuid"
 	"gopkg.in/redis.v5"
+	"time"
 )
 
 func UserHKey(uid int32) string {
@@ -147,6 +148,32 @@ func UpdateUser(token string, u *mdu.User) error {
 	return nil
 }
 
+func UpdateUserHeartbeat(uid int32) error {
+	key := UserHKey(uid)
+	f := func(tx *redis.Tx) error {
+		tx.Pipelined(func(p *redis.Pipeline) error {
+			tx.HSet(key, "heartbeat", time.Now().Unix())
+			return nil
+		})
+		return nil
+	}
+
+	err := cache.KV().Watch(f, key)
+	if err != nil {
+		return errors.Internal("set user heartbeat error", err)
+	}
+	return nil
+}
+
+func GetUserHeartbeat(uid int32) (int64, error) {
+	key := UserHKey(uid)
+	val, err := cache.KV().HGet(key, "heartbeat").Int64()
+	if err != nil {
+		return 0, err
+	}
+	return val, nil
+}
+
 func SimpleUpdateUser(u *mdu.User) error {
 	key := UserHKey(u.UserID)
 	val := cache.KV().HGetAll(key).Val()
@@ -266,6 +293,40 @@ func ListUsers() ([]*mdu.User, error) {
 	return us, nil
 }
 
+func GetUserHeartbeats() map[int32]int64 {
+	m := make(map[int32]int64)
+	keys, err := ListUserHKeys()
+	if err != nil {
+		log.Err("redis get all user err: %v", err)
+	}
+	for _, k := range keys {
+		cols := strings.Split(k, ":")
+		if len(cols) != 3 {
+			log.Err("redis get all user token err: %+v", cols)
+			continue
+		}
+		uid, err := strconv.Atoi(cols[2])
+		if err != nil {
+			log.Err("list strconv users str failed,err:%v", err)
+			continue
+		}
+		userID := int32(uid)
+		if GetUserOnlineStatus(userID) == enumu.UserUnline {
+			continue
+		}
+		hearbeat, err := GetUserHeartbeat(userID)
+		if err != nil {
+			if err == redis.Nil{
+				UpdateUserHeartbeat(userID)
+			}
+			log.Err("list user heartbeat failed,uid:%d,err:%v", userID, err)
+			continue
+		}
+		m[userID] = hearbeat
+	}
+	return m
+}
+
 func GetUserList(f func(*mdu.User) bool, page int32) ([]*mdu.User, int32) {
 	var us []*mdu.User
 	keys, err := ListUserHKeys()
@@ -351,7 +412,7 @@ func GetUserOnlineStatus(uid int32) int32 {
 	return int32(online)
 }
 
-func GetAllOnlineCount() (int32, error) {
+func GetAllOnlineCount() int32 {
 	key := UserOnlineHKey()
 	//userNumber, err := CountUserHKeys()
 	//if err != nil {
@@ -360,9 +421,8 @@ func GetAllOnlineCount() (int32, error) {
 	userNumber := GetUserNumber()
 	bc := redis.BitCount{0, userNumber}
 	count := cache.KV().BitCount(key, &bc).Val()
-	return int32(count), nil
+	return int32(count)
 }
-
 
 func SetUserNumber(count int32) error {
 	key := UserNumberHKey()
@@ -384,7 +444,7 @@ func SetUserNumber(count int32) error {
 
 func GetUserNumber() int64 {
 	key := UserNumberHKey()
-	val := cache.KV().HGet(key,"count").Val()
+	val := cache.KV().HGet(key, "count").Val()
 	count, _ := strconv.ParseInt(val, 10, 32)
 	return count
 }

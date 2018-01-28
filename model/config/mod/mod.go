@@ -22,6 +22,14 @@ type Config struct {
 
 func (co *Config) ToProto() *pbconf.Config {
 	return &pbconf.Config{
+		ItemID:      co.ItemID,
+		ItemValue:   co.ItemValue,
+	}
+}
+
+
+func (co *Config) ToDetailProto() *pbconf.Config {
+	return &pbconf.Config{
 		ConfigID:    co.ConfigID,
 		Channel:     co.Channel,
 		Version:     co.Version,
@@ -34,6 +42,7 @@ func (co *Config) ToProto() *pbconf.Config {
 		UpdatedAt:   mdtime.TimeToProto(co.UpdatedAt),
 	}
 }
+
 
 func ConfigFromProto(co *pbconf.Config) *Config {
 	if co == nil {

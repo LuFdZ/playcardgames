@@ -23,6 +23,7 @@ all:  api-srv           \
       common-srv        \
       doudizhu-srv      \
       fourcard-srv      \
+      mail-srv          \
 
 dev:
 	-${GOGET} github.com/golang/lint
@@ -87,6 +88,8 @@ gen: dep
 	${PROTO_BUILD} ./proto/common/common.proto
 	${PROTO_BUILD} ./proto/doudizhu/doudizhu.proto
 	${PROTO_BUILD} ./proto/fourcard/fourcard.proto
+	${PROTO_BUILD} ./proto/mail/mail.proto
+
 
 api-srv: gen
 	${BUILD} -o ./bin/api-srv service/api/main.go
@@ -132,6 +135,9 @@ doudizhu-srv: gen
 
 fourcard-srv: gen
 	${BUILD} -o ./bin/fourcard-srv service/fourcard/main.go
+
+mail-srv: gen
+	${BUILD} -o ./bin/mail-srv service/mail/main.go
 
 db-reset-init:
 	${MIGRATE_CMD} goto 1

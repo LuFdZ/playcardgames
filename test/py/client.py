@@ -141,6 +141,9 @@ class Client(object):
     def ClinetHearbeat(self):
         self.StreamSend("ClinetHearbeat", 3423424)
 
+    def WebScoket(self):
+        self.StreamSend("UserWebScoketList", {})
+
     """
     房间相关操作
     """
@@ -313,17 +316,17 @@ class Client(object):
         return ul
 
     def PageUserList(self, page, pagesize):
+        now = int(time.time())
         ul = self.Request("/user/UserSrv/PageUserList", {
             "Page": {
                 "Page": page,
                 "PageSize": pagesize,
                 "Time": {
-                    "Start": 0,
-                    "End": 0,
+                    "Start": now - 60 * 60 * 24,
+                    "End": now,
                 },
                 "Sum": False,
             },
-            "OpenID": "123123"
         })
         return ul
 
@@ -638,13 +641,13 @@ class Client(object):
     四张相关操作
     """
 
-    def CRFour(self, roomType, maxNumber, roundNumber, scoreType):
+    def CRFour(self, roomType, maxNumber, roundNumber, scoreType, betType):
         ul = self.Request("/room/roomSrv/CreateRoom", {
             "RoundNumber": roundNumber,
             "MaxNumber": maxNumber,
             "GameType": 1004,
             "RoomType": roomType,
-            "GameParam": '{\"ScoreType\":%d}' % (scoreType)
+            "GameParam": '{\"ScoreType\":%d,\"BetType\":%d}' % (scoreType) % (betType)
         })
         return ul
 
@@ -658,5 +661,22 @@ class Client(object):
         ul = self.Request("/fourcard/FourCardSrv/SubmitCard", {
             "Head": ['1_8', '3_8'],
             "Tail": ['1_4', '3_4']
+        })
+        return ul
+
+    """
+    四张相关操作
+    """
+
+    def SendMail(self):
+        ul = self.Request("/mail/mailSrv/SendMail", {
+            "MailSend": {
+                "MailID": 1001,
+                "SendID": 100000,
+                "MailType": 1,
+                "MailInfo": None,
+            },
+            "SendAll": 0,
+            "Ids":[100001,100002,100003]
         })
         return ul

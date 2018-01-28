@@ -7,6 +7,8 @@ const (
 	NewUserDiamond     = 100
 	NewUserGold        = 0
 	MaxUserRecordCount = 20
+	LogTime            = 1
+	HeartbeatTimeout   = 5 //心跳超时时间（分）
 )
 
 const (
@@ -32,3 +34,5 @@ const (
 	UserOnline = 1
 	UserUnline = 2
 )
+
+var AdminUserID int32

@@ -7,7 +7,7 @@ import (
 	gcf "playcards/utils/config"
 	"playcards/utils/env"
 	"playcards/utils/log"
-
+	"playcards/utils/sync"
 	"playcards/utils/auth"
 
 	"github.com/micro/go-micro"
@@ -19,6 +19,7 @@ var FuncRights = map[string]int32{
 	"UserSrv.WXLogin":           auth.RightsNone,
 	"UserSrv.GetProperty":       auth.RightsPlayer | auth.RightsUserView,
 	"UserSrv.SetLocation":       auth.RightsPlayer,
+	"UserSrv.Heartbeat":         auth.RightsPlayer,
 	"UserSrv.UserInfo":          auth.RightsUserView,
 	"UserSrv.PageUserList":      auth.RightsUserView,
 	"UserSrv.GetToken":          auth.RightsUserView,
@@ -45,10 +46,15 @@ func main() {
 		micro.WrapHandler(auth.ServerAuthWrapper(FuncRights)),
 	)
 	service.Init()
-
 	server := service.Server()
-	server.Handle(server.NewHandler(&handler.UserSrv{}))
+	gt := sync.NewGlobalTimer()
+	h := handler.NewHandler(server, gt)
+	server.Handle(server.NewHandler(h))
+
+	//server := service.Server()
+	//server.Handle(server.NewHandler(&handler.UserSrv{}))
 
 	err := service.Run()
+	gt.Stop()
 	env.ErrExit(err)
 }

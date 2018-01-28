@@ -11,7 +11,6 @@ import (
 
 	"github.com/jinzhu/gorm"
 	"strconv"
-	"playcards/utils/log"
 )
 
 func UpdateConfig(co *mdconf.Config) error {
@@ -46,16 +45,12 @@ func CreateConfig(co *mdconf.Config) error {
 }
 
 func GetConfigs(channel string, version string, mobileOs string) map[int32]*mdconf.Config {
-	log.Debug("AAAAGetConfigs:%s|%s|%s\n",channel,version,mobileOs)
 	f := func(co *mdconf.Config) bool {
 		if co.Status == enumc.ConfigOpenStatusAble &&
 			(co.Channel == channel || len(co.Channel) == 0) &&
 			(co.Version == version || len(co.Version) == 0) &&
 			(co.MobileOs == mobileOs || len(co.MobileOs) == 0) {
-				log.Debug("GetConfigsOk:%v\n",co)
 			return true
-		}else{
-			log.Debug("GetConfigsNotOk:%v\n",co)
 		}
 		return false
 	}
@@ -66,12 +61,9 @@ func GetUniqueConfigByItemID(channel string, version string, mobileOs string) []
 	cm := GetConfigs(channel, version, mobileOs)
 
 	var cos []*mdconf.Config
-	//str := "GetUniqueConfigByItemID List "
 	for _, co := range cm {
 		cos = append(cos, co)
-		//str += fmt.Sprintf("ID:%d ",co.ConfigID)
 	}
-	//fmt.Printf("%s\n",str)
 	return cos
 }
 
@@ -88,11 +80,11 @@ func PageConfigs(page *mdpage.PageOption, c *mdconf.Config) (
 	return dbconf.PageConfigs(db.DB(), page, c)
 }
 
-func CheckConfigCondition(channel string, version string, mobileOs string) float64 {
+func CheckConfigCondition(openType int32, channel string, version string, mobileOs string) float64 {
 	rate := 1.00
 	cm := GetConfigs(channel, version, mobileOs)
 	for itemID, co := range cm {
-		if itemID == enumc.ConsumeOpen {
+		if itemID == openType {
 			value, _ := strconv.Atoi(co.ItemValue)
 			rate = float64(value) / 100
 		}

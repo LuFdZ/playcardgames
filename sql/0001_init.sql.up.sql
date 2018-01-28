@@ -7,6 +7,7 @@ CREATE TABLE `users` (
   `email`           VARCHAR(128) NOT NULL,
   `avatar`          VARCHAR(128)          DEFAULT NULL,
   `status`          INT          NOT NULL DEFAULT '0',
+  `type`            INT          NOT NULL DEFAULT '0',
   `channel`         VARCHAR(64)           DEFAULT NULL,
   `version`         VARCHAR(64)           DEFAULT NULL,
   `login_type`      INT                   DEFAULT NULL,
@@ -29,7 +30,10 @@ CREATE TABLE `users` (
   PRIMARY KEY (`user_id`),
   #   UNIQUE KEY `email_unique` (`email`),
   UNIQUE KEY `username_unique` (`username`),
-  UNIQUE KEY `openid_unique` (`open_id`)
+  UNIQUE KEY `openid_unique` (`open_id`),
+  UNIQUE KEY `invite_unique` (`invite_user_id`),
+  UNIQUE KEY `invite_unique` (`invite_user_id`),
+  UNIQUE KEY `type_unique` (`type`)
 )
   ENGINE = InnoDB
   AUTO_INCREMENT = 100000

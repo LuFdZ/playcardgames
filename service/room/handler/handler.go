@@ -134,7 +134,6 @@ func (rs *RoomSrv) update(gt *gsync.GlobalTimer) {
 		return nil
 	}
 	gt.Register(lock, time.Millisecond*enumr.LoopTime, f)
-
 }
 
 func (rs *RoomSrv) CreateRoom(ctx context.Context, req *pbr.Room,
@@ -341,7 +340,7 @@ func (rs *RoomSrv) LeaveRoom(ctx context.Context, req *pbr.Room,
 		return errorr.ErrUserNotInRoom
 	}
 	f := func() error {
-		ru, r, err = room.LeaveRoom(u, r)
+		ru, r, err = room.LeaveRoom(u)
 		if err != nil {
 			return err
 		}
@@ -616,7 +615,7 @@ func (rs *RoomSrv) VoiceChat(ctx context.Context, req *pbr.VoiceChatRequest, rsp
 	if err != nil {
 		return err
 	}
-	r, err := room.VoiceChat(u.UserID)
+	r, err := room.UserRoomCheck(u.UserID)
 	if err != nil {
 		return err
 	}
@@ -705,12 +704,6 @@ func (rs *RoomSrv) GetRoomUserLocation(ctx context.Context, req *pbr.Room, rsp *
 	return nil
 }
 
-func (rs *RoomSrv) Heartbeat(ctx context.Context,
-	req *pbr.Room, rsp *pbr.Room) error {
-
-	return nil
-}
-
 func (rs *RoomSrv) GetRoomRecovery(ctx context.Context, req *pbr.Room, rsp *pbr.RoomReply) error {
 	u, err := auth.GetUser(ctx)
 	if err != nil {
@@ -743,6 +736,9 @@ func (rs *RoomSrv) GetRoomRecovery(ctx context.Context, req *pbr.Room, rsp *pbr.
 		case enumr.DoudizhuGameType:
 			top = TopicRoomDoudizhuExist
 			break
+		case enumr.FourCardGameType:
+			top = TopicRoomFourCardExist
+			break
 
 		}
 		topic.Publish(rs.broker, msg, top)
@@ -761,17 +757,18 @@ func (rs *RoomSrv) GameStart(ctx context.Context, req *pbr.Room,
 	if err != nil {
 		return err
 	}
-	if mr.GameType != enumr.NiuniuGameType {
+	if mr.GameType == enumr.ThirteenGameType {
 		return errorr.ErrGameType
 	}
-	lock := RoomLockKey(req.Password)
+
 	f := func() error {
-		err = room.GameStart(mr, u.UserID)
+		err = room.GameStart(u.UserID)
 		if err != nil {
 			return err
 		}
 		return nil
 	}
+	lock := RoomLockKey(req.Password)
 	err = gsync.GlobalTransaction(lock, f)
 	if err != nil {
 		log.Err("%s game start failed: %v", lock, err)
@@ -816,7 +813,7 @@ func (rs *RoomSrv) ShuffleCard(ctx context.Context, req *pbr.Room,
 		log.Err("%s set ready room failed: %v", lock, err)
 		return err
 	}
-	msg := &pbr.RoomUser{UserID:u.UserID}
+	msg := &pbr.RoomUser{UserID: u.UserID}
 	msg.Ids = mdr.Ids
 	topic.Publish(rs.broker, msg, TopicRoomReady)
 	if allReady && mdr.Shuffle > 0 {
@@ -829,3 +826,23 @@ func (rs *RoomSrv) ShuffleCard(ctx context.Context, req *pbr.Room,
 	rsp.Result = 1
 	return nil
 }
+
+func (rs *RoomSrv) RoomChat(ctx context.Context, req *pbr.RoomChatRequest, rsp *pbr.RoomReply) error {
+	u, err := auth.GetUser(ctx)
+	if err != nil {
+		return err
+	}
+	r, err := room.UserRoomCheck(u.UserID)
+	if err != nil {
+		return err
+	}
+	msg := &pbr.RoomChat{
+		RoomID:   r.RoomID,
+		UserID:   u.UserID,
+		ChatCode: req.ChatCode,
+		Ids:      r.Ids,
+	}
+	topic.Publish(rs.broker, msg, TopicRoomChat)
+	return nil
+}
+

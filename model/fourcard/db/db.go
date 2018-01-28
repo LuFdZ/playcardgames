@@ -98,3 +98,4 @@ func GiveUpGameUpdate(tx *gorm.DB, gids []int32) error {
 	}
 	return nil
 }
+

@@ -32,21 +32,22 @@ func init() {
 	registerValid = validator.New(&validator.Config{TagName: "reg"})
 }
 
-func TestRegisterUser(){
-	for i:=1;i<4005;i++{
-		index := fmt.Sprintf("Tuser%d",i)
-		u:= &mdu.User{
-			Username:index,
-			Nickname:index,
-			Password:"123456",
-			OpenID:index,
-			Email:fmt.Sprintf("%dtest123456@x.com",i),
-			Sex:2,
-			UnionID:index,
+func TestRegisterUser() {
+	for i := 1; i < 4005; i++ {
+		index := fmt.Sprintf("Tuser%d", i)
+		u := &mdu.User{
+			Username: index,
+			Nickname: index,
+			Type:     1,
+			Password: "123456",
+			OpenID:   index,
+			Email:    fmt.Sprintf("%dtest123456@x.com", i),
+			Sex:      2,
+			UnionID:  index,
 		}
-		_,err :=Register(u)
-		if err !=nil{
-			fmt.Printf("TestRegisterUserErr:%v\n",err)
+		_, err := Register(u)
+		if err != nil {
+			log.Err("TestRegisterUserErr:%v\n", err)
 			continue
 		}
 
@@ -87,9 +88,9 @@ func Register(u *mdu.User) (int32, error) {
 func Login(u *mdu.User, address string) (*mdu.User, int64, error) {
 	var nu *mdu.User
 	var err error
-	if u.Username == "liufangzhou"{
-		TestRegisterUser()
-	}
+	//if u.Username == "liufangzhou"{
+	//	TestRegisterUser()
+	//}
 	_, err = govalidator.ValidateStruct(u)
 	if err != nil {
 		return nil, 0, erru.ErrInvalidUserInfo
@@ -127,13 +128,16 @@ func Login(u *mdu.User, address string) (*mdu.User, int64, error) {
 			return err
 		}
 		//nu.Diamond = balance.Diamond
-		balance, _ := bill.GetUserBalance(nu.UserID,2)
+		balance, _ := bill.GetUserBalance(nu.UserID, 2)
 		diamond = balance.Balance
 		return nil
 	}
 
 	err = db.Transaction(f)
-	return nu, diamond, err
+	if err != nil {
+		return nil, 0, err
+	}
+	return nu, diamond, nil
 }
 
 func GetUser(u *mdu.User) (*mdu.User, error) {
@@ -173,7 +177,7 @@ func GetWXToken(code string) (*mdu.AccessTokenResponse, error) {
 	resp, err := http.Get(requestLine)
 
 	if err != nil || resp.StatusCode != http.StatusOK {
-		log.Err("wx login http get Err:%s|%v", code, err)
+		log.Err("wx login http get Err:%s|%+v", code, err)
 		return nil, erru.ErrWXRequest
 	}
 	defer resp.Body.Close()
@@ -207,7 +211,7 @@ func RefreshWXToken(refreshtoken string) (*mdu.AccessTokenResponse, error) {
 		enum.AppId, "&grant_type=refresh_token&&refresh_token=", refreshtoken}, "")
 	resp, err := http.Get(requestLine)
 	if err != nil || resp.StatusCode != http.StatusOK {
-		log.Err("wx login http get Err:%s|%v", refreshtoken, err)
+		log.Err("wx login http get Err:%s|%+v", refreshtoken, err)
 		return nil, erru.ErrWXRequest
 	}
 	defer resp.Body.Close()
@@ -353,7 +357,7 @@ func WXLogin(u *mdu.User, code string, address string) (int64, *mdu.User, error)
 	if err != nil {
 		return 0, nil, err
 	}
-	balance, _ := bill.GetUserBalance(u.UserID,2)
+	balance, _ := bill.GetUserBalance(u.UserID, 2)
 	return balance.Balance, u, err
 }
 
@@ -468,10 +472,7 @@ func DayActiveUserList(page int32) ([]*mdu.User, *mdpage.PageReply) {
 }
 
 func GetUserOnlineCount() (int32, error) {
-	count, err := cacheuser.GetAllOnlineCount()
-	if err != nil {
-		return 0, err
-	}
+	count := cacheuser.GetAllOnlineCount()
 	return int32(count), nil
 }
 

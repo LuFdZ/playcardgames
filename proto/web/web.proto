@@ -3,3 +3,8 @@ syntax = "proto3";
 package web;
 
 message ServiceOnline {}
+
+message UserWebScoketList {
+    int32 Count = 1;
+    repeated int32 Ids = 2;
+}

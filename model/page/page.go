@@ -11,7 +11,7 @@ import (
 
 const (
 	MinPageSize = 1
-	MaxPageSize = 50
+	MaxPageSize = 20
 
 	MinTimeDuration = 0
 	MaxTimeDuration = time.Hour * 24

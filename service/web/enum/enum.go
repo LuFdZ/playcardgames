@@ -1,7 +1,7 @@
 package enum
 
 const (
-	HeartbeatTimeout = 7
+	HeartbeatTimeout = 30
 	SocketAline      = 1
 	SocketClose      = 2
 )
@@ -25,6 +25,7 @@ var (
 	WebServiceCode      = 17 //web消息
 	LogServiceCode      = 18 //日志
 	SysCode             = 19
+	MailServiceCode     = 21
 )
 
 //基本消息标签和编号
@@ -73,6 +74,9 @@ const (
 
 	MsgShuffleCard     = "ShuffleCardBro"
 	MsgShuffleCardCode = 400112
+
+	MsgRoomChat     = "RoomChatBro"
+	MsgRoomChatCode = 400113
 )
 
 //十三张标签和编号
@@ -187,4 +191,10 @@ const (
 
 	MsgFourCardExist     = "FourCardExist"
 	MsgFourCardExistCode = 160107
+)
+
+//邮件标签和编号
+const (
+	MsgNewMailNotice     = "NewMailNotice"
+	MsgNewMailNoticeCode = 210101
 )

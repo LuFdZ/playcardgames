@@ -15,21 +15,20 @@ const (
 )
 
 const (
-	GameStatusInit    = 1 //游戏初始化发牌
-	GameStatusStarted = 2 //所有人都已提交牌
-	GameStatusDone    = 3 //游戏已结算
-	GameStatusGiveUp  = 4 //游戏被放弃
+	GameStatusInit    = 110 //游戏初始化发牌
+	GameStatusStarted = 120 //所有人都已提交牌
+	GameStatusDone    = 130 //游戏已结算
+	GameStatusGiveUp  = 140 //游戏被放弃
 )
 
 const (
-	RecoveryInitNoReady = 1 //十三张初始化玩家未交牌
-	RecoveryInitReady   = 2 //十三张初始化玩家已交牌
-	RecoveryGameStart   = 3 //游戏结算
+	RecoveryInitNoReady = 110 //十三张初始化玩家未交牌
+	RecoveryInitReady   = 120 //十三张初始化玩家已交牌
+	RecoveryGameStart   = 130 //游戏结算
 )
 
 const (
-	TimesDefault = 3//当庄模式 固定上庄
-
+	TimesDefault = 1//当庄模式 固定上庄
 )
 
 var GroupTypeName = [...]string{"Single", "Couple", "TwoCouple", "Three", "Straight", "Flush", "ThreeCouple", "Four", "FlushStraight", "Shoot", "AllShoot"}

@@ -38,6 +38,10 @@ func GetLockClients(topic string) map[*Client]bool {
 	return topics[topic]
 }
 
+func GetClients()map[int32]map[*Client]bool{
+	return clients
+}
+
 func GetClientByUserID(uid int32) []*Client {
 	var out []*Client
 	Lock()
@@ -155,3 +159,7 @@ func CloseAll() {
 	Unlock()
 	waitGroup.Wait()
 }
+
+//func PageClients(page int32,size int32,total int32) []int32{
+//
+//}

@@ -136,6 +136,7 @@ type DoudizhuRoomParam struct {
 
 type FourCardRoomParam struct {
 	ScoreType int32
+	BetType int32
 }
 
 //func (r *Room) String() string {

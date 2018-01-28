@@ -26,17 +26,17 @@ const (
 
 // room status desc
 const (
-	RoomStatusInit            = 1  //建立房间
-	RoomStatusAllReady        = 2  //房间满员并且全部确认准备
-	RoomStatusStarted         = 3  //游戏开始
-	RoomStatusReInit          = 4  //一局游戏结束，等待下一轮确认开始
-	RoomStatusDelay           = 5  //房间到达游戏最大局数，留存一段时间等待同房续费
-	RoomStatusDone            = 6  //房间正常结束
-	RoomStatusDestroy         = 7  //房间非正常结束(所有人员离开)
-	RoomStatusGiveUp          = 8  //房间投票放弃
-	RoomStatusOverTimeClean   = 9  //房间长时间无人操作被超时清除
-	RoomStatusDiamondNoEnough = 10 //房间开始时付费人水晶不足 取消房间数据
-	RoomStatusShuffle         = 11 //洗牌
+	RoomStatusInit            = 110 //建立房间
+	RoomStatusAllReady        = 120 //房间满员并且全部确认准备
+	RoomStatusStarted         = 130 //游戏开始
+	RoomStatusShuffle         = 140 //洗牌
+	RoomStatusReInit          = 150 //一局游戏结束，等待下一轮确认开始
+	RoomStatusDelay           = 160 //房间到达游戏最大局数，留存一段时间等待同房续费
+	RoomStatusDone            = 170 //房间正常结束
+	RoomStatusDestroy         = 180 //房间非正常结束(所有人员离开)
+	RoomStatusGiveUp          = 190 //房间投票放弃
+	RoomStatusOverTimeClean   = 200 //房间长时间无人操作被超时清除
+	RoomStatusDiamondNoEnough = 210 //房间开始时付费人水晶不足 取消房间数据
 )
 
 // room type desc
@@ -108,11 +108,11 @@ const (
 
 // game recovery room status
 const (
-	RecoveryFristInitNoReady = 1 //房间初始化玩家未准备 没有上一局
-	RecoveryInitNoReady      = 2 //房间初始化玩家未准备 有上一局
-	RecoveryInitReady        = 3 //房间初始化玩家已准备
-	RecoveryGameStart        = 4 //游戏开始
-	RecoveryGameDone         = 5 //游戏开始
+	RecoveryFristInitNoReady = 110 //房间初始化玩家未准备 没有上一局
+	RecoveryInitNoReady      = 120 //房间初始化玩家未准备 有上一局
+	RecoveryInitReady        = 130 //房间初始化玩家已准备
+	RecoveryGameStart        = 140 //游戏开始
+	RecoveryGameDone         = 150 //游戏开始
 )
 
 const (
@@ -131,4 +131,10 @@ const (
 	RoomNoFlag = 2
 )
 
-var GameType = []int32{1001, 1002, 1003}
+const (
+	ConsumeOpen      = 110001 //消费开关
+	AgentConsumeOpen = 110002 //代开房消费开关
+	ClubConsumeOpen  = 110003 //俱乐部消费开关
+)
+
+var GameType = []int32{1001, 1002, 1003,1004}

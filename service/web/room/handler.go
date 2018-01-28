@@ -11,8 +11,6 @@ import (
 	"playcards/utils/auth"
 	"encoding/json"
 	"playcards/utils/log"
-	gctx "playcards/utils/context"
-	"time"
 )
 
 var RoomEvent = []string{
@@ -29,8 +27,10 @@ var RoomEvent = []string{
 	srvroom.TopicRoomThirteenExist,
 	srvroom.TopicRoomNiuniuExist,
 	srvroom.TopicRoomDoudizhuExist,
+	srvroom.TopicRoomFourCardExist,
 	srvroom.TopicRoomNotice,
 	srvroom.TopicRoomGShuffleCardBro,
+	srvroom.TopicRoomChat,
 }
 
 func SubscribeRoomMessage(c *clients.Client, req *request.Request) error {
@@ -49,28 +49,6 @@ func SubscribeRoomMessage(c *clients.Client, req *request.Request) error {
 func UnsubscribeRoomMessage(c *clients.Client, req *request.Request) error {
 	c.Unsubscribe(RoomEvent)
 	return nil
-}
-
-func ClinetHearbeatMessage(c *clients.Client, req *request.Request) error {
-	var ctime int64 = 0
-
-	err := json.Unmarshal(req.Args, &ctime)
-	if err != nil {
-		ctime = 0
-	}
-	msg := &pbroom.HeartBeat{}
-	if ctime != 0 {
-		msg.Stime = time.Now().Unix()
-		msg.Ctime = ctime
-	}
-	c.SendMessage("", enum.MsgHeartbeat, msg, enum.MsgSubscribeCode)
-	return nil
-}
-
-func HeartbeatCallback(c *clients.Client) {
-	//log.Debug("room heartbeat %v", c)
-	ctx := gctx.NewContext(c.Token())
-	rpc.Heartbeat(ctx, &pbroom.HeartbeatRequest{})
 }
 
 func CloseCallbackHandler(c *clients.Client) {
@@ -100,10 +78,8 @@ func init() {
 		SubscribeRoomMessage)
 	request.RegisterHandler("UnSubscribeRoomMessage", auth.RightsPlayer,
 		UnsubscribeRoomMessage)
-	request.RegisterHandler("ClientHeartbeat", auth.RightsPlayer,
-		ClinetHearbeatMessage)
+
 	request.RegisterHandler("ReceiveTestLog", auth.RightsPlayer,
 		ReceiveTestLogMessage)
 	request.RegisterCloseHandler(CloseCallbackHandler)
-	//request.RegisterHeartbeatHandler(HeartbeatCallback)
 }

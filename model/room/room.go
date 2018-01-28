@@ -106,8 +106,22 @@ func CreateRoom(rtype int32, gtype int32, maxNum int32, roundNum int32,
 	if rtype == 0 {
 		rtype = enumroom.RoomTypeNom
 	}
-
-	cost := getRoomCost(gtype, maxNum, roundNum, user, rtype)
+	channel := user.Channel
+	version := user.Version
+	mobileOs := user.MobileOs
+	payerID := user.UserID
+	if rtype == enumroom.RoomTypeClub {
+		mdclub, _ := club.GetClubFromDB(clubID)
+		_, creater := cacheuser.GetUserByID(mdclub.CreatorID)
+		if creater == nil {
+			return nil, errroom.ErrClubCreaterNotFind
+		}
+		channel = creater.Channel
+		version = creater.Version
+		mobileOs = creater.MobileOs
+		payerID = mdclub.CreatorID
+	}
+	cost := getRoomCost(gtype, maxNum, roundNum, channel, version, mobileOs, rtype)
 	if rtype == enumroom.RoomTypeNom {
 		roomUser := GetRoomUser(user, enumroom.UserUnready, 1,
 			enumroom.UserRoleMaster)
@@ -169,7 +183,7 @@ func CreateRoom(rtype int32, gtype int32, maxNum int32, roundNum int32,
 		Giveup:         enumroom.NoGiveUp,
 		Users:          users,
 		RoomType:       rtype,
-		PayerID:        user.UserID,
+		PayerID:        payerID,
 		GiveupAt:       &now,
 		CreatedAt:      &now,
 		UpdatedAt:      &now,
@@ -225,9 +239,18 @@ func getPassWord() (string, error) {
 	return pwdNew, nil
 }
 
-func getRoomCost(gType int32, maxNumber int32, roundNumber int32, user *mduser.User, roomtype int32) int64 {
+func getRoomCost(gType int32, maxNumber int32, roundNumber int32, channel string, version string, mobileOs string, roomtype int32) int64 {
 	var diamond int64
 	var cost int32
+	var configID int32
+	if roomtype == enumroom.RoomTypeNom{
+		configID = enumroom.ConsumeOpen
+	}else if roomtype == enumroom.RoomTypeAgent{
+		configID = enumroom.AgentConsumeOpen
+	}else if roomtype == enumroom.RoomTypeClub{
+		configID = enumroom.ClubConsumeOpen
+	}
+
 	if gType == enumroom.ThirteenGameType {
 		cost = enumroom.ThirteenGameCost
 	} else if gType == enumroom.NiuniuGameType {
@@ -237,10 +260,12 @@ func getRoomCost(gType int32, maxNumber int32, roundNumber int32, user *mduser.U
 	}
 
 	diamond = int64(maxNumber * roundNumber * cost)
-	if roomtype == enumroom.RoomTypeNom {
-		rate := config.CheckConfigCondition(user.Channel, user.Version, user.MobileOs)
-		diamond = int64(rate * float64(diamond))
-	}
+	//if roomtype == enumroom.RoomTypeNom {
+	//
+	//}
+	rate := config.CheckConfigCondition(configID, channel, version, mobileOs)
+	diamond = int64(rate * float64(diamond))
+
 	return diamond
 }
 
@@ -315,9 +340,12 @@ func JoinRoom(pwd string, mduser *mduser.User) (*mdroom.RoomUser, *mdroom.Room, 
 	return roomUser, mr, nil
 }
 
-func LeaveRoom(mduser *mduser.User, mr *mdroom.Room) (*mdroom.RoomUser, *mdroom.Room, error) {
-
-	if mr.RoundNumber > 1 && mr.Status > enumroom.RoomStatusAllReady {
+func LeaveRoom(mduser *mduser.User) (*mdroom.RoomUser, *mdroom.Room, error) {
+	mr, err := cacheroom.GetRoomUserID(mduser.UserID)
+	if err != nil {
+		return nil, nil, err
+	}
+	if mr.RoundNow > 1 || (mr.RoundNow == 1 && mr.Status > enumroom.RoomStatusInit) {
 		return nil, nil, errroom.ErrGameHasBegin
 	}
 
@@ -443,8 +471,6 @@ func GetReady(pwd string, uid int32, shuffle bool) (bool, *mdroom.Room, error) {
 		log.Err("room ready failed, roomid:%d,uid:%d,err:%v\n", mdr.RoomID, uid, err)
 		return false, nil, err
 	}
-
-	log.Debug("AAAGetReadyTest:%t|%d|%d\n", allReady, num, mdr.MaxNumber, mdr.RoundNow)
 	if allReady && num == mdr.MaxNumber && mdr.RoundNow == 1 {
 		err = roomBackUnFreezeAndBalance(mdr)
 		if err != nil {
@@ -453,20 +479,6 @@ func GetReady(pwd string, uid int32, shuffle bool) (bool, *mdroom.Room, error) {
 		}
 	}
 	return allReady, mdr, nil
-}
-
-func isBeginOrEndRound(mdr *mdroom.Room, uid int32) bool {
-	//if mdr.RoundNow == 1 || mdr.RoundNow == 10 {
-	//	return false
-	//}
-	//var minScore int32 = 0
-	//minID := uid
-	//for _, ur := range mdr.UserResults {
-	//	if ur.Score < minScore {
-	//		minID = ur.UserID
-	//	}
-	//}
-	return true
 }
 
 func GiveUpGame(pwd string, uid int32) ([]int32, *mdroom.GiveUpGameResult, *mdroom.Room,
@@ -667,7 +679,7 @@ func Shock(uid int32, sendid int32) error {
 	return nil
 }
 
-func VoiceChat(uid int32) (*mdroom.Room, error) {
+func UserRoomCheck(uid int32) (*mdroom.Room, error) {
 	mr, err := cacheroom.GetRoomUserID(uid)
 	if err != nil {
 		return nil, err
@@ -782,9 +794,9 @@ func CheckRoomExist(uid int32, rid int32) (int32, *mdroom.CheckRoomExist, error)
 				break
 			}
 		}
-	} else if mr.Status == enumroom.RoomStatusReInit {
+	} else if mr.Status == enumroom.RoomStatusReInit || mr.Status == enumroom.RoomStatusAllReady {
 		roomStatus = enumroom.RecoveryInitNoReady
-	} else if mr.Status == enumroom.RoomStatusAllReady || mr.Status == enumroom.RoomStatusStarted {
+	} else if mr.Status == enumroom.RoomStatusStarted {
 		roomStatus = enumroom.RecoveryGameStart
 	} else if mr.Status > enumroom.RoomStatusReInit {
 		roomStatus = enumroom.RecoveryGameDone
@@ -1067,7 +1079,8 @@ func GiveUpRoomDestroy() []*mdroom.Room {
 				if room.RoomType == enumroom.RoomTypeAgent {
 					cacheroom.SetAgentRoom(room)
 				}
-				log.Debug("GiveUpRoomDestroyPolling roomid:%d,pwd:%s,subdate:%f m\n", room.RoomID, room.Password, sub.Minutes())
+				log.Debug("GiveUpRoomDestroyPolling roomid:%d,pwd:%s,subdate:%f m\n", room.RoomID,
+					room.Password, sub.Minutes())
 				//go db.Transaction(f)
 				//读写分离
 				err = db.Transaction(f)
@@ -1281,6 +1294,12 @@ func chekcGameParam(maxNumber int32, maxRound int32, gtype int32, gameParam stri
 			log.Err("fourcard unmarshal room param failed, %v", err)
 			return errroom.ErrGameParam
 		}
+		if roomParam.ScoreType < 1 || roomParam.ScoreType > 2 {
+			return errroom.ErrGameParam
+		}
+		if roomParam.BetType < 1 || roomParam.BetType > 2 {
+			return errroom.ErrGameParam
+		}
 		break
 	default:
 		return errroom.ErrGameParam
@@ -1300,7 +1319,11 @@ func CheckHasRoom(uid int32) (bool, *mdroom.Room, error) {
 	return false, nil, nil
 }
 
-func GameStart(mdr *mdroom.Room, uid int32) error {
+func GameStart(uid int32) error {
+	mdr, err := cacheroom.GetRoomUserID(uid)
+	if err != nil {
+		return err
+	}
 	if uid != mdr.Users[0].UserID {
 		return errroom.ErrNotPayer
 	}
@@ -1328,9 +1351,9 @@ func GameStart(mdr *mdroom.Room, uid int32) error {
 	mdr.StartMaxNumber = mdr.MaxNumber
 	mdr.MaxNumber = int32(len(mdr.Users))
 	RoomRefund(mdr)
-	cost := getRoomCost(mdr.GameType, mdr.MaxNumber, mdr.RoundNumber, mdPayer, mdr.RoomType)
+	cost := getRoomCost(mdr.GameType, mdr.MaxNumber, mdr.RoundNumber, mdPayer.Channel, mdPayer.Version, mdPayer.MobileOs, mdr.RoomType)
 	mdr.Cost = cost
-	err := roomStartBalance(mdr, mdPayer)
+	err = roomStartBalance(mdr, mdPayer)
 	if err != nil {
 		log.Err("room game start failed, roomid:%d,uid:%d,err:%v\n", mdr.RoomID, uid, err)
 		return err
@@ -1347,12 +1370,14 @@ func RoomCreateBalance(mdr *mdroom.Room, mdu *mduser.User) error {
 	//jType := getRoomJournalType(mdr.GameType)
 	if mdr.Cost != 0 {
 		if mdr.RoomType == enumroom.RoomTypeClub {
-			err := club.SetClubBalance(-mdr.Cost, enumbill.TypeDiamond, mdr.ClubID, mdr.GameType*100+1, int64(mdr.RoomID), int64(mdu.UserID))
+			err := club.SetClubBalance(-mdr.Cost, enumbill.TypeDiamond, mdr.ClubID, mdr.GameType*100+1,
+				int64(mdr.RoomID), int64(mdu.UserID))
 			if err != nil {
 				return err
 			}
 		} else {
-			_, err := bill.SetBalanceFreeze(mdu.UserID, int64(mdr.RoomID), &mbill.Balance{Amount: mdr.Cost, CoinType: enumcom.Diamond}, mdr.GameType*100+2)
+			_, err := bill.SetBalanceFreeze(mdu.UserID, int64(mdr.RoomID), &mbill.Balance{Amount: mdr.Cost,
+				CoinType: enumcom.Diamond}, mdr.GameType*100+2)
 			if err != nil {
 				return err
 			}
@@ -1368,12 +1393,15 @@ func roomBackUnFreezeAndBalance(mdr *mdroom.Room) error {
 			_, err := bill.SetBalanceFreeze(mdr.PayerID, int64(mdr.RoomID),
 				&mbill.Balance{Amount: -mdr.Cost, CoinType: enumcom.Diamond}, mdr.GameType*100+2)
 			if err != nil {
-				log.Err("back room freeze err roomid:%d,payerid:%d,cost:%d,constype:%d,err:%v", mdr.RoomID, mdr.PayerID, -mdr.Cost, mdr.CostType, err)
+				log.Err("back room freeze err roomid:%d,payerid:%d,cost:%d,constype:%d,err:%v", mdr.RoomID,
+					mdr.PayerID, -mdr.Cost, mdr.CostType, err)
 				return err
 			}
-			err = bill.GainGameBalance(mdr.PayerID, mdr.RoomID, mdr.GameType*100+1, &mbill.Balance{Amount: -mdr.Cost, CoinType: enumcom.Diamond})
+			err = bill.GainGameBalance(mdr.PayerID, mdr.RoomID, mdr.GameType*100+1, &mbill.Balance{Amount:
+			-mdr.Cost, CoinType: enumcom.Diamond})
 			if err != nil {
-				log.Err("back room balance err roomid:%d,payerid:%d,cost:%d,constype:%d,err:%v", mdr.RoomID, mdr.PayerID, mdr.Cost, mdr.CostType, err)
+				log.Err("back room balance err roomid:%d,payerid:%d,cost:%d,constype:%d,err:%v", mdr.RoomID,
+					mdr.PayerID, mdr.Cost, mdr.CostType, err)
 				return err
 			}
 		}
@@ -1385,12 +1413,14 @@ func roomStartBalance(mdr *mdroom.Room, mdu *mduser.User) error {
 	//jType := getRoomJournalType(mdr.GameType)
 	if mdr.Cost != 0 {
 		if mdr.RoomType == enumroom.RoomTypeClub {
-			err := club.SetClubBalance(-mdr.Cost, enumbill.TypeDiamond, mdr.ClubID, mdr.GameType*100+1, int64(mdr.RoomID), int64(mdu.UserID))
+			err := club.SetClubBalance(-mdr.Cost, enumbill.TypeDiamond, mdr.ClubID, mdr.GameType*100+1,
+				int64(mdr.RoomID), int64(mdu.UserID))
 			if err != nil {
 				return err
 			}
 		} else {
-			err := bill.GainGameBalance(mdu.UserID, mdr.RoomID, mdr.GameType*100+1, &mbill.Balance{Amount: -mdr.Cost, CoinType: enumcom.Diamond})
+			err := bill.GainGameBalance(mdu.UserID, mdr.RoomID, mdr.GameType*100+1,
+				&mbill.Balance{Amount: -mdr.Cost, CoinType: enumcom.Diamond})
 			if err != nil {
 				return err
 			}
@@ -1404,7 +1434,8 @@ func RoomRefund(mdr *mdroom.Room) error {
 		jType := mdr.GameType*100 + 2 //getRoomJournalType(mdr.GameType)
 		f := func(tx *gorm.DB) error {
 			if mdr.RoomType == enumroom.RoomTypeClub {
-				err := club.SetClubBalance(mdr.Cost, enumbill.TypeDiamond, mdr.ClubID, jType, int64(mdr.RoomID), int64(mdr.PayerID))
+				err := club.SetClubBalance(mdr.Cost, enumbill.TypeDiamond, mdr.ClubID, jType, int64(mdr.RoomID),
+					int64(mdr.PayerID))
 				if err != nil {
 					return err
 				}
@@ -1412,7 +1443,8 @@ func RoomRefund(mdr *mdroom.Room) error {
 				_, err := bill.SetBalanceFreeze(mdr.PayerID, int64(mdr.RoomID),
 					&mbill.Balance{Amount: -mdr.Cost, CoinType: enumcom.Diamond}, jType)
 				if err != nil {
-					log.Err("back room cost err roomid:%d,payerid:%d,cost:%d,constype:%d", mdr.RoomID, mdr.PayerID, mdr.Cost, mdr.CostType)
+					log.Err("back room cost err roomid:%d,payerid:%d,cost:%d,constype:%d", mdr.RoomID,
+						mdr.PayerID, mdr.Cost, mdr.CostType)
 					return err
 				}
 			}

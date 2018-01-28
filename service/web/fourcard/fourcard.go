@@ -134,6 +134,7 @@ func GameResultHandler(p broker.Publication) error {
 }
 
 func FourCardExistHandle(p broker.Publication) error {
+
 	t := p.Topic()
 	msg := p.Message()
 	rs := &pbroom.RoomExist{}

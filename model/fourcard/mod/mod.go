@@ -21,6 +21,7 @@ type Fourcard struct {
 	UpdatedAt     *time.Time
 	OpDateAt      *time.Time
 	BankerID      int32
+	BetType       int32       `gorm:"-"`
 	GameResult    *GameResult `gorm:"-"`
 	PassWord      string      `gorm:"-"`
 	SearchKey     string      `gorm:"-"`

@@ -347,9 +347,13 @@ func (cs *ClubSrv) UpdateClubExamine(ctx context.Context,
 	*rsp = pbclub.ClubReply{
 		Result: 1,
 	}
+	_, muser := cacheuser.GetUserByID(u.UserID)
 	msgAll := &pbclub.ClubMember{
-		ClubID: req.ClubID,
-		UserID: req.UserID,
+		ClubID:   req.ClubID,
+		UserID:   muser.UserID,
+		Nickname: muser.Nickname,
+		Icon:     muser.Icon,
+		Online:   cacheuser.GetUserOnlineStatus(muser.UserID),
 	}
 	topic.Publish(cs.broker, msgAll, TopicClubMemberJoin)
 	return nil

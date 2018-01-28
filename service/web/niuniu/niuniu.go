@@ -146,7 +146,7 @@ func NiuniuGameReadyHandler(p broker.Publication) error {
 	}
 	ids := rs.Ids
 	rs.Ids = nil
-	err = clients.SendToUsers(ids, t, enum.MsgNiuniuGameReady, rs,enum.MsgNiuniuAllBetCode)
+	err = clients.SendToUsers(ids, t, enum.MsgNiuniuGameReady, rs,enum.MsgNiuniuGameReadyCode)
 	if err != nil {
 		return err
 	}

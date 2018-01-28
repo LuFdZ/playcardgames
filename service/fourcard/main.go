@@ -17,9 +17,9 @@ import (
 )
 
 var FuncRights = map[string]int32{
-	"FourCardSrv.SubmitCard":     auth.RightsPlayer,
-	"FourCardSrv.SetBet":         auth.RightsPlayer,
-	"FourCardSrv.GameResultList": auth.RightsPlayer,
+	"FourCardSrv.SubmitCard":       auth.RightsPlayer,
+	"FourCardSrv.SetBet":           auth.RightsPlayer,
+	"FourCardSrv.GameResultList":   auth.RightsPlayer,
 	"FourCardSrv.FourCardRecovery": auth.RightsPlayer,
 }
 

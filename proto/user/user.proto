@@ -84,6 +84,9 @@ message GetTokenRequest {
     int32 UserID = 1;
 }
 
+message HeartbeatRequest {
+}
+
 message GetTokenReply {
     int32 Result = 1; //1请求成功  2请求失败
     int32 Code = 2; // 0查询到token 101 uid对应的 token不存在
@@ -138,6 +141,14 @@ message UserRsply {
     int32 Result = 1;
 }
 
+message HeartbeatReply {
+}
+
+message HeartBeat{
+    int64 Ctime = 1;
+    int64 Stime = 2;
+}
+
 service UserSrv {
     rpc Register (User) returns (RegisterReply) {
     }
@@ -166,5 +177,7 @@ service UserSrv {
     rpc SetLocation (SetLocationRequest) returns (UserRsply) {
     }
     rpc RefreshUserCount (User) returns (UserRsply) {
+    }
+    rpc Heartbeat (HeartbeatRequest) returns (HeartbeatReply) {
     }
 }

@@ -22,19 +22,19 @@ const (
 )
 
 const (
-	GameStatusInit          = 1 //游戏初始化发牌开始下注
-	GameStatusAllBet        = 2 //所有人下注完成开始定序
-	GameStatusOrdered       = 3 //顺序确定发牌
-	GameStatusSubmitCard    = 4 //开始交牌
-	GameStatusAllSubmitCard = 5 //所有人都已提交牌
-	GameStatusDone          = 6 //游戏已结算
-	GameStatusGiveUp        = 7 //游戏被放弃
+	GameStatusInit          = 110 //游戏初始化开始下注
+	GameStatusAllBet        = 120 //所有人下注完成开始定序
+	GameStatusOrdered       = 130 //顺序确定发牌
+	GameStatusSubmitCard    = 140 //开始交牌
+	GameStatusAllSubmitCard = 150 //所有人都已提交牌
+	GameStatusDone          = 160 //游戏已结算
+	GameStatusGiveUp        = 170 //游戏被放弃
 )
 
 const (
-	UserStatusInit       = 1 //游戏初始化
-	UserStatusSetBet     = 2 //已下注
-	UserStatusSubmitCard = 3 //已提交
+	UserStatusInit       = 110 //游戏初始化
+	UserStatusSetBet     = 120 //已下注
+	UserStatusSubmitCard = 130 //已提交
 )
 
 const (
@@ -43,10 +43,10 @@ const (
 )
 
 const (
-	RecoveryInitNoReady = 1 //十三张初始化玩家未交牌
-	RecoveryInitReady   = 2 //十三张初始化玩家已交牌
-	RecoveryGameStart   = 3 //游戏结算
+	BetTypeHave = 1 //比牌模式 有下注
+	BetTypeNo   = 2 //比牌模式 无下注
 )
+
 
 const (
 	TimesDefault = 3 //当庄模式 固定上庄

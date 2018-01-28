@@ -19,6 +19,7 @@ type User struct {
 	Email         string `reg:"min=6,max=30,email,excludesall= 	"`
 	Avatar        string
 	Status        int32
+	Type          int32
 	Channel       string `reg:"omitempty,min=6,max=64,excludesall= 	"`
 	Version       string `reg:"omitempty,min=6,max=64,excludesall= 	"`
 	Icon          string

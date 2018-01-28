@@ -108,34 +108,6 @@ func (fcs *FourCardSrv) update(gt *gsync.GlobalTimer, gl *lua.LState) {
 	gt.Register(lock, time.Millisecond*enumgame.LoopTime, f)
 }
 
-func (fcs *FourCardSrv) GetBanker(ctx context.Context, req *pbfour.SetBetRequest,
-	rsp *pbfour.DefaultReply) error {
-	u, err := auth.GetUser(ctx)
-	if err != nil {
-		return err
-	}
-
-	reply := &pbfour.DefaultReply{
-		Result: enumgame.Success,
-	}
-	r, err := room.GetRoomByUserID(u.UserID)
-	f := func() error {
-		err = fourcard.SetBet(u.UserID, req.Key, r)
-		if err != nil {
-			return err
-		}
-		return nil
-	}
-	lock := RoomLockKey(r.Password)
-	err = gsync.GlobalTransaction(lock, f)
-	if err != nil {
-		log.Err("%s get banker failed: %v", lock, err)
-		return err
-	}
-	*rsp = *reply
-	return nil
-}
-
 func (fcs *FourCardSrv) SetBet(ctx context.Context, req *pbfour.SetBetRequest,
 	rsp *pbfour.DefaultReply) error {
 	u, err := auth.GetUser(ctx)
@@ -147,6 +119,9 @@ func (fcs *FourCardSrv) SetBet(ctx context.Context, req *pbfour.SetBetRequest,
 		Result: enumgame.Success,
 	}
 	mdr, err := room.GetRoomByUserID(u.UserID)
+	if err != nil {
+		return err
+	}
 	f := func() error {
 		err = fourcard.SetBet(u.UserID, req.Key, mdr)
 		if err != nil {
@@ -184,6 +159,9 @@ func (fcs *FourCardSrv) SubmitCard(ctx context.Context, req *pbfour.SubmitCardRe
 		Result: enumgame.Success,
 	}
 	mdr, err := room.GetRoomByUserID(u.UserID)
+	if err!=nil{
+		return err
+	}
 	var game *mdgame.Fourcard
 	f := func() error {
 		game, err = fourcard.SubmitCard(u.UserID, mdr, req.Head, req.Tail)
@@ -192,6 +170,7 @@ func (fcs *FourCardSrv) SubmitCard(ctx context.Context, req *pbfour.SubmitCardRe
 		}
 		return nil
 	}
+	fmt.Printf("AAASubmitCard:%+v\n",mdr)
 	lock := RoomLockKey(mdr.Password)
 	err = gsync.GlobalTransaction(lock, f)
 	if err != nil {
@@ -226,7 +205,7 @@ func (fcs *FourCardSrv) GameResultList(ctx context.Context, req *pbfour.GameResu
 	return nil
 }
 
-func (fcs *FourCardSrv) GameRecovery(ctx context.Context, req *pbfour.RecoveryRequest,
+func (fcs *FourCardSrv) FourCardRecovery(ctx context.Context, req *pbfour.RecoveryRequest,
 	rsp *pbfour.RecoveryReply) error {
 	_, err := auth.GetUser(ctx)
 	if err != nil {

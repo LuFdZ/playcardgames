@@ -32,6 +32,7 @@ const (
 
 const (
 	SystemOpUserID = 100000
+	SystemOpUserName = "财神棋牌客服"
 )
 
 const (

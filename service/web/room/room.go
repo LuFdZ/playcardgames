@@ -66,14 +66,14 @@ func SubscribeAllRoomMessage(brk broker.Broker) error {
 	subscribe.SrvSubscribe(brk, topic.Topic(srvroom.TopicRoomVoiceChat),
 		RoomVoiceChatHandler,
 	)
-	//subscribe.SrvSubscribe(brk, topic.Topic(srvroom.TopicRoomExist),
-	//	RoomExistHandler,
-	//)
 	subscribe.SrvSubscribe(brk, topic.Topic(srvroom.TopicRoomNotice),
 		RoomNoticeHandler,
 	)
 	subscribe.SrvSubscribe(brk, topic.Topic(srvroom.TopicRoomGShuffleCardBro),
 		ShuffleCardHandler,
+	)
+	subscribe.SrvSubscribe(brk, topic.Topic(srvroom.TopicRoomChat),
+		RoomChatHandler,
 	)
 	return nil
 }
@@ -226,7 +226,24 @@ func RoomVoiceChatHandler(p broker.Publication) error {
 	}
 	ids := rs.Ids
 	rs.Ids = nil
-	err = clients.SendToUsers(ids, t, enum.MsgRoomVoiceChat, rs,enum.MsgRoomRenewalCode)
+	err = clients.SendToUsers(ids, t, enum.MsgRoomVoiceChat, rs,enum.MsgRoomVoiceChatCode)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func RoomChatHandler(p broker.Publication) error {
+	t := p.Topic()
+	msg := p.Message()
+	rs := &pbroom.RoomChat{}
+	err := proto.Unmarshal(msg.Body, rs)
+	if err != nil {
+		return err
+	}
+	ids := rs.Ids
+	rs.Ids = nil
+	err = clients.SendToUsers(ids, t, enum.MsgRoomChat, rs,enum.MsgRoomChatCode)
 	if err != nil {
 		return err
 	}
@@ -258,7 +275,7 @@ func RoomNoticeHandler(p broker.Publication) error {
 	}
 	ids := rs.Ids
 	rs.Ids = nil
-	err = clients.SendToUsers(ids, t, enum.MsgRoomNotice, rs,enum.MsgRoomRenewalCode)
+	err = clients.SendToUsers(ids, t, enum.MsgRoomNotice, rs,enum.MsgRoomNoticeCode)
 	if err != nil {
 		return err
 	}

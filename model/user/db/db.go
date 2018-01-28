@@ -10,6 +10,7 @@ import (
 	"playcards/utils/errors"
 	"github.com/Masterminds/squirrel"
 	"github.com/jinzhu/gorm"
+	"playcards/utils/log"
 )
 
 func AddUser(tx *gorm.DB, u *mdu.User) (int32, error) {
@@ -28,7 +29,8 @@ func GetUser(tx *gorm.DB, u *mdu.User) (*mdu.User, error) {
 
 	if err := tx.Select(selsql).Table(enumu.UserTableName).
 		Where(u).Find(qr).Error; err != nil {
-		return nil, errors.Internal("get user failed", err)
+		log.Err("get user fail mud:%v,err:%v", u, err)
+		return nil, erru.ErrNameOrPasswordNotExisted
 	}
 	return &qr.User, nil
 }
@@ -95,18 +97,18 @@ func PageUserList(tx *gorm.DB, page *mdpage.PageOption, u *mdu.User) (
 		}
 		str += " channel like '%" + u.Channel + "%'"
 	}
-	if page.StartAt != nil {
-		if len(str) > 0 {
-			str += " and"
-		}
-		str += fmt.Sprintf(" created_at > %s", page.StartAt.Unix())
-	}
-	if page.EndAt != nil {
-		if len(str) > 0 {
-			str += " and"
-		}
-		str += fmt.Sprintf(" created_at < %s", page.EndAt.Unix())
-	}
+	//if page.StartAt != nil {
+	//	if len(str) > 0 {
+	//		str += " and"
+	//	}
+	//	str += fmt.Sprintf(" created_at > %d", page.StartAt.Unix())
+	//}
+	//if page.EndAt != nil {
+	//	if len(str) > 0 {
+	//		str += " and"
+	//	}
+	//	str += fmt.Sprintf(" created_at < %d", page.EndAt.Unix())
+	//}
 
 	if u.UserID != 0 {
 		etx = etx.Where("user_id = ?", u.UserID)
@@ -156,7 +158,7 @@ func GetInvitedUserCount(tx *gorm.DB, uid int32) ([]mdu.User, error) {
 
 func FindAndGetUser(tx *gorm.DB, openID string) (*mdu.User, error) {
 	//fmt.Printf("WXLogin:%v", u)
-	u:= &mdu.User{}
+	u := &mdu.User{}
 	found, err := db.FoundRecord(tx.Where("open_id = ?", openID).Find(&u).Error)
 	if err != nil {
 		return nil, errors.Internal("get user failed ", err)

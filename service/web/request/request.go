@@ -55,7 +55,7 @@ func OnEmit(c *clients.Client, req *Request) error {
 
 	err := c.Auth(method.rights)
 
-	if m != "ClientHeartbeat" {
+	if m != "ClientHeartbeat" && m !="UserSrv.Heartbeat" {
 		log.Debug("%v call %v %v", c, m, err)
 	}
 

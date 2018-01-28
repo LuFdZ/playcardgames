@@ -464,8 +464,11 @@ func UpdateNiuniu(niu *mdniu.Niuniu) error {
 //	return rooms, nil
 //}
 
-func GetBanker(uid int32, key int32, room *mdr.Room) error {
-
+func GetBanker(uid int32, key int32) error {
+	mdr, err := room.GetRoomByUserID(uid)
+	if err != nil{
+		return err
+	}
 	//value, err := tools.Int2String(str)
 	var value int32
 	if v, ok := enumniu.BankerScoreMap[key]; !ok {
@@ -480,15 +483,15 @@ func GetBanker(uid int32, key int32, room *mdr.Room) error {
 	// 	return 0, errorsniu.ErrParam
 	// }
 
-	if room.Status > enumr.RoomStatusStarted {
+	if mdr.Status > enumr.RoomStatusStarted {
 		return errroom.ErrGameIsDone
 	}
 
-	if room.Giveup == enumr.WaitGiveUp {
+	if mdr.Giveup == enumr.WaitGiveUp {
 		return errroom.ErrInGiveUp
 	}
 
-	niu, err := cacheniu.GetGame(room.RoomID)
+	niu, err := cacheniu.GetGame(mdr.RoomID)
 	if niu == nil {
 		return errorsniu.ErrGameNoFind
 	}
@@ -537,40 +540,45 @@ func GetBanker(uid int32, key int32, room *mdr.Room) error {
 
 }
 
-func SetBet(uid int32, key int32, room *mdr.Room) ([]int32, error) {
+func SetBet(uid int32, key int32) error {
 	var value int32
+	mdr, err := cacher.GetRoomUserID(uid)
+	if err != nil{
+		return err
+	}
+
 	if v, ok := enumniu.BetScoreMap[key]; !ok {
-		return nil, errorsniu.ErrParam
+		return errorsniu.ErrParam
 	} else {
 		value = v
 	}
 
-	if room.Status > enumr.RoomStatusStarted {
+	if mdr.Status > enumr.RoomStatusStarted {
 
-		return nil, errroom.ErrGameIsDone
+		return errroom.ErrGameIsDone
 	}
-	if room.Giveup == enumr.WaitGiveUp {
-		return nil, errroom.ErrInGiveUp
+	if mdr.Giveup == enumr.WaitGiveUp {
+		return errroom.ErrInGiveUp
 	}
-	niu, err := cacheniu.GetGame(room.RoomID)
+	niu, err := cacheniu.GetGame(mdr.RoomID)
 
 	if niu.Status != enumniu.GameStatusSetBet {
-		return nil, errorsniu.ErrBetDone
+		return errorsniu.ErrBetDone
 	}
 
 	allReady, userResult := GetUserAndAllOtherStatusReady(niu, uid,
 		enumniu.GetBetStatus)
 
 	if userResult == nil {
-		return nil, errorsniu.ErrUserNotInGame
+		return errorsniu.ErrUserNotInGame
 	}
 
 	if userResult.Info.Role == enumniu.Banker {
-		return nil, errorsniu.ErrBankerNoBet
+		return errorsniu.ErrBankerNoBet
 	}
 
 	if userResult.Status > enumniu.UserStatusGetBanker {
-		return nil, errorsniu.ErrAlreadySetBet
+		return errorsniu.ErrAlreadySetBet
 	}
 
 	userResult.Status = enumniu.UserStatusSetBet
@@ -582,7 +590,7 @@ func SetBet(uid int32, key int32, room *mdr.Room) ([]int32, error) {
 	err = cacheniu.UpdateGame(niu)
 	if err != nil {
 		log.Err("niuniu set session failed, %v", err)
-		return nil, err
+		return err
 	}
 
 	//f := func(tx *gorm.DB) error {
@@ -598,34 +606,38 @@ func SetBet(uid int32, key int32, room *mdr.Room) ([]int32, error) {
 	//	return 0, err
 	//}
 
-	return niu.Ids, nil //
+	return nil //
 }
 
-func SubmitCard(uid int32, room *mdr.Room) ([]int32, error) {
-	if room.Status > enumr.RoomStatusStarted {
-		if room.Giveup == enumr.WaitGiveUp {
-			return nil, errroom.ErrInGiveUp
+func SubmitCard(uid int32) error {
+	mdr, err := cacher.GetRoomUserID(uid)
+	if err !=nil{
+		return err
+	}
+	if mdr.Status > enumr.RoomStatusStarted {
+		if mdr.Giveup == enumr.WaitGiveUp {
+			return errroom.ErrInGiveUp
 		}
-		return nil, errroom.ErrGameIsDone
+		return errroom.ErrGameIsDone
 	}
 
-	niu, err := cacheniu.GetGame(room.RoomID)
+	niu, err := cacheniu.GetGame(mdr.RoomID)
 	if niu == nil {
-		return nil, errorsniu.ErrGameNoFind
+		return errorsniu.ErrGameNoFind
 	}
 	if niu.Status != enumniu.GameStatusSubmitCard {
-		return nil, errorsniu.ErrSubmitCardDone
+		return errorsniu.ErrSubmitCardDone
 	}
 
 	allReady, userResult := GetUserAndAllOtherStatusReady(niu, uid,
 		enumniu.GetSubmitCardStatus)
 
 	if userResult == nil {
-		return nil, errorsniu.ErrUserNotInGame
+		return errorsniu.ErrUserNotInGame
 	}
 
 	if userResult.Status > enumniu.UserStatusSetBet {
-		return nil, errorsniu.ErrAlreadySetBet
+		return errorsniu.ErrAlreadySetBet
 	}
 
 	userResult.Status = enumniu.UserStatusSubmitCard
@@ -637,9 +649,9 @@ func SubmitCard(uid int32, room *mdr.Room) ([]int32, error) {
 	err = cacheniu.UpdateGame(niu)
 	if err != nil {
 		log.Err("niuniu set session failed, %v", err)
-		return nil, err
+		return err
 	}
-	return niu.Ids, nil //
+	return nil //
 }
 
 func GetUserAndAllOtherStatusReady(n *mdniu.Niuniu, uid int32,
