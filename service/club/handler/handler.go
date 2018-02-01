@@ -9,6 +9,7 @@ import (
 	mdclub "playcards/model/club/mod"
 	mdpage "playcards/model/page"
 	cacheuser "playcards/model/user/cache"
+	cacheclub "playcards/model/club/cache"
 	mduser "playcards/model/user/mod"
 	pbclub "playcards/proto/club"
 	"playcards/utils/auth"
@@ -16,6 +17,8 @@ import (
 	utilproto "playcards/utils/proto"
 	gsync "playcards/utils/sync"
 	"playcards/utils/topic"
+	pbmail "playcards/proto/mail"
+	srvmail "playcards/service/mail/handler"
 	"time"
 
 	"github.com/micro/go-micro/broker"
@@ -137,11 +140,12 @@ func (cs *ClubSrv) RemoveClubMember(ctx context.Context,
 func (cs *ClubSrv) CreateClubMember(ctx context.Context,
 	req *pbclub.ClubMember, rsp *pbclub.ClubReply) error {
 	var (
-		user *mduser.User
-		err  error
+		user   *mduser.User
+		mdClub *mdclub.Club
+		err    error
 	)
 	f := func() error {
-		user, err = club.CreateClubMember(req.ClubID, req.UserID)
+		mdClub, user, err = club.CreateClubMember(req.ClubID, req.UserID)
 		if err != nil {
 			return err
 		}
@@ -164,6 +168,13 @@ func (cs *ClubSrv) CreateClubMember(ctx context.Context,
 		Online:   cacheuser.GetUserOnlineStatus(user.UserID),
 	}
 	topic.Publish(cs.broker, msgAll, TopicClubMemberJoin)
+
+	mailReq := &pbmail.SendSysMailRequest{
+		MailID: enumclub.MailClubJoin,
+		Ids:    []int32{req.UserID},
+		Args:   []string{mdClub.ClubName},
+	}
+	topic.Publish(cs.broker, mailReq, srvmail.TopicSendSysMail)
 	return nil
 }
 
@@ -210,6 +221,14 @@ func (cs *ClubSrv) LeaveClub(ctx context.Context,
 		UserID: u.UserID,
 	}
 	topic.Publish(cs.broker, msgAll, TopicClubMemberLeave)
+
+	mdClub, err := cacheclub.GetClub(req.ClubID)
+	mailReq := &pbmail.SendSysMailRequest{
+		MailID: enumclub.MailClubUnJoin,
+		Ids:    []int32{req.UserID},
+		Args:   []string{mdClub.ClubName},
+	}
+	topic.Publish(cs.broker, mailReq, srvmail.TopicSendSysMail)
 	return nil
 }
 
@@ -269,7 +288,7 @@ func (cs *ClubSrv) PageClubMember(ctx context.Context,
 func (cs *ClubSrv) PageClubRoom(ctx context.Context,
 	req *pbclub.PageClubRoomRequest, rsp *pbclub.PageClubRoomReply) error {
 	rsp.Result = 2
-	l, err := club.PageClubRoom(req.ClubID, req.Page, req.PageSize,req.Flag)
+	l, err := club.PageClubRoom(req.ClubID, req.Page, req.PageSize, req.Flag)
 	if err != nil {
 		return err
 	}
@@ -319,8 +338,17 @@ func (cs *ClubSrv) SetBlackList(ctx context.Context,
 	if err != nil {
 		return err
 	}
-	err = club.SetBlackList(req.ClubID, req.UserID, u.UserID)
+	f := func() error {
+		err = club.SetBlackList(req.ClubID, req.UserID, u.UserID)
+		if err != nil {
+			return err
+		}
+		return nil
+	}
+	lock := ClubRoomLockKey(req.ClubID)
+	err = gsync.GlobalTransaction(lock, f)
 	if err != nil {
+		log.Err("%s club set black list failed: %v", lock, err)
 		return err
 	}
 	*rsp = pbclub.ClubReply{
@@ -331,6 +359,15 @@ func (cs *ClubSrv) SetBlackList(ctx context.Context,
 		UserID: req.UserID,
 	}
 	topic.Publish(cs.broker, msgAll, TopicClubMemberLeave)
+
+	mdClub, err := cacheclub.GetClub(req.ClubID)
+	mailReq := &pbmail.SendSysMailRequest{
+		MailID: enumclub.MailClubUnJoin,
+		Ids:    []int32{req.UserID},
+		Args:   []string{mdClub.ClubName},
+	}
+	topic.Publish(cs.broker, mailReq, srvmail.TopicSendSysMail)
+
 	return nil
 }
 
@@ -340,8 +377,18 @@ func (cs *ClubSrv) UpdateClubExamine(ctx context.Context,
 	if err != nil {
 		return err
 	}
-	err = club.UpdateClubExamine(req.ClubID, req.UserID, req.Status, u.UserID)
+	mdClub := &mdclub.Club{}
+	f := func() error {
+		mdClub,err = club.UpdateClubExamine(req.ClubID, req.UserID, req.Status, u.UserID)
+		if err != nil {
+			return err
+		}
+		return nil
+	}
+	lock := ClubRoomLockKey(req.ClubID)
+	err = gsync.GlobalTransaction(lock, f)
 	if err != nil {
+		log.Err("%s club set examine failed: %v", lock, err)
 		return err
 	}
 	*rsp = pbclub.ClubReply{
@@ -356,5 +403,12 @@ func (cs *ClubSrv) UpdateClubExamine(ctx context.Context,
 		Online:   cacheuser.GetUserOnlineStatus(muser.UserID),
 	}
 	topic.Publish(cs.broker, msgAll, TopicClubMemberJoin)
+
+	mailReq := &pbmail.SendSysMailRequest{
+		MailID: enumclub.MailClubJoin,
+		Ids:    []int32{req.UserID},
+		Args:   []string{mdClub.ClubName},
+	}
+	topic.Publish(cs.broker, mailReq, srvmail.TopicSendSysMail)
 	return nil
 }

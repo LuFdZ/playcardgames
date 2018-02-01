@@ -547,6 +547,10 @@ func SetBet(uid int32, key int32) error {
 		return err
 	}
 
+	//if key<1 ||key >5{
+	//	return errorsniu.ErrParam
+	//}
+	//value = key
 	if v, ok := enumniu.BetScoreMap[key]; !ok {
 		return errorsniu.ErrParam
 	} else {
@@ -689,7 +693,7 @@ func AutoSetBankerScore(niu *mdniu.Niuniu) {
 	for _, userResult := range niu.Result.List {
 		if userResult.Status == enumniu.UserStatusInit {
 			userResult.Info = &mdniu.BankerAndBet{
-				BankerScore: 0,
+				BankerScore: 1,
 				BetScore:    0,
 				Role:        enumniu.Player,
 			}

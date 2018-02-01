@@ -19,7 +19,7 @@ message MailInfo {
 
 //邮件发送记录结构体
 message MailSendLog {
-    int32 SendLogID = 1; //记录ID
+    int32 LogID = 1; //记录ID
     int32 MailID = 2; //模板ID
     int32 SendID = 3; //发送人ID
     int32 MailType = 4; //邮件类型 1 系统模板邮件 2 系统自定义邮件 3 自动邮件 4 个人邮件
@@ -33,7 +33,7 @@ message MailSendLog {
 
 //用户邮件结构体
 message PlayerMail {
-    int32 PlayerMailID = 1; //用户邮件实例id
+    int32 LogID = 1; //用户邮件实例id
     int32 SendLogID = 2; //邮件发送记录id
     int32 UserID = 3;
     int32 Status = 4; //1 已读 2未读
@@ -51,35 +51,47 @@ message PlayerMail {
 message SendMailRequest {
     MailSendLog MailSend = 1;
     repeated int32 Ids = 2;
-    int32 SendAll = 3; //1 全体邮件 2 非全体邮件
+    string Channel = 3;
+}
+
+//发送邮件请求
+message SendSysMailRequest {
+    int32 MailID = 1;
+    repeated int32 Ids = 2;
+    repeated string Args = 3;
+}
+
+//读取邮件请求
+message ReadMailRequest {
+    int32 LogID = 1;
 }
 
 //领取邮件物品请求
 message GetMailItemsRequest {
-    int32 PlayerMailID = 1;
+    int32 LogID = 1;
 }
 
-//邮件模板分页请求请求
+//邮件模板分页请求
 message PageMailInfoRequest {
     page.PageOption Page = 1;
     MailInfo MailInfo = 2;
 }
 
-//邮件发送记录分页请求请求
+//邮件发送记录分页请求
 message PageMailSendLogRequest {
     page.PageOption Page = 1;
     MailSendLog MailSendLog = 2;
 }
 
-//邮件发送记录分页请求请求
-message PagePlayerMailRequest {
+//玩家邮件分页请求
+message PageAllPlayerMailRequest {
     page.PageOption Page = 1;
     PlayerMail PlayerMail = 2;
 }
 
-//玩家邮件查询请求请求
-message GetPlayerMailsRequest {
-    page.PageOption Page = 1;
+//玩家邮件分页请求
+message PagePlayerMailRequest {
+    int32 Page = 1;
 }
 
 //***********************************************回应***********************************************
@@ -101,10 +113,15 @@ message PageMailSendLogReply {
     int64 Count = 3;
 }
 
-message PagePlayerMailReply {
+message PageAllPlayerMailReply {
     int32 Result = 1;
     repeated PlayerMail List = 2;
     int64 Count = 3;
+}
+
+message PagePlayerMailReply {
+    repeated PlayerMail List = 1;
+    page.PageReply PageReply = 2;
 }
 
 //通用回复
@@ -124,6 +141,10 @@ message NewMailNoticeBro {
 service MailSrv {
     rpc SendMail (SendMailRequest) returns (DefaultReply) {
     }
+    rpc SendSysMail (SendSysMailRequest) returns (DefaultReply) {
+    }
+    rpc ReadMail (ReadMailRequest) returns (DefaultReply) {
+    }
     rpc GetMailItems (GetMailItemsRequest) returns (GetMailItemsReply) {
     }
     rpc CreateMailInfo (MailInfo) returns (DefaultReply) {
@@ -134,11 +155,9 @@ service MailSrv {
     }
     rpc PageMailLog (PageMailSendLogRequest) returns (PageMailSendLogReply) {
     }
+    rpc PageAllPlayerMail (PageAllPlayerMailRequest) returns (PageAllPlayerMailReply) {
+    }
     rpc PagePlayerMail (PagePlayerMailRequest) returns (PagePlayerMailReply) {
-    }
-    rpc GetPlayerMails (GetPlayerMailsRequest) returns (PagePlayerMailReply) {
-    }
-    rpc CreatePlayersMails (NewMailNoticeBro) returns (DefaultReply) {
     }
 
     rpc RefreshAllMailInfoFromDB (MailInfo) returns (DefaultReply) {

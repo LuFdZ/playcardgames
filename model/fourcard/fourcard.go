@@ -65,7 +65,7 @@ func CreateGame() []*mdgame.Fourcard {
 			ui := &mdgame.UserInfo{
 				UserID:     user.UserID,
 				Status:     enumgame.UserStatusInit,
-				Bet:        0,
+				Bet:        1,
 				Role:       user.Role,
 				TotalScore: 0,
 			}
@@ -168,7 +168,7 @@ func UpdateGame(goLua *lua.LState) []*mdgame.Fourcard {
 	for _, game := range games {
 		if game.Status == enumgame.GameStatusInit {
 			sub := time.Now().Sub(*game.OpDateAt)
-			if sub.Seconds() > enumgame.SetBetTime || game.BetType == enumgame.BetTypeHave {
+			if sub.Seconds() > enumgame.SetBetTime || game.BetType == enumgame.BetTypeNo {
 				autoSetBankerScore(game)
 				game.Status = enumgame.GameStatusAllBet
 				err := cachegame.UpdateGame(game)
@@ -363,11 +363,15 @@ func autoSetBankerScore(game *mdgame.Fourcard) {
 
 func SetBet(uid int32, key int32, mdr *mdroom.Room) error {
 	var value int32
-	if v, ok := enumgame.BetScoreMap[key]; !ok {
+	if key<1 || key >5{
 		return errgame.ErrParam
-	} else {
-		value = v
 	}
+	value = key
+	//if v, ok := enumgame.BetScoreMap[key]; !ok {
+	//	return errgame.ErrParam
+	//} else {
+	//	value = v
+	//}
 
 	if mdr.Status > enumroom.RoomStatusStarted {
 		return errroom.ErrGameIsDone
@@ -589,7 +593,7 @@ func GameExist(uid int32, rid int32) (*pbfour.RecoveryReply, error) {
 	}
 	out.FourCardExist = game.ToProto()
 	for _, gr := range out.FourCardExist.List {
-		if gr.UserID != uid {
+		if gr.UserID != uid && game.Status < enumgame.GameStatusDone {
 			gr.CardList = nil
 			gr.TailCards = nil
 			gr.HeadCards = nil

@@ -46,6 +46,7 @@ func NewWebHandler(c client.Client) *Web {
 	webclub.Init(w.broker)
 	webdoudizhu.Init(w.broker)
 	webfour.Init(w.broker)
+	webmail.Init(w.broker)
 	return w
 }
 

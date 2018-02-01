@@ -81,7 +81,7 @@ func GetLockUserBalance(tx *gorm.DB, uid int32, cointype int32) (*mdbill.Balance
 
 func GetJournal(tx *gorm.DB, uid int32, orderid string, cointype int32) int32 {
 	out := &mdbill.Journal{}
-	if found, _ := db.FoundRecord(tx.Where("user_id = ? and `foreign` = ? coin_type = ?",
+	if found, _ := db.FoundRecord(tx.Where("user_id = ? and `foreign` = ? and coin_type = ?",
 		uid, orderid, cointype).Find(&out).Error); found {
 		return 2
 	}

@@ -2,18 +2,20 @@ package handler
 
 import (
 	"playcards/model/bill"
-	_ "playcards/model/bill"
+	//_ "playcards/model/bill"
 	enumbill "playcards/model/bill/enum"
 	pbbill "playcards/proto/bill"
+	pbmail "playcards/proto/mail"
 	"playcards/utils/auth"
 	gctx "playcards/utils/context"
 	"playcards/utils/topic"
-
+	//"playcards/model/mail"
+	srvmail "playcards/service/mail/handler"
 	"github.com/micro/go-micro/broker"
 	"github.com/micro/go-micro/server"
 
-
 	"golang.org/x/net/context"
+	"playcards/utils/tools"
 )
 
 type BillSrv struct {
@@ -91,7 +93,7 @@ func (b *BillSrv) Recharge(ctx context.Context, req *pbbill.RechargeRequest,
 	//	return err
 	//}
 	res, ub, err := bill.Recharge(req.UserID, u.UserID, req.Diamond,
-		req.OrderID, enumbill.JournalTypeRecharge, u.Channel)
+		req.OrderID, enumbill.JournalTypeRecharge, u.Channel, req.CoinType)
 	if err != nil {
 		rsp.Code = 102
 		return err
@@ -105,6 +107,19 @@ func (b *BillSrv) Recharge(ctx context.Context, req *pbbill.RechargeRequest,
 			Diamond: ub.Balance,
 		}
 		topic.Publish(b.broker, msg, TopicBillChange)
+
+		//邮件通知
+		CoinName := enumbill.NameGold
+		if req.CoinType == enumbill.TypeDiamond {
+			CoinName = enumbill.NameDiamond
+		}
+		//mail.SendSysMail(enumbill.MailRecharge,[]int32{u.UserID},CoinName,string(req.Diamond))
+		mailReq := &pbmail.SendSysMailRequest{
+			MailID:enumbill.MailRecharge,
+			Ids:[]int32{req.UserID},
+			Args:[]string{CoinName,tools.Int64ToString(req.Diamond)},
+		}
+		topic.Publish(b.broker, mailReq, srvmail.TopicSendSysMail)
 	}
 	//rsp.Result = result
 	return nil

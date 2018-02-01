@@ -170,7 +170,7 @@ func (fcs *FourCardSrv) SubmitCard(ctx context.Context, req *pbfour.SubmitCardRe
 		}
 		return nil
 	}
-	fmt.Printf("AAASubmitCard:%+v\n",mdr)
+	//fmt.Printf("AAASubmitCard:%+v\n",mdr)
 	lock := RoomLockKey(mdr.Password)
 	err = gsync.GlobalTransaction(lock, f)
 	if err != nil {

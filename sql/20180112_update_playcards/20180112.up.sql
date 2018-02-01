@@ -56,7 +56,7 @@ CREATE TABLE `mail_infos` (
   `mail_name`        VARCHAR(50)   NOT NULL DEFAULT '',
   `mail_title`       VARCHAR(50)   NOT NULL DEFAULT '',
   `mail_content`     VARCHAR(500)  NOT NULL DEFAULT '',
-  `mail_type`        INT           NOT NULL DEFAULT '0',
+  `mail_type`        INT           NOT NULL DEFAULT '110',
   `status`           INT           NOT NULL DEFAULT '0',
   `item_list`        VARCHAR(500)  NOT NULL DEFAULT '',
   `created_at`       DATETIME      NOT NULL,
@@ -73,18 +73,17 @@ CREATE TABLE `mail_infos` (
 
 
 CREATE TABLE `mail_send_logs` (
-  `send_log_id`      INT           NOT NULL AUTO_INCREMENT,
+  `log_id`           INT           NOT NULL AUTO_INCREMENT,
   `mail_id`          INT           NOT NULL DEFAULT '0',
   `send_id`          INT           NOT NULL DEFAULT '0',
   `mail_type`        INT           NOT NULL DEFAULT '0',
-  `status`           INT           NOT NULL DEFAULT '0',
+  `status`           INT           NOT NULL DEFAULT '110',
   `mail_str`         VARCHAR(1500)  NOT NULL DEFAULT '',
   `send_count`       INT           NOT NULL DEFAULT '0',
   `total_count`      INT           NOT NULL DEFAULT '0',
-  `count`            INT           NOT NULL DEFAULT '0',
   `created_at`       DATETIME      NOT NULL,
   `updated_at`       DATETIME      NOT NULL,
-  PRIMARY KEY (`send_log_id`),
+  PRIMARY KEY (`log_id`),
   KEY `idx_id` (`mail_id`),
   KEY `idx_send` (`send_id`),
   KEY `idx_type` (`mail_type`),
@@ -96,17 +95,17 @@ CREATE TABLE `mail_send_logs` (
   DEFAULT CHARSET = utf8;
 
 CREATE TABLE `player_mails` (
-  `player_mail_id`   INT           NOT NULL AUTO_INCREMENT,
+  `log_id`           INT           NOT NULL AUTO_INCREMENT,
   `send_log_id`      INT           NOT NULL DEFAULT '0',
   `mail_id`          INT           NOT NULL DEFAULT '0',
   `user_id`          INT           NOT NULL DEFAULT '0',
   `send_id`          INT           NOT NULL DEFAULT '0',
   `mail_type`        INT           NOT NULL DEFAULT '0',
   `have_item`        INT           NOT NULL DEFAULT '0',
-  `status`           INT           NOT NULL DEFAULT '0',
+  `status`           INT           NOT NULL DEFAULT '110',
   `created_at`       DATETIME      NOT NULL,
   `updated_at`       DATETIME      NOT NULL,
-   PRIMARY KEY (`player_mail_id`),
+   PRIMARY KEY (`log_id`),
   KEY `idx_id` (`mail_id`),
   KEY `idx_send_log` (`send_log_id`),
   KEY `idx_user` (`user_id`),
@@ -119,7 +118,15 @@ CREATE TABLE `player_mails` (
   AUTO_INCREMENT = 1
   DEFAULT CHARSET = utf8;
 
-INSERT INTO mail_infos VALUES (1001,"房间退出通知", "房间退出", "房间%d于%s退出！", 3, "", now(), now());
+
+INSERT INTO mail_infos VALUES (1001,"充值成功通知", "充值成功", "感谢您的充值，您的【%s】【%s】已到帐，祝您游戏愉快！", 3,1, "", now(), now());
+INSERT INTO mail_infos VALUES (1101,"加入俱乐部通知", "加入俱乐部成功", " “【%s】”俱乐部已对您敞开大门，祝您游戏愉快！", 3,1, "", now(), now());
+INSERT INTO mail_infos VALUES (1102,"退出俱乐部通知", "退出俱乐部通知", "“【%s】”俱乐部已将您移出，如有疑问请联系俱乐部会长。", 3,1, "", now(), now());
+INSERT INTO mail_infos VALUES (1201,"游戏投票解散通知", "游戏解散通知", "您的对局【%s】已经投票解散，对局详情可点击大厅战绩按钮进行查看。", 3,1, "", now(), now());
+INSERT INTO mail_infos VALUES (1202,"游戏超时解散通知", "游戏解散通知", "您的对局【%s】因游戏时长超过24小时被系统解散，对局详情可点击大厅战绩按钮进行查看。", 3,1, "", now(), now());
+INSERT INTO mail_infos VALUES (1301,"邀请好友绑定获奖通知", "邀请用户奖励通知", "【%s】已成功绑定您作为邀请人，符合邀请奖励条件，请领取您的奖励！", 3,1, "", now(), now());
+INSERT INTO mail_infos VALUES (1302,"分享朋友圈奖励通知", "邀请用户奖励通知", "【用户昵称】已成功绑定您作为邀请人，符合邀请奖励条件，请领取您的奖励！", 3,1, "", now(), now());
+
 alter table rooms add shuffle int default 0 not null after giveup;
 alter table users add type int default 0 not null after status;
 ALTER  TABLE  `users`  ADD  INDEX idx_type (`type`);

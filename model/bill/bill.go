@@ -4,6 +4,7 @@ import (
 	pbbill "playcards/proto/bill"
 	dbbill "playcards/model/bill/db"
 	enumbill "playcards/model/bill/enum"
+	enumauth "playcards/utils/auth"
 	mdbill "playcards/model/bill/mod"
 	enumcom "playcards/model/common/enum"
 	cachebill "playcards/model/bill/cache"
@@ -37,7 +38,7 @@ func GainBalance(uid int32, aid int64, balanceType int32, balance *mdbill.Balanc
 	*mdbill.Balance, error) {
 	f := func(tx *gorm.DB) error {
 		ub, err := dbbill.GainBalance(tx, uid, balance, balanceType,
-			strconv.Itoa(int(aid)), enumbill.SystemOpUserID, enumbill.DefaultChannel)
+			strconv.Itoa(int(aid)), enumauth.SystemOpUserID, enumbill.DefaultChannel)
 		if err != nil {
 			return err
 		}
@@ -66,7 +67,7 @@ func GainGameBalance(uid int32, aid int32, balanceType int32, balance *mdbill.Ba
 		//	return err
 		//}
 		ub, err := dbbill.GainBalance(tx, uid, balance, balanceType,
-			fid, enumbill.SystemOpUserID, enumbill.DefaultChannel)
+			fid, enumauth.SystemOpUserID, enumbill.DefaultChannel)
 		if err != nil {
 			return err
 		}
@@ -83,13 +84,16 @@ func GainGameBalance(uid int32, aid int32, balanceType int32, balance *mdbill.Ba
 }
 
 func Recharge(uid int32, aid int32, diamond int64, orderid string,
-	rechangeType int32, channel string) (int32, *mdbill.Balance, error) {
+	rechangeType int32, channel string, coinType int32) (int32, *mdbill.Balance, error) {
 	exist := CheckDiamondBalanceIsDone(uid, orderid)
 	if exist == enumbill.OrderExist {
 		return enumbill.OrderExist, nil, nil
 	}
 	f := func(tx *gorm.DB) error {
-		balance := &mdbill.Balance{Amount: diamond, CoinType: enumcom.Diamond}
+		if coinType != enumbill.TypeGold{
+			coinType = enumbill.TypeDiamond
+		}
+		balance := &mdbill.Balance{Amount: diamond, CoinType: coinType}
 		ub, err := dbbill.GainBalance(tx, uid, balance,
 			rechangeType, orderid, aid, channel)
 		if err != nil {
@@ -120,7 +124,7 @@ func SetBalanceFreeze(uid int32, aid int64, balance *mdbill.Balance, balanceType
 ) (*mdbill.Balance, error) {
 	f := func(tx *gorm.DB) error {
 		err := dbbill.SetBalanceFreeze(tx, uid, balance, balanceType,
-			strconv.Itoa(int(aid)), enumbill.SystemOpUserID)
+			strconv.Itoa(int(aid)), enumauth.SystemOpUserID)
 		if err != nil {
 			return err
 		}

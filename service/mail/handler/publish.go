@@ -1,6 +1,6 @@
 package handler
 
 const (
-	TopicSendMail   = "playcards.mail.SendMail"
-	TopicMailNotice = "playcards.mail.MailNotice"
+	TopicSendSysMail = "playcards.mail.SendSysMail"
+	TopicMailNotice  = "playcards.mail.MailNotice"
 )

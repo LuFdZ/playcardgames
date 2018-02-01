@@ -17,6 +17,7 @@ import (
 	mduser "playcards/model/user/mod"
 	pbroom "playcards/proto/room"
 	enumcom "playcards/model/common/enum"
+	//"playcards/model/mail"
 	"playcards/model/config"
 	"playcards/utils/db"
 	"playcards/utils/log"
@@ -1178,7 +1179,11 @@ func DeadRoomDestroy() error {
 		if err != nil {
 			log.Err("delete dead set delete room redis err, %d|%v\n", room.RoomID, err)
 		}
-		room.Status = room.Status*10 + enumroom.RoomStatusOverTimeClean
+		refund := false
+		if room.Status < enumroom.RoomStatusStarted{
+			refund = true
+		}
+		room.Status = room.Status*1000 + enumroom.RoomStatusOverTimeClean
 		f := func(tx *gorm.DB) error {
 			_, err = dbroom.UpdateRoom(tx, room)
 			if err != nil {
@@ -1196,9 +1201,10 @@ func DeadRoomDestroy() error {
 			log.Err("room dead room destroy delete room users redis err, %v", err)
 			return err
 		}
-		if room.Status < enumroom.RoomStatusStarted {
+		if refund {
 			RoomRefund(room)
 		}
+		//err = mail.SendSysMail()
 
 	}
 

@@ -5,6 +5,7 @@ import (
 	"playcards/service/web/clients"
 	"playcards/service/web/request"
 	"playcards/utils/auth"
+	"playcards/utils/log"
 )
 
 var MailEvent = []string{
@@ -12,6 +13,7 @@ var MailEvent = []string{
 }
 
 func SubscribeMailMessage(c *clients.Client, req *request.Request) error {
+	log.Debug("SubscribeMailMessage:%v",MailEvent)
 	c.Subscribe(MailEvent)
 	return nil
 }

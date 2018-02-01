@@ -21,6 +21,7 @@ message RechargeRequest {
     int64 Diamond = 2;
     string OrderID = 3;
     string Channel = 4;
+    int32 CoinType = 5;
 }
 
 //回应

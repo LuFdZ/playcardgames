@@ -14,11 +14,20 @@ import (
 )
 
 var FuncRights = map[string]int32{
-	"MailSrv.SendMail":          auth.RightsPlayer,
-	"MailSrv.CreatePlayerMails": auth.RightsPlayer,
-	"MailSrv.RefreshAllMailInfoFromDB": auth.RightsAdmin,
+	"MailSrv.SendMail":                    auth.RightsPlayer,
+	"MailSrv.CreatePlayerMails":           auth.RightsPlayer,
+	"MailSrv.ReadMail":                    auth.RightsPlayer,
+	"MailSrv.GetMailItems":                auth.RightsPlayer,
+	"MailSrv.PagePlayerMail":              auth.RightsPlayer,
+	"MailSrv.PageMailInfo":                auth.RightsPlayer,
+	"MailSrv.PageMailSendLog":             auth.RightsPlayer,
+	"MailSrv.PageAllPlayerMail":           auth.RightsPlayer,
+	"MailSrv.SendSysMail":                 auth.RightsAdmin,
+	"MailSrv.CreateMailInfo":              auth.RightsAdmin,
+	"MailSrv.UpdateMailInfo":              auth.RightsAdmin,
+	"MailSrv.RefreshAllMailInfoFromDB":    auth.RightsAdmin,
 	"MailSrv.RefreshAllMailSendLogFromDB": auth.RightsAdmin,
-	"MailSrv.RefreshAllPlayerMailFromDB": auth.RightsAdmin,
+	"MailSrv.RefreshAllPlayerMailFromDB":  auth.RightsAdmin,
 }
 
 func main() {

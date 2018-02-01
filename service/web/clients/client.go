@@ -19,12 +19,13 @@ type Message struct {
 }
 
 type Client struct {
-	user    *mdu.User
-	ws      *websocket.Conn
-	token   string
-	topics  map[string]bool
-	channel chan interface{}
-	stop    chan bool
+	user      *mdu.User
+	ws        *websocket.Conn
+	token     string
+	heartbeat time.Time
+	topics    map[string]bool
+	channel   chan interface{}
+	stop      chan bool
 }
 
 func NewClient(token string, u *mdu.User, ws *websocket.Conn) *Client {
@@ -67,6 +68,16 @@ func (c *Client) UserID() int32 {
 
 func (c *Client) Token() string {
 	return c.token
+}
+
+func (c *Client) Heartbeat() bool {
+	date := time.Now()
+	sub := time.Now().Sub(c.heartbeat)
+	if sub.Minutes() >1{
+		c.heartbeat = date
+		return true
+	}
+	return false
 }
 
 func (c *Client) Auth(sright int32) error {

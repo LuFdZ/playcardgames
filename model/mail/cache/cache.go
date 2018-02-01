@@ -3,7 +3,7 @@ package cache
 import (
 	"encoding/json"
 	"fmt"
-	mdmail "playcards/model/mail/mod"
+	mdgame "playcards/model/mail/mod"
 	enumgame "playcards/model/mail/enum"
 	"playcards/utils/cache"
 	"playcards/utils/errors"
@@ -28,10 +28,10 @@ func PlayerMailHKey() string {
 }
 
 func PlayerMailHSubKey(uid int32, logid int32) string {
-	return fmt.Sprintf(cache.KeyPrefix("%d:%d"), uid, logid)
+	return fmt.Sprintf("uid:%d-logid:%d-", uid, logid)
 }
 
-func SetMailInfos(mis []*mdmail.MailInfo) error {
+func SetMailInfos(mis []*mdgame.MailInfo) error {
 	key := MailInfoHKey()
 	err := DeleteAllMails(key)
 	if err != nil {
@@ -41,7 +41,6 @@ func SetMailInfos(mis []*mdmail.MailInfo) error {
 	f := func(tx *redis.Tx) error {
 		tx.Pipelined(func(p *redis.Pipeline) error {
 			for _, mi := range mis {
-				fmt.Printf("SetMailInfos:%s,%v\n",key,mi)
 				b, _ := json.Marshal(mi)
 				tx.HSet(key, tools.IntToString(mi.MailID), string(b))
 			}
@@ -56,18 +55,17 @@ func SetMailInfos(mis []*mdmail.MailInfo) error {
 	return nil
 }
 
-func SetMailSendLogs(mlss []*mdmail.MailSendLog) error {
+func SetMailSendLogs(mlss []*mdgame.MailSendLog) error {
 	key := MailSendLogHKey()
 	err := DeleteAllMails(key)
 	if err != nil {
 		return err
 	}
 	f := func(tx *redis.Tx) error {
-		key = MailSendLogHKey()
 		tx.Pipelined(func(p *redis.Pipeline) error {
 			for _, mls := range mlss {
 				b, _ := json.Marshal(mls)
-				tx.HSet(key, tools.IntToString(mls.SendLogID), string(b))
+				tx.HSet(key, tools.IntToString(mls.LogID), string(b))
 			}
 			return nil
 		})
@@ -80,18 +78,18 @@ func SetMailSendLogs(mlss []*mdmail.MailSendLog) error {
 	return nil
 }
 
-func SetPlayerMails(pms []*mdmail.PlayerMail) error {
+func SetPlayerMails(pms []*mdgame.PlayerMail) error {
 	key := PlayerMailHKey()
 	err := DeleteAllMails(key)
 	if err != nil {
 		return err
 	}
 	f := func(tx *redis.Tx) error {
-		key = MailInfoHKey()
+		key = PlayerMailHKey()
 		tx.Pipelined(func(p *redis.Pipeline) error {
 			for _, pm := range pms {
 				b, _ := json.Marshal(pm)
-				tx.HSet(key, tools.IntToString(pm.PlayerMailID), string(b))
+				tx.HSet(key, tools.IntToString(pm.LogID), string(b))
 			}
 			return nil
 		})
@@ -104,7 +102,7 @@ func SetPlayerMails(pms []*mdmail.PlayerMail) error {
 	return nil
 }
 
-func GetMailInfo(mid int32) (*mdmail.MailInfo, error) {
+func GetMailInfo(mid int32) (*mdgame.MailInfo, error) {
 	key := MailInfoHKey()
 	val, err := cache.KV().HGet(key, tools.IntToString(mid)).Bytes()
 	if err == redis.Nil {
@@ -115,7 +113,7 @@ func GetMailInfo(mid int32) (*mdmail.MailInfo, error) {
 		return nil, errors.Internal("get mail info failed", err)
 	}
 
-	mi := &mdmail.MailInfo{}
+	mi := &mdgame.MailInfo{}
 	if err := json.Unmarshal(val, mi); err != nil {
 		return nil, errors.Internal("get mail info failed", err)
 	}
@@ -138,13 +136,15 @@ func DeleteAllMails(key string) error {
 	return nil
 }
 
-func SetMailSendLog(msl *mdmail.MailSendLog) error {
+func SetMailSendLog(msl *mdgame.MailSendLog) error {
 	var key string
 	f := func(tx *redis.Tx) error {
-		key = MailInfoHKey()
+		key = MailSendLogHKey()
 		tx.Pipelined(func(p *redis.Pipeline) error {
 			b, _ := json.Marshal(msl)
-			tx.HSet(key, tools.IntToString(msl.SendLogID), string(b))
+			tx.HSet(key, tools.IntToString(msl.LogID), string(b))
+			//expire := enumgame.MailEndLogOverTime
+			//tx.Expire(key, expire)
 			return nil
 		})
 		return nil
@@ -155,7 +155,7 @@ func SetMailSendLog(msl *mdmail.MailSendLog) error {
 	return nil
 }
 
-func GetMailSendLog(logID int32) (*mdmail.MailSendLog, error) {
+func GetMailSendLog(logID int32) (*mdgame.MailSendLog, error) {
 	key := MailSendLogHKey()
 	val, err := cache.KV().HGet(key, tools.IntToString(logID)).Bytes()
 	if err == redis.Nil {
@@ -166,7 +166,7 @@ func GetMailSendLog(logID int32) (*mdmail.MailSendLog, error) {
 		return nil, errors.Internal("get mail send log failed", err)
 	}
 
-	co := &mdmail.MailSendLog{}
+	co := &mdgame.MailSendLog{}
 	if err := json.Unmarshal(val, co); err != nil {
 		return nil, errors.Internal("get mail send log failed", err)
 	}
@@ -176,7 +176,7 @@ func GetMailSendLog(logID int32) (*mdmail.MailSendLog, error) {
 func DeleteMailSendLog(logID int32) error {
 	var key string
 	f := func(tx *redis.Tx) error {
-		key = MailInfoHKey()
+		key = MailSendLogHKey()
 		tx.Pipelined(func(p *redis.Pipeline) error {
 			tx.HDel(key, tools.IntToString(logID))
 			return nil
@@ -189,13 +189,15 @@ func DeleteMailSendLog(logID int32) error {
 	return nil
 }
 
-func SetPlayerMail(pm *mdmail.PlayerMail) error {
+func SetPlayerMail(pm *mdgame.PlayerMail) error {
 	key := PlayerMailHKey()
 	f := func(tx *redis.Tx) error {
-		subkey := PlayerMailHSubKey(pm.UserID, pm.PlayerMailID)
+		subkey := PlayerMailHSubKey(pm.UserID, pm.LogID)
 		tx.Pipelined(func(p *redis.Pipeline) error {
 			b, _ := json.Marshal(pm)
 			tx.HSet(key, subkey, string(b))
+			expire := enumgame.PlayerMailOverTime
+			tx.Expire(key, expire)
 			return nil
 		})
 		return nil
@@ -206,8 +208,25 @@ func SetPlayerMail(pm *mdmail.PlayerMail) error {
 	return nil
 }
 
-func GetPlayerMail(uid int32, logID int32) (*mdmail.PlayerMail, error) {
-	key := MailSendLogHKey()
+func UpdatePlayerMail(pm *mdgame.PlayerMail) error {
+	key := PlayerMailHKey()
+	f := func(tx *redis.Tx) error {
+		subkey := PlayerMailHSubKey(pm.UserID, pm.LogID)
+		tx.Pipelined(func(p *redis.Pipeline) error {
+			b, _ := json.Marshal(pm)
+			tx.HSet(key, subkey, string(b))
+			return nil
+		})
+		return nil
+	}
+	if err := cache.KV().Watch(f, key); err != nil {
+		return errors.Internal("update player mail list failed err:", err)
+	}
+	return nil
+}
+
+func GetPlayerMail(uid int32, logID int32) (*mdgame.PlayerMail, error) {
+	key := PlayerMailHKey()
 	subkey := PlayerMailHSubKey(uid, logID)
 	val, err := cache.KV().HGet(key, subkey).Bytes()
 	if err == redis.Nil {
@@ -218,7 +237,7 @@ func GetPlayerMail(uid int32, logID int32) (*mdmail.PlayerMail, error) {
 		return nil, errors.Internal("get player mail failed", err)
 	}
 
-	pm := &mdmail.PlayerMail{}
+	pm := &mdgame.PlayerMail{}
 	if err := json.Unmarshal(val, pm); err != nil {
 		return nil, errors.Internal("get player mail failed", err)
 	}
@@ -228,7 +247,7 @@ func GetPlayerMail(uid int32, logID int32) (*mdmail.PlayerMail, error) {
 func DeletePlayerMail(uid int32, logID int32) error {
 	var key string
 	f := func(tx *redis.Tx) error {
-		key = MailInfoHKey()
+		key = PlayerMailHKey()
 		subkey := PlayerMailHSubKey(uid, logID)
 		tx.Pipelined(func(p *redis.Pipeline) error {
 			tx.HDel(key, subkey)
@@ -242,9 +261,9 @@ func DeletePlayerMail(uid int32, logID int32) error {
 	return nil
 }
 
-func GetPlayerMails(uid int32) ([]*mdmail.PlayerMail, error) {
+func GetPlayerMails(uid int32) ([]*mdgame.PlayerMail, error) {
 	var curson uint64
-	var pms []*mdmail.PlayerMail
+	var pms []*mdgame.PlayerMail
 	var count int64
 	count = 999
 	key := PlayerMailHKey()
@@ -276,9 +295,9 @@ func GetPlayerMails(uid int32) ([]*mdmail.PlayerMail, error) {
 	return pms, nil
 }
 
-func PagePlayerMailList(page int32, pms []*mdmail.PlayerMail) ([]*mdmail.PlayerMail, int32, int32) {
+func PagePlayerMailList(page int32, pms []*mdgame.PlayerMail) ([]*mdgame.PlayerMail, int32, int32) {
 	total := int32(len(pms))
-	var pageList []*mdmail.PlayerMail
+	var pageList []*mdgame.PlayerMail
 	count := float64(len(pms)) / float64(enumgame.MaxMailRecordCount)
 	count = math.Ceil(count)
 	if count == 0 {
@@ -290,13 +309,52 @@ func PagePlayerMailList(page int32, pms []*mdmail.PlayerMail) ([]*mdmail.PlayerM
 	if pageStart > int(count) {
 		return nil, int32(count), total
 	}
-	for i, u := range pms {
+	for i, pm := range pms {
 		index := i + 1
 		if index <= pageStart || index > pageEnd {
 			continue
 		}
-		pageList = append(pageList, u)
+		pageList = append(pageList, pm)
 	}
 
 	return pageList, int32(count), total
+}
+
+func GetAndRefreshPlayerMailByID(uid int32) []*mdgame.PlayerMail {
+	var curson uint64
+	var pms []*mdgame.PlayerMail
+	var count int64
+	count = 999
+	key := PlayerMailHKey()
+	match := fmt.Sprintf("uid:%d-*", uid)
+
+	for {
+		scan := cache.KV().HScan(key, curson, match, count)
+		keysValues, cur, err := scan.Result()
+		if err != nil {
+			log.Err("list player mail list failed", err)
+			continue
+		}
+		for i, pmStr := range keysValues {
+			if i%2 == 1 {
+				pm := &mdgame.PlayerMail{}
+				if err := json.Unmarshal([]byte(pmStr), &pm); err != nil {
+					log.Err("get player mail unmarshal err str:%s,err:%v", pmStr, err)
+					continue
+				}
+				pms = append(pms, pm)
+			}
+		}
+		curson = cur
+		if curson == 0 {
+			break
+		}
+	}
+
+	return pms
+}
+
+func GetPlayerMailByID(page int32, uid int32) ([]*mdgame.PlayerMail, int32, int32) {
+	pms := GetAndRefreshPlayerMailByID(uid)
+	return PagePlayerMailList(page, pms)
 }

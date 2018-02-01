@@ -197,4 +197,7 @@ const (
 const (
 	MsgNewMailNotice     = "NewMailNotice"
 	MsgNewMailNoticeCode = 210101
+
+	MsgSendSysMail     = "NewSendSysMail"
+	MsgSendSysMailCode = 210102
 )

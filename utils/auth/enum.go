@@ -2,6 +2,11 @@ package auth
 
 import "time"
 
+const (
+	SystemOpUserID = 100000
+	SystemOpUserName = "财神棋牌客服"
+)
+
 const RightsNone = 0
 const SessionExpireTime = 1800 * time.Second
 

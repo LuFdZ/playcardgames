@@ -9,6 +9,7 @@ import (
 	"playcards/utils/errors"
 	"playcards/utils/log"
 	"github.com/Masterminds/squirrel"
+	"fmt"
 )
 
 func CreateMailInfo(tx *gorm.DB, mdmi *mdmail.MailInfo) (*mdmail.MailInfo, error) {
@@ -59,15 +60,15 @@ func UpdateMailSendLog(tx *gorm.DB, mdmsl *mdmail.MailSendLog) (*mdmail.MailSend
 	if err := tx.Model(mdmsl).Updates(msl).Error; err != nil {
 		return nil, errors.Internal("update mail send log failed", err)
 	}
-	return msl, nil
+	return mdmsl, nil
 }
 
-func GetAllUser(tx *gorm.DB) []int32 {
+func GetAllUser(tx *gorm.DB,channel string) []int32 {
 	var (
 		ids []int32
 	)
 	sql, param, err := squirrel.
-	Select(" user_id").From("users").ToSql()
+	Select(" user_id").From("users").Where("channel = ?",channel).ToSql()
 	if err != nil {
 		log.Err("install player mails get user id squirrel failed")
 	}
@@ -80,24 +81,32 @@ func GetAllUser(tx *gorm.DB) []int32 {
 }
 
 func CreatePlayerMails(tx *gorm.DB, mdpms []*mdmail.PlayerMail, mdmsl *mdmail.MailSendLog) {
+	fmt.Sprintf("AAAAACreatePlayerMails\n")
 	now := gorm.NowFunc()
 	var count int32 = 0
 	for _, mdpm := range mdpms {
 		mdpm.UpdatedAt = &now
 		mdpm.CreatedAt = &now
 		if err := tx.Create(mdpm).Error; err != nil {
+			return
 			log.Err("create player mail failed! uid:%d,send_log_id:%d,err:%+v", mdpm.UserID, mdpm.SendLogID, err)
 		}
-		if err := cachemail.SetPlayerMail(mdpm).Error; err != nil {
+		fmt.Printf("AAAACreatePlayerMails\n")
+		err := cachemail.SetPlayerMail(mdpm)
+		if err != nil {
+			return
 			log.Err("create player mail redis failed! uid:%d,send_log_id:%d,err:%+v", mdpm.UserID, mdpm.SendLogID, err)
 		}
+		fmt.Printf("BBBBCreatePlayerMails\n")
 		count ++
 	}
 	mdmsl.SendCount = count
 	mdmsl.TotalCount = int32(len(mdpms))
-	mdmsl, _ = UpdateMailSendLog(tx, mdmsl)
-	if err := cachemail.SetMailSendLog(mdmsl).Error; err != nil {
-		log.Err("create mail send log redis failed! send log ID:%d,err:%+v", mdmsl.SendLogID, err)
+	_, _ = UpdateMailSendLog(tx, mdmsl)
+	err := cachemail.SetMailSendLog(mdmsl)
+	if err != nil {
+		log.Err("create mail send log redis failed! send log ID:%d,err:%+v", mdmsl.LogID, err)
+		return
 	}
 }
 
@@ -135,6 +144,18 @@ func PageMailSendLogs(tx *gorm.DB, page *mdpage.PageOption,
 	return out, rows, nil
 }
 
+func PagePlayerMails(tx *gorm.DB, page *mdpage.PageOption,
+	n *mdmail.PlayerMail) ([]*mdmail.PlayerMail, int64, error) {
+	var out []*mdmail.PlayerMail
+	rows, rtx := page.Find(tx.Model(n).Order("created_at desc").
+		Where(n), &out)
+	if rtx.Error != nil {
+		return nil, 0, errors.Internal("page player mail log failed", rtx.Error)
+	}
+	return out, rows, nil
+}
+
+
 func GetMailInfos(tx *gorm.DB) ([]*mdmail.MailInfo, error) {
 	var (
 		out []*mdmail.MailInfo
@@ -166,4 +187,22 @@ func GetPlayerMails(tx *gorm.DB) ([]*mdmail.PlayerMail, error) {
 		return nil, errors.Internal("select mail player list failed", err)
 	}
 	return out, nil
+}
+
+func CleanOverdueByCreateAt(tx *gorm.DB) error {
+	if err := tx.Model(&mdmail.MailSendLog{}).
+		Where("status < ? and created_at <  date_sub(curdate(),interval ? day)",
+		enummail.MailSendOverdue,enummail.MailSendLogMaxNumber).
+		UpdateColumn("status", enummail.MailSendOverdue).
+		Error; err != nil {
+		return errors.Internal("update player room play times failed", err)
+	}
+	if err := tx.Model(&mdmail.PlayerMail{}).
+		Where("status < ? and created_at <  date_sub(curdate(),interval ? day)",
+		enummail.PlayermailReadClose,enummail.PlayerMailMaxNumber).
+		UpdateColumn("status", enummail.PlayermailOverdue).
+		Error; err != nil {
+		return errors.Internal("update player room play times failed", err)
+	}
+	return nil
 }

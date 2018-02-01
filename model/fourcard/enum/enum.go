@@ -56,4 +56,4 @@ const (
 var FourCardCardType = [...]int32{10, 20, 30, 40, 50, 60, 70, 80, 90,
 	100, 110}
 
-var BetScoreMap = map[int32]int32{1: 5, 2: 10, 3: 15, 4: 20, 5: 25}
+//var BetScoreMap = map[int32]int32{1: 1, 2: 10, 3: 15, 4: 20, 5: 25}

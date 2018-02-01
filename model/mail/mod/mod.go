@@ -5,26 +5,25 @@ import (
 	pbmail "playcards/proto/mail"
 	//cachegame "playcards/model/mail/cache"
 	enumgame "playcards/model/mail/enum"
-	//errgame "playcards/model/mail/errors"
 	mdtime "playcards/model/time"
 	"time"
 	"github.com/jinzhu/gorm"
 )
 
 type MailInfo struct {
-	MailID      int32
+	MailID      int32 `gorm:"primary_key"`
 	MailName    string
 	MailTitle   string
 	MailContent string
 	MailType    int32
-	Status     int32
+	Status      int32
 	ItemList    string
 	CreatedAt   *time.Time
 	UpdatedAt   *time.Time
 }
 
 type MailSendLog struct {
-	SendLogID  int32
+	LogID      int32 `gorm:"primary_key"`
 	MailID     int32
 	SendID     int32
 	MailType   int32
@@ -38,16 +37,16 @@ type MailSendLog struct {
 }
 
 type PlayerMail struct {
-	PlayerMailID int32
-	SendLogID    int32
-	MailID       int32
-	UserID       int32
-	SendID       int32
-	MailType     int32
-	Status       int32
-	HaveItem     int32
-	CreatedAt    *time.Time
-	UpdatedAt    *time.Time
+	LogID     int32 `gorm:"primary_key"`
+	SendLogID int32
+	MailID    int32
+	UserID    int32
+	SendID    int32
+	MailType  int32
+	Status    int32
+	HaveItem  int32
+	CreatedAt *time.Time
+	UpdatedAt *time.Time
 }
 
 func (mi *MailInfo) ToProto() *pbmail.MailInfo {
@@ -65,7 +64,7 @@ func (mi *MailInfo) ToProto() *pbmail.MailInfo {
 
 func (msl *MailSendLog) ToProto() *pbmail.MailSendLog {
 	return &pbmail.MailSendLog{
-		SendLogID:  msl.SendLogID,
+		LogID:      msl.LogID,
 		MailID:     msl.MailID,
 		SendID:     msl.SendID,
 		MailType:   msl.MailType,
@@ -78,28 +77,28 @@ func (msl *MailSendLog) ToProto() *pbmail.MailSendLog {
 	}
 }
 
-func (pm *PlayerMail) ToProto() (*pbmail.PlayerMail, error) {
+func (pm *PlayerMail) ToProto() *pbmail.PlayerMail {
 	out := &pbmail.PlayerMail{
-		PlayerMailID: pm.PlayerMailID,
-		SendLogID:    pm.SendLogID,
-		UserID:       pm.UserID,
-		MailType:     pm.MailType,
-		Status:       pm.Status,
-		CreatedAt:    mdtime.TimeToProto(pm.CreatedAt),
+		LogID:     pm.LogID,
+		SendLogID: pm.SendLogID,
+		UserID:    pm.UserID,
+		MailType:  pm.MailType,
+		Status:    pm.Status,
+		CreatedAt: mdtime.TimeToProto(pm.CreatedAt),
 	}
 	//if pm.MailType == enumgame.MailTypeSysMode {
 	//	msl, err := cachegame.GetMailSendLog(pm.SendLogID)
 	//	if err != nil {
-	//		return nil, err
+	//		return out
 	//	}
 	//	if msl == nil {
-	//		return nil, errgame.ErrMailInfoNotFind
+	//		return out
 	//	}
 	//	out.MailTitle = msl.MailInfo.MailTitle
 	//	out.MailContent = msl.MailInfo.MailContent
 	//	out.ItemList = msl.MailInfo.ItemList
 	//}
-	return out, nil
+	return out
 }
 
 func (msl *MailSendLog) BeforeCreate(scope *gorm.Scope) error {
@@ -143,11 +142,22 @@ func MailInfoFromProto(mi *pbmail.MailInfo) *MailInfo {
 
 func SendMailLogFromProto(msl *pbmail.MailSendLog) *MailSendLog {
 	out := &MailSendLog{
-		MailID     :msl.MailID,
-		MailType   :msl.MailType,
+		MailID:   msl.MailID,
+		MailType: msl.MailType,
 	}
-	if out.MailType != enumgame.MailTypeSysMode{
+	if out.MailType != enumgame.MailTypeSysMode {
 		out.MailInfo = MailInfoFromProto(msl.MailInfo)
+	}
+	return out
+}
+
+func PlayerMailFromProto(msl *pbmail.PlayerMail) *PlayerMail {
+	out := &PlayerMail{
+		LogID     :msl.LogID,
+		SendLogID :msl.SendLogID,
+		UserID    :msl.UserID,
+		SendID    :msl.SendLogID,
+		MailType  :msl.MailType,
 	}
 	return out
 }

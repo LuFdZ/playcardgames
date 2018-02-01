@@ -75,7 +75,8 @@ func (uc *UserCard) ToProto() *pbfour.UserCard {
 	return &pbfour.UserCard{
 		CardType: tools.IntToString(uc.CardType),
 		CardList: uc.CardList,
-		Score:    tools.IntToString(uc.Score),
+		Value:    tools.IntToString(uc.Score),
+		ScoreWin: tools.IntToString(uc.Win),
 	}
 }
 
@@ -83,7 +84,7 @@ func (ur *UserInfo) ToProto() *pbfour.UserInfo {
 	out := &pbfour.UserInfo{
 		UserID:     ur.UserID,
 		Status:     ur.Status,
-		Bet:        enumfour.BetScoreMap[ur.Bet],
+		Bet:        ur.Bet, //enumfour.BetScoreMap[ur.Bet],
 		Role:       ur.Role,
 		TotalScore: tools.IntToString(ur.TotalScore),
 		CardList:   ur.CardList,

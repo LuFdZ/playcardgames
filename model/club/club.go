@@ -64,7 +64,7 @@ func CreateClub(name string, creatorid int32, creatorproxy int32) error {
 }
 
 func GetClubFromDB(cid int32) (*mdclub.Club, error) {
-	return dbclub.GetLockClub(db.DB(),cid)
+	return dbclub.GetLockClub(db.DB(), cid)
 }
 
 func SetClubBalance(amonut int64, amonuttype int32, clubid int32, typeid int32, foreign int64, opid int64) error {
@@ -162,14 +162,14 @@ func RemoveClubMember(clubid int32, uid int32, removeType int32) error {
 	return nil
 }
 
-func CreateClubMember(clubid int32, uid int32) (*mduser.User, error) { //muser *mduser.User
+func CreateClubMember(clubid int32, uid int32) (*mdclub.Club, *mduser.User, error) { //muser *mduser.User
 	_, muser := cacheuser.GetUserByID(uid)
 	if muser == nil {
-		return nil, errcon.ErrUserErr
+		return nil, nil, errcon.ErrUserErr
 	}
 	mClub, err := CheckUserJoinClubRoom(clubid, muser)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	mcm := &mdclub.ClubMember{
 		UserID: muser.UserID,
@@ -199,19 +199,18 @@ func CreateClubMember(clubid int32, uid int32) (*mduser.User, error) { //muser *
 		return nil
 	})
 	if err != nil {
-		return nil, nil
+		return nil, nil, nil
 	}
 
 	err = cacheuser.SimpleUpdateUser(muser)
 	if err != nil {
-		return nil, nil
+		return nil, nil, nil
 	}
 	err = cacheclub.SetClubMember(mcm)
 	if err != nil {
-		return nil, nil
+		return nil, nil, nil
 	}
-
-	return muser, nil
+	return mClub, muser, nil
 }
 
 func CheckUserJoinClubRoom(clubid int32, muser *mduser.User) (*mdclub.Club, error) {
@@ -300,16 +299,16 @@ func SetBlackList(clubid int32, uid int32, opid int32) error {
 	return nil
 }
 
-func UpdateClubExamine(clubid int32, uid int32, status int32, opid int32) error {
+func UpdateClubExamine(clubid int32, uid int32, status int32, opid int32) (*mdclub.Club, error) {
 	err := common.UpdateExamine(enumcon.TypeClub, clubid, uid, status, opid)
 	if err != nil {
-		return err
+		return nil, err
 	}
-	_, err = CreateClubMember(clubid, uid)
+	maClub,_, err := CreateClubMember(clubid, uid)
 	if err != nil {
-		return err
+		return nil, err
 	}
-	return nil
+	return maClub, nil
 }
 
 func GetClub(muser *mduser.User) (*pbclub.ClubInfo, error) {
@@ -388,7 +387,7 @@ func PageClubMember(page *mdpage.PageOption, mem *mdclub.ClubMember) (
 	return dbclub.PageClubMember(db.DB(), page, mem)
 }
 
-func PageClubRoom(clubid int32, page int32, pagesize int32,flag int32) (
+func PageClubRoom(clubid int32, page int32, pagesize int32, flag int32) (
 	[]*pbroom.Room, error) {
 	if page < 1 {
 		page = 1
@@ -396,10 +395,10 @@ func PageClubRoom(clubid int32, page int32, pagesize int32,flag int32) (
 	if pagesize < 1 {
 		pagesize = 20
 	}
-	if flag == 0{
+	if flag == 0 {
 		flag = 2
 	}
-	rooms, err := dbroom.PageRoomList(db.DB(), clubid, page, pagesize,flag)
+	rooms, err := dbroom.PageRoomList(db.DB(), clubid, page, pagesize, flag)
 	if err != nil {
 		return nil, err
 	}

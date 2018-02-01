@@ -43,3 +43,8 @@ const (
 	TypeGold = 1
 	TypeDiamond =2
 )
+
+const (
+	MailClubJoin   = 1101
+	MailClubUnJoin = 1102
+)

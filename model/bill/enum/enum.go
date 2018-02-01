@@ -7,6 +7,7 @@ const (
 	JournalTypeInvited
 	JournalTypeShare
 	JournalTypeClubRecharge
+	JournalTypeMailTitem
 )
 
 const (
@@ -20,6 +21,7 @@ const (
 	JournalTypeFourCardFreeze = 400102
 )
 
+
 const (
 	UserBalanceTableName = "balances"
 	JournalTableName     = "journals"
@@ -30,10 +32,10 @@ const (
 	TypeDiamond = 2
 )
 
-const (
-	SystemOpUserID = 100000
-	SystemOpUserName = "财神棋牌客服"
-)
+//const (
+//	SystemOpUserID = 100000
+//	SystemOpUserName = "财神棋牌客服"
+//)
 
 const (
 	OrderFail    = 0
@@ -48,4 +50,13 @@ const (
 const (
 	TypeUser = 1
 	TypeClub = 2
+)
+
+const (
+	MailRecharge   = 1001
+)
+
+const (
+	NameGold    = "金币"
+	NameDiamond = "钻石"
 )

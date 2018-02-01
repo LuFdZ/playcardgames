@@ -23,7 +23,8 @@ message UserInfo {
 message UserCard {
     string CardType = 1; //牌型
     repeated string CardList = 2; //牌组列表
-    string Score = 3; //牌组得分
+    string Value = 3; //牌组得分
+    string ScoreWin = 4; //输赢得分
 }
 
 //随机开始玩家结构体

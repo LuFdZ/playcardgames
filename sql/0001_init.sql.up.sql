@@ -185,6 +185,7 @@ CREATE TABLE `player_rooms` (
   `user_id`    INT      NOT NULL DEFAULT '0',
   `room_id`    INT               DEFAULT NULL DEFAULT '0',
   `game_type`  INT               DEFAULT NULL DEFAULT '0',
+  `room_type`  INT               DEFAULT NULL DEFAULT '0',
   `play_times` INT               DEFAULT NULL DEFAULT '0',
   `created_at` DATETIME NOT NULL,
   `updated_at` DATETIME NOT NULL,
@@ -365,6 +366,7 @@ CREATE TABLE `examines` (
   ENGINE = InnoDB
   AUTO_INCREMENT = 1
   DEFAULT CHARSET = utf8;
+
 
 
 INSERT INTO users VALUES

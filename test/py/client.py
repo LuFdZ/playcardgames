@@ -8,6 +8,8 @@ import time
 Host = "http://127.0.0.1:8080"
 
 
+# Host = "http://game.372124.com:8888"
+
 class Client(object):
     def __init__(self, name, opid, unid, host=Host):
         self.token = ""
@@ -76,6 +78,7 @@ class Client(object):
         websocket.enableTrace(True)
         self.ws = websocket.WebSocketApp(
             "ws://localhost:8999/stream",
+            # "ws://game.372124.com:8888/stream",
             on_message=on_message,
             on_error=on_error,
             on_close=on_close,
@@ -138,8 +141,8 @@ class Client(object):
     def UnSubscribeClub(self):
         self.StreamSend("UnSubscribeClubMessage", {})
 
-    def ClinetHearbeat(self):
-        self.StreamSend("ClinetHearbeat", 3423424)
+    def ClientHeartbeat(self):
+        self.StreamSend("ClientHeartbeat", 3423424)
 
     def WebScoket(self):
         self.StreamSend("UserWebScoketList", {})
@@ -285,11 +288,12 @@ class Client(object):
     充值相关操作
     """
 
-    def Recharge(self, uid, diamond, orderCode):
+    def Recharge(self, uid, diamond, orderCode, ctype):
         ul = self.Request("/bill/billSrv/Recharge", {
             "UserID": uid,
             "Diamond": diamond,
             "OrderID": orderCode,
+            "CoinType": ctype,
         })
         return ul
 
@@ -641,13 +645,13 @@ class Client(object):
     四张相关操作
     """
 
-    def CRFour(self, roomType, maxNumber, roundNumber, scoreType, betType):
+    def CRFour(self, roomType, maxNumber, roundNumber):  # , scoreType, betType
         ul = self.Request("/room/roomSrv/CreateRoom", {
             "RoundNumber": roundNumber,
             "MaxNumber": maxNumber,
             "GameType": 1004,
             "RoomType": roomType,
-            "GameParam": '{\"ScoreType\":%d,\"BetType\":%d}' % (scoreType) % (betType)
+            "GameParam": '{\"ScoreType\":2,\"BetType\":2}'  # % (scoreType) % (betType)
         })
         return ul
 
@@ -657,19 +661,26 @@ class Client(object):
         })
         return ul
 
-    def SCFour(self):
+    def SCFourA(self):
         ul = self.Request("/fourcard/FourCardSrv/SubmitCard", {
-            "Head": ['1_8', '3_8'],
-            "Tail": ['1_4', '3_4']
+            "Head": ['3_2', '3_9'],
+            "Tail": ['3_3', '4_4']
+        })
+        return ul
+
+    def SCFourB(self):
+        ul = self.Request("/fourcard/FourCardSrv/SubmitCard", {
+            "Head": ['3_6', '4_10'],
+            "Tail": ['1_6', '3_10']
         })
         return ul
 
     """
-    四张相关操作
+    邮件相关操作
     """
 
     def SendMail(self):
-        ul = self.Request("/mail/mailSrv/SendMail", {
+        ul = self.Request("/mail/MailSrv/SendSysMail", {
             "MailSend": {
                 "MailID": 1001,
                 "SendID": 100000,
@@ -677,6 +688,32 @@ class Client(object):
                 "MailInfo": None,
             },
             "SendAll": 0,
-            "Ids":[100001,100002,100003]
+            "Ids": [100001, 100002, 100003, 112020]
         })
         return ul
+
+    def PagePlayerMail(self, page):
+        ul = self.Request("/mail/mailSrv/PagePlayerMail", {
+            "Page": page,
+        })
+        return ul
+
+    def GetMailItems(self, logID):
+        ul = self.Request("/mail/mailSrv/GetMailItems", {
+            "LogID": logID,
+        })
+        return ul
+
+    def PagePlayerMail(self, page):
+        ul = self.Request("/mail/MailSrv/PagePlayerMail", {
+            "Page": page,
+        })
+        return ul
+
+    def ReadMail(self, logid):
+        ul = self.Request("/mail/MailSrv/ReadMail", {
+            "LogID": logid,
+        })
+        return ul
+
+
