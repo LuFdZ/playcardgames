@@ -36,14 +36,18 @@ type Room struct {
 	ClubID         int32
 	Cost           int64
 	CostType       int32
+	Level          int32
 	ShuffleAt      *time.Time        `gorm:"-"`
+	ReadyAt        *time.Time        `gorm:"-"`
 	StartMaxNumber int32             `gorm:"-"`
 	UserResults    []*GameUserResult `gorm:"-"`
 	Users          []*RoomUser       `gorm:"-"`
 	GiveupGame     GiveUpGameResult  `gorm:"-"`
 	HasNotice      bool              `gorm:"-"`
 	SearchKey      string            `gorm:"-"`
+	ReadyUserMap   map[int32]int64   `gorm:"-"`
 	Ids            []int32           `gorm:"-"`
+	PlayerIds      []int32           `gorm:"-"`
 }
 
 type GiveUpGameResult struct {
@@ -57,15 +61,21 @@ type UserState struct {
 }
 
 type RoomUser struct {
-	UserID    int32
-	Nickname  string
-	Ready     int32
-	Position  int32
-	Icon      string
-	Sex       int32
-	Role      int32
-	UpdatedAt *time.Time
-	Location  string
+	UserID       int32
+	Nickname     string
+	Ready        int32
+	Position     int32
+	Icon         string
+	Sex          int32
+	Role         int32
+	UpdatedAt    *time.Time
+	Location     string
+	Online       int32
+	Type         int32
+	ResultAmount int64
+	CoinType     int32
+	Join         int32
+	Gold         int64
 }
 
 type GameUserResult struct {
@@ -136,7 +146,19 @@ type DoudizhuRoomParam struct {
 
 type FourCardRoomParam struct {
 	ScoreType int32
-	BetType int32
+	BetType   int32
+}
+
+type PlayerSpecialGameRecord struct {
+	GameID     int32
+	RoomID     int32
+	GameType   int32
+	RoomType   int32
+	Password   string
+	UserID     int32
+	GameResult string
+	CreatedAt  *time.Time
+	UpdatedAt  *time.Time
 }
 
 //func (r *Room) String() string {
@@ -213,6 +235,7 @@ func (r *RoomUser) ToProto() *pbr.RoomUser {
 		Ready:    r.Ready,
 		Position: r.Position,
 		Role:     r.Role,
+		Gold:     r.Gold,
 	}
 	_, u := cacheuser.GetUserByID(r.UserID)
 	if u != nil {
@@ -220,6 +243,12 @@ func (r *RoomUser) ToProto() *pbr.RoomUser {
 		mRu.Icon = u.Icon
 		mRu.Sex = u.Sex
 		mRu.Location = u.Location
+		mRu.Online = cacheuser.GetUserOnlineStatus(r.UserID)
+	}
+	if r.Type == enumr.Robot {
+		mRu.Nickname = r.Nickname
+		mRu.Sex = r.Sex
+		mRu.Online = 1
 	}
 	return mRu
 }
@@ -300,6 +329,33 @@ func (cre *CheckRoomExist) ToProto() *pbr.CheckRoomExistReply {
 	//	GiveupResult: cre.GiveupResult.ToProto(),
 	//	GameResult:   cre.GameResult.ToProto(),
 	//}
+}
+
+func (psgr *PlayerSpecialGameRecord) ToProto() *pbr.PlayerSpecialGameRecord {
+	out := &pbr.PlayerSpecialGameRecord{
+		GameID:     psgr.GameID,
+		RoomID:     psgr.RoomID,
+		GameType:   psgr.GameType,
+		RoomType:   psgr.RoomType,
+		Password:   psgr.Password,
+		UserID:     psgr.UserID,
+		GameResult: psgr.GameResult,
+		CreatedAt:  mdtime.TimeToProto(psgr.CreatedAt),
+		UpdatedAt:  mdtime.TimeToProto(psgr.UpdatedAt),
+	}
+	return out
+}
+
+func GameRecordFromProto(psgr *pbr.PlayerSpecialGameRecord) *PlayerSpecialGameRecord {
+	out := &PlayerSpecialGameRecord{
+		GameID:   psgr.GameID,
+		RoomID:   psgr.RoomID,
+		GameType: psgr.GameType,
+		RoomType: psgr.RoomType,
+		Password: psgr.Password,
+		UserID:   psgr.UserID,
+	}
+	return out
 }
 
 func (r *Room) BeforeUpdate(scope *gorm.Scope) error {

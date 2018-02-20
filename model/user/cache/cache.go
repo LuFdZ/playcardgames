@@ -17,6 +17,7 @@ import (
 	"github.com/twinj/uuid"
 	"gopkg.in/redis.v5"
 	"time"
+	"playcards/utils/tools"
 )
 
 func UserHKey(uid int32) string {
@@ -45,6 +46,18 @@ func UserNumberHKey() string {
 
 func UserHKeySearch() string {
 	return cache.KeyPrefix("USER:*")
+}
+
+func RobotMap() string {
+	return cache.KeyPrefix("ROBOTMAP")
+}
+
+//func RobotHKey(uid int32,nickName string) string {
+//	return fmt.Sprintf("%d:%s", uid, nickName)
+//}
+
+func RobotUsingMap() string {
+	return cache.KeyPrefix("ROBOTUSINGMAP")
 }
 
 func UserIDFromToken(token string) (int32, error) {
@@ -153,6 +166,10 @@ func UpdateUserHeartbeat(uid int32) error {
 	f := func(tx *redis.Tx) error {
 		tx.Pipelined(func(p *redis.Pipeline) error {
 			tx.HSet(key, "heartbeat", time.Now().Unix())
+
+			index := uid - 100000 - 1
+			tx.SetBit(UserOnlineHKey(), int64(index), 1)
+
 			return nil
 		})
 		return nil
@@ -316,7 +333,7 @@ func GetUserHeartbeats() map[int32]int64 {
 		}
 		hearbeat, err := GetUserHeartbeat(userID)
 		if err != nil {
-			if err == redis.Nil{
+			if err == redis.Nil {
 				UpdateUserHeartbeat(userID)
 			}
 			log.Err("list user heartbeat failed,uid:%d,err:%v", userID, err)
@@ -395,8 +412,9 @@ func SetUserOnlineStatus(uid int32, status int) error {
 	}
 	err := cache.KV().Watch(f, key)
 	if err != nil {
-		return errors.Internal("set user wx info error", err)
+		return errors.Internal("set user online status error", err)
 	}
+	//log.Debug("AAAASetUserOnlineStatus:%d|%d\n",uid,status)
 	return nil
 }
 
@@ -447,4 +465,152 @@ func GetUserNumber() int64 {
 	val := cache.KV().HGet(key, "count").Val()
 	count, _ := strconv.ParseInt(val, 10, 32)
 	return count
+}
+
+func SetRobot(mdu *mdu.User) error {
+	key := RobotMap()
+	//subKey := RobotHKey(mdu.UserID,mdu.Nickname)
+	f := func(tx *redis.Tx) error {
+		tx.Pipelined(func(p *redis.Pipeline) error {
+			u, _ := json.Marshal(mdu)
+			tx.HSet(key, mdu.Nickname, u)
+			return nil
+		})
+		return nil
+	}
+	err := cache.KV().Watch(f, key)
+	if err != nil {
+		return errors.Internal("set user wx info error", err)
+	}
+	return nil
+}
+
+func DeleteRobots() error {
+	key := RobotMap()
+	f := func(tx *redis.Tx) error {
+		tx.Pipelined(func(p *redis.Pipeline) error {
+			tx.Del(key)
+			return nil
+		})
+		return nil
+	}
+	err := cache.KV().Watch(f, key)
+	if err != nil {
+		return errors.Internal("delete robots error", err)
+	}
+	return nil
+}
+
+func SetRobots(us []*mdu.User) error {
+	DeleteRobots()
+	var key string
+	f := func(tx *redis.Tx) error {
+		key = RobotMap()
+		tx.Pipelined(func(p *redis.Pipeline) error {
+			for _, u := range us {
+				//subkey := RobotHKey(u.UserID,u.Password)
+				r, _ := json.Marshal(u)
+				tx.HSet(key, u.Nickname, string(r))
+			}
+			return nil
+		})
+		return nil
+	}
+	if err := cache.KV().Watch(f, key); err != nil {
+		return errors.Internal("set robots list failed", err)
+	}
+	log.Info("redis reset all robots")
+	return nil
+}
+
+func SetRobotUsing(uid int32) error {
+	key := RobotUsingMap()
+	f := func(tx *redis.Tx) error {
+		key = RobotMap()
+		tx.Pipelined(func(p *redis.Pipeline) error {
+			tx.HSet(key, tools.IntToString(uid), time.Now().Unix())
+			return nil
+		})
+		return nil
+	}
+	if err := cache.KV().Watch(f, key); err != nil {
+		return errors.Internal("set robots using failed", err)
+	}
+	return nil
+}
+
+func DeleteUsingRobot(uid int32) error {
+	key := RobotUsingMap()
+	f := func(tx *redis.Tx) error {
+		tx.Pipelined(func(p *redis.Pipeline) error {
+			tx.HDel(key, tools.IntToString(uid))
+			return nil
+		})
+		return nil
+	}
+	err := cache.KV().Watch(f, key)
+	if err != nil {
+		return errors.Internal("delete using robot error", err)
+	}
+	return nil
+}
+
+func CheckExistRobot(nickname string) bool {
+	key := RobotMap()
+	return cache.KV().HExists(key, nickname).Val()
+}
+
+func CheckExistUsingRobot(uid int32) bool {
+	key := RobotUsingMap()
+	val := cache.KV().HGet(key, tools.IntToString(uid)).Val()
+	if len(val) == 0 {
+		return false
+	}
+	//被使用机器人存在时间超过一小时，从被占用记录中删除
+	subTime := time.Now().Unix()  - tools.StringParseInt64(val)
+	fmt.Printf("CheckExistUsingRobot:%f|%f|%f\n",time.Now().Unix() , tools.StringParseInt64(val),subTime)
+	if subTime > 360{
+		err := DeleteUsingRobot(uid)
+		if err != nil{
+			log.Err("check exist using robot overdue delete fail err:%d",err)
+			return true
+		}
+	}
+	//cache.KV().HExists(key, tools.IntToString(uid)).Val()
+	return true
+}
+
+func GetRobot() (*mdu.User, error) {
+	var curson uint64
+	var count int64
+	count = 100
+
+	for {
+		scan := cache.KV().HScan(RobotMap(), curson, "*", count)
+		keys, cur, err := scan.Result()
+		if err != nil {
+			return nil, errors.Internal("list users failed", err)
+		}
+		for i, ustr := range keys {
+			if i%2 == 1 {
+				u := &mdu.User{}
+				//room, err := GetRoom(k)
+
+				if err = json.Unmarshal([]byte(ustr), u); err != nil {
+					log.Err("redis get room err: str:%s,err:%v", ustr, err)
+					continue
+				}
+				if CheckExistUsingRobot(u.UserID) {
+					continue
+				}
+				SetRobotUsing(u.UserID)
+				return u, nil
+			}
+		}
+		curson = cur
+		if curson == 0 {
+			break
+		}
+	}
+	return nil, nil
 }

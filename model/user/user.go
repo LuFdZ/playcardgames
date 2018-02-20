@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
-	"playcards/model/bill"
 	dbbill "playcards/model/bill/db"
 	mdpage "playcards/model/page"
 	cacheuser "playcards/model/user/cache"
@@ -15,6 +14,7 @@ import (
 	"playcards/model/user/enum"
 	erru "playcards/model/user/errors"
 	mdu "playcards/model/user/mod"
+	"math/rand"
 	"playcards/utils/auth"
 	"playcards/utils/db"
 	"playcards/utils/log"
@@ -24,6 +24,7 @@ import (
 	"github.com/asaskevich/govalidator"
 	"github.com/jinzhu/gorm"
 	"gopkg.in/go-playground/validator.v8"
+	"playcards/utils/tools"
 )
 
 var registerValid *validator.Validate
@@ -32,26 +33,43 @@ func init() {
 	registerValid = validator.New(&validator.Config{TagName: "reg"})
 }
 
-func TestRegisterUser() {
-	for i := 1; i < 4005; i++ {
-		index := fmt.Sprintf("Tuser%d", i)
-		u := &mdu.User{
-			Username: index,
-			Nickname: index,
-			Type:     1,
-			Password: "123456",
-			OpenID:   index,
-			Email:    fmt.Sprintf("%dtest123456@x.com", i),
-			Sex:      2,
-			UnionID:  index,
-		}
-		_, err := Register(u)
-		if err != nil {
-			log.Err("TestRegisterUserErr:%v\n", err)
-			continue
-		}
+func GetRobotNickName() string {
+	rand.Seed(time.Now().UnixNano())
+	nickname := enum.FirsnameList[tools.GenerateRangeNum(0, len(enum.FirsnameList))] +
+		enum.NameList[tools.GenerateRangeNum(0, len(enum.NameList))]
+	nickname = mdu.EncodNickName(nickname)
+	return nickname
+}
 
+func RegisterRobotUser(count int32) {
+	var i int32 = 0
+
+	f := func(tx *gorm.DB) error {
+		for ; i < count; i++ {
+			index := fmt.Sprintf("Robot:%d:%d", i, time.Now().Nanosecond()/1000)
+			nickname := GetRobotNickName()
+			exist := cacheuser.CheckExistRobot(nickname)
+			for i := 0; exist && i < 3; i++ {
+				nickname = GetRobotNickName()
+				exist = cacheuser.CheckExistRobot(nickname)
+			}
+			u := &mdu.User{
+				Username: index,
+				Nickname: nickname,
+				Type:     enum.Robot,
+				OpenID:   index,
+				Sex:      i%2 + 1,
+			}
+			_, err := dbu.AddUser(tx, u)
+			cacheuser.SetRobot(u)
+			if err != nil {
+				log.Err("register robot user index:%d,robot:%+v,err:%v\n", i, u, err)
+				continue
+			}
+		}
+		return nil
 	}
+	go db.Transaction(f)
 }
 
 func Register(u *mdu.User) (int32, error) {
@@ -69,6 +87,7 @@ func Register(u *mdu.User) (int32, error) {
 	// TODO: delete this before release
 	u.Rights = auth.RightsAdmin
 	u.OpenID = u.Username
+	u.Type = enum.Player
 	f := func(tx *gorm.DB) error {
 		uid, err = dbu.AddUser(tx, u)
 		if err != nil {
@@ -85,7 +104,7 @@ func Register(u *mdu.User) (int32, error) {
 	return uid, err
 }
 
-func Login(u *mdu.User, address string) (*mdu.User, int64, error) {
+func Login(u *mdu.User, address string) (*mdu.User, error) {
 	var nu *mdu.User
 	var err error
 	//if u.Username == "liufangzhou"{
@@ -93,12 +112,12 @@ func Login(u *mdu.User, address string) (*mdu.User, int64, error) {
 	//}
 	_, err = govalidator.ValidateStruct(u)
 	if err != nil {
-		return nil, 0, erru.ErrInvalidUserInfo
+		return nil,erru.ErrInvalidUserInfo
 	}
 
 	hash := sha256.Sum256([]byte(u.Password + enum.Salt))
 	u.Password = fmt.Sprintf("%x", hash)
-	var diamond int64
+	//var diamond int64
 	f := func(tx *gorm.DB) error {
 		nu, err = dbu.GetUser(tx, &mdu.User{
 			Username: u.Username,
@@ -128,25 +147,25 @@ func Login(u *mdu.User, address string) (*mdu.User, int64, error) {
 			return err
 		}
 		//nu.Diamond = balance.Diamond
-		balance, _ := bill.GetUserBalance(nu.UserID, 2)
-		diamond = balance.Balance
+		//balance, _ := bill.GetUserBalance(nu.UserID, 2)
+		//diamond = balance.Balance
 		return nil
 	}
 
 	err = db.Transaction(f)
 	if err != nil {
-		return nil, 0, err
+		return nil,err
 	}
-	return nu, diamond, nil
+	return nu, nil
 }
 
 func GetUser(u *mdu.User) (*mdu.User, error) {
 	return dbu.GetUser(db.DB(), u)
 }
 
-func PageUserList(page *mdpage.PageOption, u *mdu.User) ([]*mdu.User, int64,
+func PageUserList(page *mdpage.PageOption, u *mdu.User,sort int32) ([]*mdu.User, int64,
 	error) {
-	return dbu.PageUserList(db.DB(), page, u)
+	return dbu.PageUserList(db.DB(), page, u,sort)
 }
 
 func UpdateUser(u *mdu.User) (*mdu.User, error) {
@@ -291,10 +310,10 @@ func GetAndCheckWXToken(openid string) (*mdu.AccessTokenResponse, error) {
 	return accesstoken, nil
 }
 
-func WXLogin(u *mdu.User, code string, address string) (int64, *mdu.User, error) {
+func WXLogin(u *mdu.User, code string, address string) (*mdu.User, error) {
 
 	if u.OpenID == "" && code == "" {
-		return 0, nil, erru.ErrWXLoginParam
+		return nil, erru.ErrWXLoginParam
 	}
 	atr := &mdu.AccessTokenResponse{}
 
@@ -302,7 +321,7 @@ func WXLogin(u *mdu.User, code string, address string) (int64, *mdu.User, error)
 		checkatr, err := GetWXToken(code)
 
 		if err != nil {
-			return 0, nil, err
+			return nil, err
 		}
 
 		atr = checkatr
@@ -312,7 +331,7 @@ func WXLogin(u *mdu.User, code string, address string) (int64, *mdu.User, error)
 		checkatr, err := GetAndCheckWXToken(u.OpenID) //cacheuser.GetAccessToken(u.OpenID)
 		if err != nil {
 			log.Err("user login set session failed, %v", err)
-			return 0, nil, err
+			return nil, err
 		}
 		atr = checkatr
 		//fmt.Printf("BBB WX Login Get Old Token:%v", atr)
@@ -320,12 +339,12 @@ func WXLogin(u *mdu.User, code string, address string) (int64, *mdu.User, error)
 
 	err := cacheuser.SetUserWXInfo(atr.OpenID, atr.RefreshToken)
 	if err != nil {
-		return 0, nil, err
+		return nil, err
 	}
 	newUser, err := dbu.FindAndGetUser(db.DB(), u.OpenID)
 
 	if err != nil {
-		return 0, nil, err
+		return nil, err
 	}
 
 	if newUser == nil {
@@ -337,9 +356,10 @@ func WXLogin(u *mdu.User, code string, address string) (int64, *mdu.User, error)
 		newUser.RegIP = address
 		newUser.OpenID = u.OpenID
 		newUser.UnionID = u.UnionID
+		newUser.Type = enum.Player
 		u, err = CreateUserByWX(newUser, atr)
 		if err != nil {
-			return 0, nil, err
+			return nil, err
 		}
 	} else {
 		newUser.MobileOs = u.MobileOs
@@ -347,7 +367,7 @@ func WXLogin(u *mdu.User, code string, address string) (int64, *mdu.User, error)
 		newUser.LastLoginIP = address
 		u, err = UpdateUserFromWX(newUser, atr)
 		if err != nil {
-			return 0, nil, err
+			return nil, err
 		}
 	}
 	now := gorm.NowFunc()
@@ -355,10 +375,10 @@ func WXLogin(u *mdu.User, code string, address string) (int64, *mdu.User, error)
 
 	u, err = UpdateUser(u)
 	if err != nil {
-		return 0, nil, err
+		return nil, err
 	}
-	balance, _ := bill.GetUserBalance(u.UserID, 2)
-	return balance.Balance, u, err
+
+	return u, err
 }
 
 func CreateUserByWX(u *mdu.User, atr *mdu.AccessTokenResponse) (*mdu.User, error) {
@@ -505,4 +525,12 @@ func SetLocation(user *mdu.User, Json string) error {
 		return err
 	}
 	return nil
+}
+
+func RefreshAllRobotsFromDB() error {
+	rs, err := dbu.GetRobots(db.DB())
+	if err != nil {
+		return err
+	}
+	return cacheuser.SetRobots(rs)
 }

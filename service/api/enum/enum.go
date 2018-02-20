@@ -24,6 +24,7 @@ var (
 	DoudizhuServiceName = "playcards.srv.doudizhu"
 	FourCardServiceName = "playcards.srv.fourcard"
 	MailServiceName     = "playcards.srv.mail"
+	GoldRoomServiceName = "playcards.srv.goldroom"
 )
 
 var (

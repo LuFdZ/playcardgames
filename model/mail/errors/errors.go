@@ -12,4 +12,5 @@ var (
 	ErrHasNotItem         = errors.NotFound(21007, "该邮件没有附件！")
 	ErrItemFormat         = errors.NotFound(21008, "邮件附件格式错误！")
 	ErrSendAndChannel     = errors.NotFound(21009, "发送人和发送渠道不能同时为空！")
+	ErrMailNotNow         = errors.NotFound(21010, "沒有新邮件！")
 )

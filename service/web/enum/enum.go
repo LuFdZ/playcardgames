@@ -24,8 +24,9 @@ var (
 	FourCardServiceCode = 16 //四张
 	WebServiceCode      = 17 //web消息
 	LogServiceCode      = 18 //日志
-	SysCode             = 19
-	MailServiceCode     = 21
+	SysCode             = 19 //系统
+	MailServiceCode     = 21 //邮件
+	GoldRoomServiceCode = 22 //金币场
 )
 
 //基本消息标签和编号

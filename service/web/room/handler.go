@@ -33,9 +33,9 @@ var RoomEvent = []string{
 	srvroom.TopicRoomChat,
 }
 
-func SubscribeRoomMessage(c *clients.Client, req *request.Request) error {
+func RoomOnlineNotice(c *clients.Client) {
 	cacheuser.SetUserOnlineStatus(c.UserID(), 1)
-	c.Subscribe(RoomEvent)
+	cacheuser.UpdateUserHeartbeat(c.UserID())
 	c.SendMessage("", enum.MsgSubscribeSuccess, nil, enum.MsgSubscribeSuccessCode)
 
 	msg := &pbroom.UserConnection{
@@ -43,6 +43,10 @@ func SubscribeRoomMessage(c *clients.Client, req *request.Request) error {
 		Status: enum.SocketAline,
 	}
 	topic.Publish(brok, msg, srvroom.TopicRoomUserConnection)
+}
+
+func SubscribeRoomMessage(c *clients.Client, req *request.Request) error {
+	c.Subscribe(RoomEvent)
 	return nil
 }
 
@@ -52,7 +56,7 @@ func UnsubscribeRoomMessage(c *clients.Client, req *request.Request) error {
 }
 
 func CloseCallbackHandler(c *clients.Client) {
-	cacheuser.SetUserOnlineStatus(c.UserID(), 0)
+	//cacheuser.SetUserOnlineStatus(c.UserID(), 0)
 	cs := clients.GetClientByUserID(c.UserID())
 	if len(cs) == 0 {
 		msg := &pbroom.UserConnection{

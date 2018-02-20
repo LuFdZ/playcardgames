@@ -28,8 +28,8 @@ const (
 )
 
 const (
-	TypeGold    = 1
-	TypeDiamond = 2
+	TypeGold    = 1 //金币
+	TypeDiamond = 2 //钻石
 )
 
 //const (

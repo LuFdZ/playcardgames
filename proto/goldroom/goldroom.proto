@@ -1,0 +1,52 @@
+syntax = "proto3";
+
+package goldroom;
+
+//***********************************************结构体***********************************************
+
+//***********************************************请求***********************************************
+message EnterRoomRequest {
+    int32 GameType = 1;//房间ID
+    int32 Level = 2;//房间级别 1 初级场 2中级场 3高级房 4顶级场
+}
+
+message LeaveRoomRequest {
+}
+
+message SetReadyRequest {
+    string Password = 1;//房间ID
+}
+
+//***********************************************回应***********************************************
+//通用回复
+message DefaultReply {
+    int32 Result = 1; //1 成功 //失败返回通用报错结构
+    int32 Code = 2;
+}
+
+
+service RoomSrv {
+    rpc EnterRoom (EnterRoomRequest) returns (DefaultReply) {
+    }
+    rpc LeaveRoom (LeaveRoomRequest) returns (DefaultReply) {
+    }
+    rpc SetReady (SetReadyRequest) returns (DefaultReply) {
+    }
+//    rpc Shock (GoldRoomPlayer) returns (DefaultReply) {
+//    }
+//    rpc VoiceChat (VoiceChatRequest) returns (DefaultReply) {
+//    }
+//    rpc GetRoomUserLocation (GoldRoom) returns (DefaultReply) {
+//    }
+//    rpc GetRoomRecovery(GoldRoom) returns (DefaultReply) {
+//    }
+//    rpc GameStart(GoldRoom) returns (DefaultReply) {
+//    }
+//    rpc ShuffleCard(GoldRoom) returns (DefaultReply) {
+//    }
+//    rpc RoomChat(RoomChatRequest) returns (DefaultReply) {
+//    }
+}
+
+
+

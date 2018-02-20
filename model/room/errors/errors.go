@@ -40,4 +40,5 @@ var (
 	ErrGameType             = errors.NotFound(40028, "游戏类型不允许该操作！")
 	ErrShuffle              = errors.Forbidden(40029, "您不能洗牌！")
 	ErrClubCreaterNotFind   = errors.Forbidden(40030, "俱乐部创建人信息未找到！")
+	ErrNotEnoughGold        = errors.Conflict(40031, "金币不足！")
 )

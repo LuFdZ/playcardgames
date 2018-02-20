@@ -9,7 +9,6 @@ import (
 	"playcards/utils/errors"
 	"playcards/utils/log"
 	"github.com/Masterminds/squirrel"
-	"fmt"
 )
 
 func CreateMailInfo(tx *gorm.DB, mdmi *mdmail.MailInfo) (*mdmail.MailInfo, error) {
@@ -81,7 +80,6 @@ func GetAllUser(tx *gorm.DB,channel string) []int32 {
 }
 
 func CreatePlayerMails(tx *gorm.DB, mdpms []*mdmail.PlayerMail, mdmsl *mdmail.MailSendLog) {
-	fmt.Sprintf("AAAAACreatePlayerMails\n")
 	now := gorm.NowFunc()
 	var count int32 = 0
 	for _, mdpm := range mdpms {
@@ -91,13 +89,11 @@ func CreatePlayerMails(tx *gorm.DB, mdpms []*mdmail.PlayerMail, mdmsl *mdmail.Ma
 			return
 			log.Err("create player mail failed! uid:%d,send_log_id:%d,err:%+v", mdpm.UserID, mdpm.SendLogID, err)
 		}
-		fmt.Printf("AAAACreatePlayerMails\n")
 		err := cachemail.SetPlayerMail(mdpm)
 		if err != nil {
 			return
 			log.Err("create player mail redis failed! uid:%d,send_log_id:%d,err:%+v", mdpm.UserID, mdpm.SendLogID, err)
 		}
-		fmt.Printf("BBBBCreatePlayerMails\n")
 		count ++
 	}
 	mdmsl.SendCount = count
@@ -160,7 +156,7 @@ func GetMailInfos(tx *gorm.DB) ([]*mdmail.MailInfo, error) {
 	var (
 		out []*mdmail.MailInfo
 	)
-	if err := tx.Where("status = ?", enummail.MailTypeSysMode).Order("created_at").
+	if err := tx.Where("status = ?", enummail.MailInfoStatusNom).Order("created_at").
 		Find(&out).Error; err != nil {
 		return nil, errors.Internal("select mail info list failed", err)
 	}
@@ -171,7 +167,7 @@ func GetMailSendLogs(tx *gorm.DB) ([]*mdmail.MailSendLog, error) {
 	var (
 		out []*mdmail.MailSendLog
 	)
-	if err := tx.Where("status = ?", enummail.MailTypeSysMode).Order("created_at").
+	if err := tx.Where("status = ?", enummail.MailSendNom).Order("created_at").
 		Find(&out).Error; err != nil {
 		return nil, errors.Internal("select send mail log list failed", err)
 	}
@@ -182,7 +178,7 @@ func GetPlayerMails(tx *gorm.DB) ([]*mdmail.PlayerMail, error) {
 	var (
 		out []*mdmail.PlayerMail
 	)
-	if err := tx.Where("status = ?", enummail.MailTypeSysMode).Order("created_at").
+	if err := tx.Where("status = ?", enummail.PlayermailNon).Order("created_at").
 		Find(&out).Error; err != nil {
 		return nil, errors.Internal("select mail player list failed", err)
 	}

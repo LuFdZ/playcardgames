@@ -72,7 +72,7 @@ func ReSetUserClubID(tx *gorm.DB, u *mdu.User) error {
 	return nil
 }
 
-func PageUserList(tx *gorm.DB, page *mdpage.PageOption, u *mdu.User) (
+func PageUserList(tx *gorm.DB, page *mdpage.PageOption, u *mdu.User, sort int32) (
 	[]*mdu.User, int64, error) {
 	var (
 		list []*mdu.User
@@ -127,8 +127,11 @@ func PageUserList(tx *gorm.DB, page *mdpage.PageOption, u *mdu.User) (
 		}
 		str += " union_id = '" + u.UnionID + "'"
 	}
-
-	rows, res := page.Find(etx.Where(str), &list)
+	sortStr := "created_at asc"
+	if sort == 2 {
+		sortStr = "created_at desc"
+	}
+	rows, res := page.Find(etx.Where(str).Order(sortStr), &list)
 	if res.Error != nil {
 		return nil, 0, errors.Internal("page user list error", res.Error)
 	}
@@ -186,4 +189,15 @@ func GetUserConut() (int32) {
 	var count int32
 	db.DB().Model(&mdu.User{}).Count(&count)
 	return count
+}
+
+func GetRobots(tx *gorm.DB) ([]*mdu.User, error) {
+	var (
+		out []*mdu.User
+	)
+	if err := tx.Where("type = ?", enumu.Robot).Order("created_at").
+		Find(&out).Error; err != nil {
+		return nil, errors.Internal("select robot list failed", err)
+	}
+	return out, nil
 }

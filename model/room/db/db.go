@@ -16,6 +16,9 @@ import (
 )
 
 func CreateRoom(tx *gorm.DB, r *mdr.Room) error {
+	now := gorm.NowFunc()
+	r.CreatedAt = &now
+	r.UpdatedAt = &now
 	if err := tx.Create(r).Error; err != nil {
 		return errors.Internal("create room failed", err)
 	}
@@ -30,7 +33,6 @@ func UpdateRoom(tx *gorm.DB, r *mdr.Room) (*mdr.Room, error) {
 		Giveup:    r.Giveup,
 		RoundNow:  r.RoundNow,
 		UpdatedAt: &now,
-		//CreatedAt: &now,
 		GiveupAt:  r.GiveupAt,
 		GameParam: r.GameParam,
 	}
@@ -38,6 +40,27 @@ func UpdateRoom(tx *gorm.DB, r *mdr.Room) (*mdr.Room, error) {
 		return nil, errors.Internal("update room failed", err)
 	}
 	return r, nil
+}
+
+func CreateSpecialGame(tx *gorm.DB, gr *mdr.PlayerSpecialGameRecord) error {
+	now := gorm.NowFunc()
+	gr.CreatedAt = &now
+	gr.UpdatedAt = &now
+	if err := tx.Create(gr).Error; err != nil {
+		return errors.Internal("create player special game record failed", err)
+	}
+	return nil
+}
+
+func PageSpecialGameList(tx *gorm.DB, gr *mdr.PlayerSpecialGameRecord, page *mdpage.PageOption,
+) ([]*mdr.PlayerSpecialGameRecord, int64, error) {
+	var out []*mdr.PlayerSpecialGameRecord
+	rows, rtx := page.Find(tx.Where(gr).
+		Order("created_at desc").Find(&out), &out)
+	if rtx.Error != nil {
+		return nil, 0, errors.Internal("page room result failed", rtx.Error)
+	}
+	return out, rows, nil
 }
 
 func SetRoomFlage(tx *gorm.DB, clubid int32, rid int32) error {

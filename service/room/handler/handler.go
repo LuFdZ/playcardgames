@@ -285,9 +285,9 @@ func (rs *RoomSrv) EnterRoom(ctx context.Context, req *pbr.Room,
 		return nil
 	}
 	lock := RoomLockKey(req.Password)
-	if mr.RoomType == enumr.RoomTypeClub {
-		lock = ClubJoinRoomLockKey(mr.ClubID)
-	}
+	//if mr.RoomType == enumr.RoomTypeClub {
+	//	lock = ClubJoinRoomLockKey(mr.ClubID)
+	//}
 	err = gsync.GlobalTransaction(lock, f)
 	if err != nil {
 		log.Err("%s enter room failed: %v", lock, err)
@@ -308,6 +308,12 @@ func (rs *RoomSrv) EnterRoom(ctx context.Context, req *pbr.Room,
 	msgAll := ru.ToProto()
 	msgAll.OwnerID = msgBack.OwnerID
 	msgAll.Ids = r.Ids
+	for _,ru := range r.Users{
+		if ru.Role == enumr.UserRoleMaster{
+			msgAll.BankerID =ru.UserID
+		}
+	}
+
 	topic.Publish(rs.broker, msgAll, TopicRoomJoin)
 	if r.ClubID > 0 {
 		msgEnter := &pbr.ClubRoomUser{
@@ -360,6 +366,7 @@ func (rs *RoomSrv) LeaveRoom(ctx context.Context, req *pbr.Room,
 	}
 	if len(r.Users) > 0 {
 		msg.OwnerID = r.Users[0].UserID
+		msg.BankerID = msg.OwnerID
 	}
 	topic.Publish(rs.broker, msg, TopicRoomUnJoin)
 	if r.ClubID > 0 {
@@ -846,3 +853,19 @@ func (rs *RoomSrv) RoomChat(ctx context.Context, req *pbr.RoomChatRequest, rsp *
 	return nil
 }
 
+func (rs *RoomSrv) PageSpecialGameList(ctx context.Context,
+	req *pbr.PageSpecialGameListRequest, rsp *pbr.PageSpecialGameListReply) error {
+	page := mdpage.PageOptionFromProto(req.Page)
+	rsp.Result = 2
+	l, rows, err := room.PageSpecialGameList(page,
+		mdroom.GameRecordFromProto(req.GameRecord))
+	if err != nil {
+		return err
+	}
+	for _, co := range l {
+		rsp.List = append(rsp.List, co.ToProto())
+	}
+	rsp.Count = rows
+	rsp.Result = 1
+	return nil
+}

@@ -31,9 +31,10 @@ type Fourcard struct {
 }
 
 type UserCard struct {
-	Win      int32
-	Score    int32
-	CardType int32
+	Win      int32 //输赢分
+	Score    int32 //牌组分值
+	CardType int32 //牌型值
+	Value    int32 //比较值 牌组为牌型值*100 散牌为牌型值*10+牌组值
 	CardList []string
 }
 
@@ -42,6 +43,7 @@ type UserInfo struct {
 	Status     int32
 	Bet        int32
 	Role       int32
+	Type       int32
 	CardList   []string
 	HeadCards  *UserCard
 	TailCards  *UserCard
@@ -105,9 +107,10 @@ func (fc *Fourcard) ToProto() *pbfour.GameResult {
 	if fc.Status > enumfour.GameStatusAllBet {
 		out.UserDice = fc.GameResult.UserDice.ToProto()
 	}
-	if fc.Status > enumfour.GameStatusOrdered {
-		utilproto.ProtoSlice(fc.GameResult.List, &out.List)
-	}
+	utilproto.ProtoSlice(fc.GameResult.List, &out.List)
+	//if fc.Status > enumfour.GameStatusOrdered {
+	//	utilproto.ProtoSlice(fc.GameResult.List, &out.List)
+	//}
 
 	return out
 }

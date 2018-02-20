@@ -12,7 +12,7 @@ message MailInfo {
     string MailTitle = 3; //邮件标题
     string MailContent = 4; //邮件内容
     int32 MailType = 5; //邮件类型 1 系统通知邮件 2 异常通知邮件 3活动奖励邮件...
-    string ItemList = 6; //附件道具信息 一级分类_二级分类_ID_数量|...
+    repeated ItemModel ItemList = 6; //附件道具信息 一级分类_二级分类_ID_数量|...
     int64 CreatedAt = 7; //创建时间
     int64 UpdatedAt = 8; //更新时间
 }
@@ -41,9 +41,16 @@ message PlayerMail {
     int32 MailType = 6; //邮件类型 1 系统模板邮件 2 系统自定义邮件 3 个人邮件
     string MailTitle = 7; //邮件标题
     string MailContent = 8; //邮件内容
-    string ItemList = 9; //附件道具信息 一级分类_二级分类_ID_数量|...
+    repeated ItemModel ItemList = 9; //附件道具信息
     int64 CreatedAt = 10;
     int64 UpdatedAt = 11;
+}
+
+message ItemModel {
+    int32 MainType = 1; //主类型
+    int32 SubType = 2; //子类型
+    int32 ItemID = 3; //物品ID
+    int64 Count = 4; //数量
 }
 
 //***********************************************请求***********************************************
@@ -94,11 +101,29 @@ message PagePlayerMailRequest {
     int32 Page = 1;
 }
 
+//创建模板邮件请求
+message CreateMailInfoRequest {
+    MailInfo MailInfo = 1;
+    ItemModel ItemModelA = 2;
+    ItemModel ItemModelB = 3;
+    ItemModel ItemModelC = 4;
+}
+
+//更新模板邮件请求
+message UpdateMailInfoRequest {
+    MailInfo MailInfo = 1;
+    ItemModel ItemModelA = 2;
+    ItemModel ItemModelB = 3;
+    ItemModel ItemModelC = 4;
+}
+
 //***********************************************回应***********************************************
 
 //领取邮件物品回复
 message GetMailItemsReply {
-    string ItemList = 8; //附件道具信息 一级分类_二级分类_ID_数量|...
+    int32 LogID = 1;
+    repeated ItemModel ItemList = 2; //附件道具信息 一级分类_二级分类_ID_数量|...
+    int32 Result = 3;
 }
 
 message PageMailListReply {
@@ -128,6 +153,7 @@ message PagePlayerMailReply {
 message DefaultReply {
     int32 Result = 1; //1 成功 //失败返回通用报错结构
     int32 Code = 2;
+    int32 LogID = 3;
 }
 
 //***********************************************广播***********************************************
@@ -147,9 +173,11 @@ service MailSrv {
     }
     rpc GetMailItems (GetMailItemsRequest) returns (GetMailItemsReply) {
     }
-    rpc CreateMailInfo (MailInfo) returns (DefaultReply) {
+    rpc GetAllMailItems (GetMailItemsRequest) returns (GetMailItemsReply) {
     }
-    rpc UpdateMailInfo (MailInfo) returns (DefaultReply) {
+    rpc CreateMailInfo (CreateMailInfoRequest) returns (DefaultReply) {
+    }
+    rpc UpdateMailInfo (UpdateMailInfoRequest) returns (DefaultReply) {
     }
     rpc PageMailInfo (PageMailInfoRequest) returns (PageMailListReply) {
     }

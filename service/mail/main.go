@@ -22,6 +22,7 @@ var FuncRights = map[string]int32{
 	"MailSrv.PageMailInfo":                auth.RightsPlayer,
 	"MailSrv.PageMailSendLog":             auth.RightsPlayer,
 	"MailSrv.PageAllPlayerMail":           auth.RightsPlayer,
+	"MailSrv.GetAllMailItems":             auth.RightsPlayer,
 	"MailSrv.SendSysMail":                 auth.RightsAdmin,
 	"MailSrv.CreateMailInfo":              auth.RightsAdmin,
 	"MailSrv.UpdateMailInfo":              auth.RightsAdmin,

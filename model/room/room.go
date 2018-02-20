@@ -123,6 +123,7 @@ func CreateRoom(rtype int32, gtype int32, maxNum int32, roundNum int32,
 		payerID = mdclub.CreatorID
 	}
 	cost := getRoomCost(gtype, maxNum, roundNum, channel, version, mobileOs, rtype)
+
 	if rtype == enumroom.RoomTypeNom {
 		roomUser := GetRoomUser(user, enumroom.UserUnready, 1,
 			enumroom.UserRoleMaster)
@@ -186,8 +187,6 @@ func CreateRoom(rtype int32, gtype int32, maxNum int32, roundNum int32,
 		RoomType:       rtype,
 		PayerID:        payerID,
 		GiveupAt:       &now,
-		CreatedAt:      &now,
-		UpdatedAt:      &now,
 		Ids:            ids,
 		Cost:           cost,
 		StartMaxNumber: maxNum,
@@ -244,11 +243,11 @@ func getRoomCost(gType int32, maxNumber int32, roundNumber int32, channel string
 	var diamond int64
 	var cost int32
 	var configID int32
-	if roomtype == enumroom.RoomTypeNom{
+	if roomtype == enumroom.RoomTypeNom {
 		configID = enumroom.ConsumeOpen
-	}else if roomtype == enumroom.RoomTypeAgent{
+	} else if roomtype == enumroom.RoomTypeAgent {
 		configID = enumroom.AgentConsumeOpen
-	}else if roomtype == enumroom.RoomTypeClub{
+	} else if roomtype == enumroom.RoomTypeClub {
 		configID = enumroom.ClubConsumeOpen
 	}
 
@@ -256,17 +255,17 @@ func getRoomCost(gType int32, maxNumber int32, roundNumber int32, channel string
 		cost = enumroom.ThirteenGameCost
 	} else if gType == enumroom.NiuniuGameType {
 		cost = enumroom.NiuniuGameCost
-	} else if gType == enumroom.DoudizhuGameCost {
+	} else if gType == enumroom.DoudizhuGameType {
 		cost = enumroom.DoudizhuGameCost
+	} else if gType == enumroom.FourCardGameType {
+		cost = enumroom.FourcardGameCost
 	}
 
 	diamond = int64(maxNumber * roundNumber * cost)
-	//if roomtype == enumroom.RoomTypeNom {
-	//
-	//}
+
 	rate := config.CheckConfigCondition(configID, channel, version, mobileOs)
 	diamond = int64(rate * float64(diamond))
-
+	//log.Debug("CreateRoom GetRoomCost:%d|%d,Condition:%s|%s|%s\n",diamond,rate,channel,version,mobileOs)
 	return diamond
 }
 
@@ -287,30 +286,30 @@ func JoinRoom(pwd string, mduser *mduser.User) (*mdroom.RoomUser, *mdroom.Room, 
 	if hasRoom {
 		return nil, nil, errroom.ErrUserAlreadyInRoom
 	}
-	mr, err := cacheroom.GetRoom(pwd)
+	mdr, err := cacheroom.GetRoom(pwd)
 	if err != nil {
 		return nil, nil, err
 	}
-	if mr.ClubID > 0 && mduser.ClubID != mr.ClubID {
+	if mdr.ClubID > 0 && mduser.ClubID != mdr.ClubID {
 		return nil, nil, errroom.ErrNotClubMember
 	}
-	if mr.Status != enumroom.RoomStatusInit {
+	if mdr.Status != enumroom.RoomStatusInit {
 		return nil, nil, errroom.ErrNotReadyStatus
 	}
-	if mr.Giveup == enumroom.WaitGiveUp {
+	if mdr.Giveup == enumroom.WaitGiveUp {
 		return nil, nil, errroom.ErrInGiveUp
 	}
 
-	num := len(mr.Users)
-	if num >= (int)(mr.MaxNumber) {
+	num := len(mdr.Users)
+	if num >= (int)(mdr.MaxNumber) {
 		return nil, nil, errroom.ErrRoomFull
 	}
 	p := 0
-	positionArray := make([]int32, mr.MaxNumber)
+	positionArray := make([]int32, mdr.MaxNumber)
 	for n := 0; n < len(positionArray); n++ {
 		positionArray[n] = 0
 	}
-	for _, ru := range mr.Users {
+	for _, ru := range mdr.Users {
 		if ru.UserID == mduser.UserID {
 			return nil, nil, errroom.ErrUserAlreadyInRoom
 		}
@@ -323,22 +322,24 @@ func JoinRoom(pwd string, mduser *mduser.User) (*mdroom.RoomUser, *mdroom.Room, 
 	}
 	roomUser := GetRoomUser(mduser, enumroom.UserUnready, int32(p+1),
 		enumroom.UserRoleSlave)
-	newUsers := append(mr.Users, roomUser)
-	mr.Users = newUsers
-	mr.Ids = append(mr.Ids, mduser.UserID)
+	if mdr.RoomType != enumroom.RoomTypeNom && len(mdr.Users) == 0 {
+		roomUser.Role = enumroom.UserRoleMaster
+	}
+	mdr.Users = append(mdr.Users, roomUser)
+	mdr.Ids = append(mdr.Ids, mduser.UserID)
 
-	err = cacheroom.UpdateRoom(mr)
+	err = cacheroom.UpdateRoom(mdr)
 	if err != nil {
-		log.Err("room jooin set session failed, %v|%v\n", err, mr)
+		log.Err("room join set session failed, %v|%v\n", err, mdr)
 		return nil, nil, err
 	}
-	err = cacheroom.SetRoomUser(mr.RoomID, mr.Password, mduser.UserID)
+	err = cacheroom.SetRoomUser(mdr.RoomID, mdr.Password, mduser.UserID)
 	if err != nil {
-		log.Err("room user jooin set session failed, %v|%v\n", err, mr)
+		log.Err("room user join set session failed, %v|%v\n", err, mdr)
 		return nil, nil, err
 	}
-	UpdateRoom(mr)
-	return roomUser, mr, nil
+	UpdateRoom(mdr)
+	return roomUser, mdr, nil
 }
 
 func LeaveRoom(mduser *mduser.User) (*mdroom.RoomUser, *mdroom.Room, error) {
@@ -382,6 +383,9 @@ func LeaveRoom(mduser *mduser.User) (*mdroom.RoomUser, *mdroom.Room, error) {
 	if handle == 0 {
 		return nil, nil, errroom.ErrUserNotInRoom
 	}
+	if roomUser.Role == enumroom.UserRoleMaster && mr.RoomType != enumroom.RoomTypeNom && len(mr.Users) >0 {
+		mr.Users[0].Role = enumroom.UserRoleMaster
+	}
 	//RoomTypeNom 普通开房解散条件 人员全部退出 || 房主退出
 	//RoomTypeAgent 代开房解散条件 代开房者主动解散
 	//RoomTypeClub 俱乐部开房解散条件 人员全部退出
@@ -401,6 +405,7 @@ func LeaveRoom(mduser *mduser.User) (*mdroom.RoomUser, *mdroom.Room, error) {
 				mr.RoomID, err)
 			return nil, nil, err
 		}
+
 		RoomRefund(mr)
 	} else {
 		err := cacheroom.UpdateRoom(mr)
@@ -415,8 +420,12 @@ func LeaveRoom(mduser *mduser.User) (*mdroom.RoomUser, *mdroom.Room, error) {
 				mr.RoomID, err)
 			return nil, nil, err
 		}
-		UpdateRoom(mr)
+		if mr.RoomType != enumroom.RoomTypeNom && len(newUsers) > 0 {
+			newUsers[0].Role = enumroom.UserRoleMaster
+		}
+		//UpdateRoom(mr)
 	}
+	UpdateRoom(mr)
 	return roomUser, mr, nil
 }
 
@@ -870,7 +879,7 @@ func DeleteAgentRoomRecord(uid int32, gameType int32, rid int32, pwd string) err
 	if mr.PayerID != uid {
 		return errroom.ErrNotPayer
 	}
-	if mr.Status < enumroom.RoomStatusDelay {
+	if mr.Status < enumroom.RoomStatusDelay &&  mr.Status < enumroom.RoomStatusOverTimeClean{
 		return errroom.ErrGameHasBegin
 	}
 
@@ -1180,30 +1189,31 @@ func DeadRoomDestroy() error {
 			log.Err("delete dead set delete room redis err, %d|%v\n", room.RoomID, err)
 		}
 		refund := false
-		if room.Status < enumroom.RoomStatusStarted{
+		if room.Status < enumroom.RoomStatusStarted {
 			refund = true
 		}
 		room.Status = room.Status*1000 + enumroom.RoomStatusOverTimeClean
-		f := func(tx *gorm.DB) error {
-			_, err = dbroom.UpdateRoom(tx, room)
-			if err != nil {
-				log.Err("delete dead room redis err, %d|%v\n", room.RoomID, err)
-			}
-			return nil
-		}
+		//f := func(tx *gorm.DB) error {
+		//	_, err = dbroom.UpdateRoom(tx, room)
+		//	if err != nil {
+		//		log.Err("delete dead room redis err, %d|%v\n", room.RoomID, err)
+		//	}
+		//	return nil
+		//}
 		if room.RoomType == enumroom.RoomTypeAgent {
 			cacheroom.SetAgentRoom(room)
 		}
 
 		//go db.Transaction(f)
-		err = db.Transaction(f)
-		if err != nil {
-			log.Err("room dead room destroy delete room users redis err, %v", err)
-			return err
-		}
+		//err = db.Transaction(f)
+		//if err != nil {
+		//	log.Err("room dead room destroy delete room users redis err, %v", err)
+		//	return err
+		//}
 		if refund {
 			RoomRefund(room)
 		}
+		UpdateRoom(room)
 		//err = mail.SendSysMail()
 
 	}
@@ -1462,4 +1472,9 @@ func RoomRefund(mdr *mdroom.Room) error {
 		}
 	}
 	return nil
+}
+
+func PageSpecialGameList(page *mdpage.PageOption, plgr *mdroom.PlayerSpecialGameRecord) (
+	[]*mdroom.PlayerSpecialGameRecord, int64, error) {
+	return dbroom.PageSpecialGameList(db.DB(), plgr, page)
 }

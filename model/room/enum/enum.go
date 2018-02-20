@@ -76,8 +76,8 @@ const (
 
 // room user ready status
 const (
-	UserReady   = 1
-	UserUnready = 2
+	UserReady   int32 = 1
+	UserUnready int32 = 2
 )
 
 // web socket conncthion status
@@ -100,10 +100,12 @@ const (
 	ThirteenGameCost = 1.0
 	NiuniuGameCost   = 1.0
 	DoudizhuGameCost = 1.0
+	FourcardGameCost = 1.0
 
 	ThirteenMaxNumber = 4
 	NiuniuMaxNumber   = 10
 	DoudizhuMaxNumber = 4
+	FourcardMaxNumber = 8
 )
 
 // game recovery room status
@@ -135,6 +137,11 @@ const (
 	ConsumeOpen      = 110001 //消费开关
 	AgentConsumeOpen = 110002 //代开房消费开关
 	ClubConsumeOpen  = 110003 //俱乐部消费开关
+)
+
+const (
+	Player = 1
+	Robot  = 2
 )
 
 var GameType = []int32{1001, 1002, 1003,1004}

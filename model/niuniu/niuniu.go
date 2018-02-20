@@ -172,12 +172,12 @@ func InitUserCard(room *mdr.Room, bankerID int32, userResults []*mdr.GameUserRes
 	for _, user := range room.Users {
 		if room.RoundNow == 1 {
 			userResult := &mdr.GameUserResult{
-				UserID:   user.UserID,
+				UserID: user.UserID,
 				//Nickname: user.Nickname,
-				Win:      0,
-				Lost:     0,
-				Tie:      0,
-				Score:    0,
+				Win:   0,
+				Lost:  0,
+				Tie:   0,
+				Score: 0,
 			}
 			userResults = append(userResults, userResult)
 		}
@@ -224,7 +224,7 @@ func InitUserCard(room *mdr.Room, bankerID int32, userResults []*mdr.GameUserRes
 				userRole = enumniu.Banker
 			}
 			userInfo := &mdniu.BankerAndBet{
-				BankerScore: 0,
+				BankerScore: 1,
 				BetScore:    0,
 				Role:        int32(userRole),
 			}
@@ -335,7 +335,11 @@ func UpdateGame(goLua *lua.LState) []*mdniu.Niuniu {
 				log.Err("niuniu room get session nil, %v|%d", niuniu.PassWord, niuniu.RoomID)
 				continue
 			}
-
+			for _, u := range niuniu.Result.List {
+				if u.Info.BetScore == 0 {
+					u.Info.BetScore = 1
+				}
+			}
 			niuniu.MarshalNiuniuRoomResult()
 			//room.MarshalGameUserResult()
 			if err := goLua.DoString(fmt.
@@ -362,6 +366,7 @@ func UpdateGame(goLua *lua.LState) []*mdniu.Niuniu {
 					err)
 				continue
 			}
+			var specialCardUids []int32
 			for i, result := range niuniu.Result.List {
 				result.Score = results.List[i].Score
 				result.Cards.CardType = results.List[i].Cards.CardType
@@ -387,6 +392,10 @@ func UpdateGame(goLua *lua.LState) []*mdniu.Niuniu {
 							userResult.Tie += 1
 						} else if ts < 0 {
 							userResult.Lost += 1
+						}
+						//特殊记录 五小牛
+						if result.Cards.CardType == "13" {
+							specialCardUids = append(specialCardUids, userResult.UserID)
 						}
 					}
 				}
@@ -414,6 +423,21 @@ func UpdateGame(goLua *lua.LState) []*mdniu.Niuniu {
 				if err != nil {
 					log.Err("niuniu update room db failed, %v|%v", niuniu, err)
 					return err
+				}
+				for _, uid := range specialCardUids {
+					plsgr := &mdr.PlayerSpecialGameRecord{
+						GameID:     niuniu.GameID,
+						RoomID:     niuniu.RoomID,
+						GameType:   room.GameType,
+						RoomType:   room.RoomType,
+						Password:   room.Password,
+						UserID:     uid,
+						GameResult: niuniu.GameResults,
+					}
+					err = dbr.CreateSpecialGame(tx, plsgr)
+					if err != nil {
+						return err
+					}
 				}
 				return nil
 			}
@@ -466,7 +490,7 @@ func UpdateNiuniu(niu *mdniu.Niuniu) error {
 
 func GetBanker(uid int32, key int32) error {
 	mdr, err := room.GetRoomByUserID(uid)
-	if err != nil{
+	if err != nil {
 		return err
 	}
 	//value, err := tools.Int2String(str)
@@ -543,19 +567,19 @@ func GetBanker(uid int32, key int32) error {
 func SetBet(uid int32, key int32) error {
 	var value int32
 	mdr, err := cacher.GetRoomUserID(uid)
-	if err != nil{
+	if err != nil {
 		return err
 	}
 
-	//if key<1 ||key >5{
-	//	return errorsniu.ErrParam
-	//}
-	//value = key
-	if v, ok := enumniu.BetScoreMap[key]; !ok {
+	if key < 1 || key > 5 {
 		return errorsniu.ErrParam
-	} else {
-		value = v
 	}
+	value = key
+	//if v, ok := enumniu.BetScoreMap[key]; !ok {
+	//	return errorsniu.ErrParam
+	//} else {
+	//	value = v
+	//}
 
 	if mdr.Status > enumr.RoomStatusStarted {
 
@@ -615,7 +639,7 @@ func SetBet(uid int32, key int32) error {
 
 func SubmitCard(uid int32) error {
 	mdr, err := cacher.GetRoomUserID(uid)
-	if err !=nil{
+	if err != nil {
 		return err
 	}
 	if mdr.Status > enumr.RoomStatusStarted {
@@ -705,7 +729,7 @@ func AutoSetBankerScore(niu *mdniu.Niuniu) {
 func AutoSetBetScore(niu *mdniu.Niuniu) {
 	for _, userResult := range niu.Result.List {
 		if userResult.Info.BetScore == 0 {
-			if userResult.Info.Role != enumr.UserRoleMaster{
+			if userResult.Info.Role != enumr.UserRoleMaster {
 				userResult.Info.BetScore = enumniu.MinSetBet
 			}
 			userResult.Status = enumniu.UserStatusSetBet

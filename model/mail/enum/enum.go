@@ -5,10 +5,10 @@ import "time"
 const (
 	LoopTime             = 1
 	MaxMailRecordCount   = 10              //最大页数
-	PlayerMailOverTime   = 1800* time.Second //1800//用户邮件过期时间(小时)
-	MailEndLogOverTime   = 5* time.Second //7200//邮件有效期 过期时间(小时)
-	PlayerMailMaxNumber  = 3               //30 用户邮件最大保存天数
-	MailSendLogMaxNumber = 3               //60 邮件发送记录最大保存天数
+	PlayerMailOverTime   = 720* time.Hour //720//用户邮件过期时间(小时)
+	MailEndLogOverTime   = 1440* time.Hour //7200//邮件有效期 过期时间(小时)
+	PlayerMailMaxNumber  = 30               //30 用户邮件最大保存天数
+	MailSendLogMaxNumber = 60               //60 邮件发送记录最大保存天数
 )
 
 const (
@@ -58,11 +58,11 @@ const (
 //邮件附件物品分类
 const (
 	//一级
-	CurrencyType = "100"
+	CurrencyType = 100
 	//二级
-	CurrencySubTypeGold    = "1" //金币
-	CurrencySubTypeDiamond = "2" //钻石
+	CurrencySubTypeGold    = 1 //金币
+	CurrencySubTypeDiamond = 2 //钻石
 
 	//一级
-	ItemType = "200"
+	ItemType = 200
 )

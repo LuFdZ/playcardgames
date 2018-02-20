@@ -6,7 +6,7 @@ const (
 
 const (
 	NewUserDiamond     = 100
-	NewUserGold        = 0
+	NewUserGold        = 20000
 )
 
 const (

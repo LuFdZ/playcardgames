@@ -64,6 +64,7 @@ class Client(object):
             """
             print "websocket connected"
             # send Token to login
+            print(self.token)
             ws.send(self.token)
 
         def on_message(ws, msg):
@@ -94,6 +95,7 @@ class Client(object):
         }
 
         b = json.dumps(data)
+        print(b)
         self.ws.send(b)
 
     def AddZodiacConfig(self):
@@ -142,7 +144,7 @@ class Client(object):
         self.StreamSend("UnSubscribeClubMessage", {})
 
     def ClientHeartbeat(self):
-        self.StreamSend("ClientHeartbeat", 3423424)
+        self.StreamSend("ClientHeartbeat", {})
 
     def WebScoket(self):
         self.StreamSend("UserWebScoketList", {})
@@ -181,8 +183,8 @@ class Client(object):
     def SubmitCardT(self):
         ul = self.Request("/thirteen/thirteenSrv/SubmitCard", {
             "Head": ['2_8', '2_5', '2_3'],
-            "Middle": ['3_13', '1_13', '3_12', '3_11', '3_9'],
-            "Tail": ['4_14', '4_5', '1_4', '4_3', '4_2']
+            "Middle": ['3_10', '3_11', '3_12', '3_13', '3_14'],
+            "Tail": ['1_10', '1_11', '1_12', '1_13', '1_14']
         })
         return ul
 
@@ -238,6 +240,21 @@ class Client(object):
                 "Sum": False,
             },
             "Feedback": {}
+        })
+        return ul
+
+    def PageSGL(self, page, pagesize):
+        ul = self.Request("/room/roomSrv/PageSpecialGameList", {
+            "Page": {
+                "Page": page,
+                "PageSize": pagesize,
+                "Time": {
+                    "Start": 0,
+                    "End": 0,
+                },
+                "Sum": False,
+            },
+            "GameRecord": {}
         })
         return ul
 
@@ -331,6 +348,12 @@ class Client(object):
                 },
                 "Sum": False,
             },
+        })
+        return ul
+
+    def RRobot(self, count):
+        ul = self.Request("/user/UserSrv/RegisterRobot", {
+            "Count": count
         })
         return ul
 
@@ -663,8 +686,8 @@ class Client(object):
 
     def SCFourA(self):
         ul = self.Request("/fourcard/FourCardSrv/SubmitCard", {
-            "Head": ['3_2', '3_9'],
-            "Tail": ['3_3', '4_4']
+            "Head": ['4_7', '3_12'],
+            "Tail": ['3_3', '5_21']
         })
         return ul
 
@@ -679,16 +702,16 @@ class Client(object):
     邮件相关操作
     """
 
-    def SendMail(self):
-        ul = self.Request("/mail/MailSrv/SendSysMail", {
+    def SendMail(self, mailid, uid):
+        ul = self.Request("/mail/MailSrv/SendMail", {
             "MailSend": {
-                "MailID": 1001,
+                "MailID": mailid,
                 "SendID": 100000,
                 "MailType": 1,
                 "MailInfo": None,
             },
             "SendAll": 0,
-            "Ids": [100001, 100002, 100003, 112020]
+            "Ids": [uid]
         })
         return ul
 
@@ -704,6 +727,11 @@ class Client(object):
         })
         return ul
 
+    def GetAllMailItems(self):
+        ul = self.Request("/mail/mailSrv/GetAllMailItems", {
+        })
+        return ul
+
     def PagePlayerMail(self, page):
         ul = self.Request("/mail/MailSrv/PagePlayerMail", {
             "Page": page,
@@ -716,4 +744,51 @@ class Client(object):
         })
         return ul
 
+    def CMI(self):
+        ul = self.Request("/mail/MailSrv/CreateMailInfo", {
+            "MailInfo": {
+                "MailID": 2001,
+                "MailName": "测试物品邮件模板",
+                "MailTitle": "测试物品邮件模板",
+                "MailContent": "小吴是傻逼，快点领东西",
+            },
+            "ItemModelA": {
+                "MainType": 100,
+                "SubType": 1,
+                "Count": 1000,
+            },
+            "ItemModelB": {
+                "MainType": 100,
+                "SubType": 2,
+                "Count": 10,
+            },
+            "ItemModelC": {
+                "MainType": 200,
+                "SubType": 1,
+                "ItemID": 1023,
+                "Count": 1,
+            },
+        })
+        return ul
 
+    """
+    金币场相关操作
+    """
+
+    def EnterGRoom(self, level, gtype):
+        ul = self.Request("/goldroom/GoldRoomSrv/EnterRoom", {
+            "Level": level,
+            "GameType": gtype,
+        })
+        return ul
+
+    def LeaveGRoom(self):
+        ul = self.Request("/goldroom/GoldRoomSrv/LeaveRoom", {
+        })
+        return ul
+
+    def SetGReady(self, pwd):
+        ul = self.Request("/goldroom/GoldRoomSrv/SetReady", {
+            "Password":pwd
+        })
+        return ul

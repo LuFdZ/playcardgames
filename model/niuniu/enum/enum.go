@@ -2,10 +2,10 @@ package enum
 
 const (
 	LoopTime       = 500
-	GetBankerTime  = 12.0
-	SetBetTime     = 17.0
-	SubmitCardTime = 12.0
-	MinSetBet      = 5
+	GetBankerTime  = 32.0
+	SetBetTime     = 32.0
+	SubmitCardTime = 32.0
+	MinSetBet      = 1
 )
 
 const (

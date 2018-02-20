@@ -31,11 +31,11 @@ type ClubSrv struct {
 	broker broker.Broker
 }
 
-func ClubLockKey(clubid int32, optype string) string {
-	return fmt.Sprintf("playcards.club.op.lock:%d|%s", clubid, optype)
-}
+//func ClubLockKey(clubid int32, optype string) string {
+//	return fmt.Sprintf("playcards.club.op.lock:%d|%s", clubid, optype)
+//}
 
-func ClubRoomLockKey(clubid int32) string {
+func ClubLockKey(clubid int32) string {
 	return fmt.Sprintf("playcards.club.op.lock:%d", clubid)
 }
 
@@ -86,7 +86,7 @@ func (cs *ClubSrv) UpdateClub(ctx context.Context,
 		}
 		return nil
 	}
-	lock := ClubLockKey(req.ClubID, enumclub.ClubOpUpdateRoom)
+	lock := ClubLockKey(req.ClubID)
 	err := gsync.GlobalTransaction(lock, f)
 	if err != nil {
 		log.Err("%s club update failed: %v", lock, err)
@@ -113,6 +113,11 @@ func (cs *ClubSrv) SetClubRoomFlag(ctx context.Context,
 func (cs *ClubSrv) RemoveClubMember(ctx context.Context,
 	req *pbclub.ClubMember, rsp *pbclub.ClubReply) error {
 
+	mdClub, err := cacheclub.GetClub(req.ClubID)
+	if err != nil{
+		return err
+	}
+
 	f := func() error {
 		err := club.RemoveClubMember(req.ClubID, req.UserID, enumclub.ClubMemberStatusRemoved)
 		if err != nil {
@@ -120,8 +125,8 @@ func (cs *ClubSrv) RemoveClubMember(ctx context.Context,
 		}
 		return nil
 	}
-	lock := ClubLockKey(req.ClubID, enumclub.ClubOpRemoveMember)
-	err := gsync.GlobalTransaction(lock, f)
+	lock := ClubLockKey(mdClub.ClubID)
+	err = gsync.GlobalTransaction(lock, f)
 	if err != nil {
 		log.Err("%s remove club member failed: %v", lock, err)
 		return err
@@ -134,6 +139,13 @@ func (cs *ClubSrv) RemoveClubMember(ctx context.Context,
 		UserID: req.UserID,
 	}
 	topic.Publish(cs.broker, msgAll, TopicClubMemberLeave)
+
+	mailReq := &pbmail.SendSysMailRequest{
+		MailID: enumclub.MailClubUnJoin,
+		Ids:    []int32{req.UserID},
+		Args:   []string{mdClub.ClubName},
+	}
+	topic.Publish(cs.broker, mailReq, srvmail.TopicSendSysMail)
 	return nil
 }
 
@@ -151,7 +163,7 @@ func (cs *ClubSrv) CreateClubMember(ctx context.Context,
 		}
 		return nil
 	}
-	lock := ClubLockKey(req.ClubID, enumclub.ClubOpCreateMember)
+	lock := ClubLockKey(req.ClubID)
 	err = gsync.GlobalTransaction(lock, f)
 	if err != nil {
 		log.Err("%s create club member failed: %v", lock, err)
@@ -184,13 +196,23 @@ func (cs *ClubSrv) JoinClub(ctx context.Context,
 	if err != nil {
 		return err
 	}
-	err = club.JoinClub(req.ClubID, u)
+	mdClub, err := cacheclub.GetClub(req.ClubID)
+	if err != nil{
+		return err
+	}
+	err = club.JoinClub(mdClub.ClubID, u)
 	if err != nil {
 		return err
 	}
 	*rsp = pbclub.ClubReply{
 		Result: 1,
 	}
+	//mailReq := &pbmail.SendSysMailRequest{
+	//	MailID: enumclub.MailClubJoin,
+	//	Ids:    []int32{u.UserID},
+	//	Args:   []string{mdClub.ClubName},
+	//}
+	//topic.Publish(cs.broker, mailReq, srvmail.TopicSendSysMail)
 	return nil
 }
 
@@ -200,6 +222,10 @@ func (cs *ClubSrv) LeaveClub(ctx context.Context,
 	if err != nil {
 		return err
 	}
+	mdClub, err := cacheclub.GetClub(req.ClubID)
+	if err != nil{
+		return err
+	}
 	f := func() error {
 		err = club.RemoveClubMember(req.ClubID, u.UserID, enumclub.ClubMemberStatusLeave)
 		if err != nil {
@@ -207,7 +233,7 @@ func (cs *ClubSrv) LeaveClub(ctx context.Context,
 		}
 		return nil
 	}
-	lock := ClubLockKey(req.ClubID, enumclub.ClubOpLeaveClub)
+	lock := ClubLockKey(mdClub.ClubID)
 	err = gsync.GlobalTransaction(lock, f)
 	if err != nil {
 		log.Err("%s create club leave  failed: %v", lock, err)
@@ -222,13 +248,6 @@ func (cs *ClubSrv) LeaveClub(ctx context.Context,
 	}
 	topic.Publish(cs.broker, msgAll, TopicClubMemberLeave)
 
-	mdClub, err := cacheclub.GetClub(req.ClubID)
-	mailReq := &pbmail.SendSysMailRequest{
-		MailID: enumclub.MailClubUnJoin,
-		Ids:    []int32{req.UserID},
-		Args:   []string{mdClub.ClubName},
-	}
-	topic.Publish(cs.broker, mailReq, srvmail.TopicSendSysMail)
 	return nil
 }
 
@@ -319,7 +338,7 @@ func (cs *ClubSrv) ClubRecharge(ctx context.Context,
 		}
 		return nil
 	}
-	lock := ClubRoomLockKey(req.ClubID)
+	lock := ClubLockKey(req.ClubID)
 	err = gsync.GlobalTransaction(lock, f)
 	if err != nil {
 		log.Err("%s club recharge failed: %v", lock, err)
@@ -338,6 +357,10 @@ func (cs *ClubSrv) SetBlackList(ctx context.Context,
 	if err != nil {
 		return err
 	}
+	mdClub, err := cacheclub.GetClub(req.ClubID)
+	if err != nil{
+		return err
+	}
 	f := func() error {
 		err = club.SetBlackList(req.ClubID, req.UserID, u.UserID)
 		if err != nil {
@@ -345,7 +368,7 @@ func (cs *ClubSrv) SetBlackList(ctx context.Context,
 		}
 		return nil
 	}
-	lock := ClubRoomLockKey(req.ClubID)
+	lock := ClubLockKey(mdClub.ClubID)
 	err = gsync.GlobalTransaction(lock, f)
 	if err != nil {
 		log.Err("%s club set black list failed: %v", lock, err)
@@ -360,7 +383,6 @@ func (cs *ClubSrv) SetBlackList(ctx context.Context,
 	}
 	topic.Publish(cs.broker, msgAll, TopicClubMemberLeave)
 
-	mdClub, err := cacheclub.GetClub(req.ClubID)
 	mailReq := &pbmail.SendSysMailRequest{
 		MailID: enumclub.MailClubUnJoin,
 		Ids:    []int32{req.UserID},
@@ -385,7 +407,7 @@ func (cs *ClubSrv) UpdateClubExamine(ctx context.Context,
 		}
 		return nil
 	}
-	lock := ClubRoomLockKey(req.ClubID)
+	lock := ClubLockKey(req.ClubID)
 	err = gsync.GlobalTransaction(lock, f)
 	if err != nil {
 		log.Err("%s club set examine failed: %v", lock, err)

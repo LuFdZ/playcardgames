@@ -50,13 +50,13 @@ func CreateThirteen(goLua *lua.LState) []*mdt.Thirteen {
 		for _, user := range mdroom.Users {
 			if mdroom.RoundNow == 1 {
 				userResult := &mdr.GameUserResult{
-					UserID:   user.UserID,
+					UserID: user.UserID,
 					//Nickname: user.Nickname,
-					Role:     user.Role,
-					Win:      0,
-					Lost:     0,
-					Tie:      0,
-					Score:    0,
+					Role:  user.Role,
+					Win:   0,
+					Lost:  0,
+					Tie:   0,
+					Score: 0,
 				}
 				userResults = append(userResults, userResult)
 			}
@@ -241,7 +241,7 @@ func UpdateGame(goLua *lua.LState) []*mdt.Thirteen { //[]*mdt.GameResultList
 		}
 
 		resultList.Result = results
-
+		var specialCardUids []int32
 		var resultArray []*mdr.GameUserResult
 		for _, result := range resultList.Result {
 			for _, userResult := range mdroom.UserResults {
@@ -275,6 +275,10 @@ func UpdateGame(goLua *lua.LState) []*mdt.Thirteen { //[]*mdt.GameResultList
 					if len(resultList.Result) > 2 &&
 						len(result.Result.Shoot) >= (len(resultList.Result)-1) {
 						m["AllShoot"]++
+					}
+					//特殊记录 顺子
+					if result.Result.Middle.GroupType == "FlushStraight" || result.Result.Tail.GroupType == "FlushStraight" {
+						specialCardUids = append(specialCardUids, userResult.UserID)
 					}
 					r, _ := json.Marshal(m)
 					userResult.GameCardCount = string(r)
@@ -326,6 +330,21 @@ func UpdateGame(goLua *lua.LState) []*mdt.Thirteen { //[]*mdt.GameResultList
 				return err
 			}
 			mdroom = r
+			for _, uid := range specialCardUids {
+				plsgr := &mdr.PlayerSpecialGameRecord{
+					GameID:     thirteen.GameID,
+					RoomID:     thirteen.RoomID,
+					GameType:   mdroom.GameType,
+					RoomType:   mdroom.RoomType,
+					Password:   mdroom.Password,
+					UserID:     uid,
+					GameResult: thirteen.GameResults,
+				}
+				err = dbr.CreateSpecialGame(tx, plsgr)
+				if err != nil {
+					return err
+				}
+			}
 			return nil
 		}
 		//go db.Transaction(f)
@@ -360,7 +379,7 @@ func initThirteenGameTypeMap() map[string]int32 {
 
 func SubmitCard(uid int32, submitCard *mdt.SubmitCard) error {
 	mdr, err := cacher.GetRoomUserID(uid)
-	if err != nil{
+	if err != nil {
 		return err
 	}
 	if mdr.Status > enumr.RoomStatusStarted {

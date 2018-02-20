@@ -11,7 +11,6 @@ import (
 
 	"gopkg.in/redis.v5"
 	"playcards/utils/tools"
-	"strings"
 	"math"
 )
 
@@ -268,24 +267,35 @@ func GetPlayerMails(uid int32) ([]*mdgame.PlayerMail, error) {
 	count = 999
 	key := PlayerMailHKey()
 	for {
-		search := fmt.Sprintf("%d:*", uid)
+		//uid:%d-
+		search := fmt.Sprintf("uid:%d-*", uid)
 		scan := cache.KV().HScan(key, curson, search, count)
 		keysValues, cur, err := scan.Result()
 		if err != nil {
 			return nil, errors.Internal("list player mail list failed", err)
 		}
-		var logID int32
+		//var logID int32
 		for i, idStr := range keysValues {
-			if i%2 == 1 {
-				logID = tools.StringParseInt(strings.Split(idStr, ":")[1])
-			} else if i%2 == 0 {
-				pm, err := GetPlayerMail(uid, logID)
-				if err != nil {
-					log.Err("get player mails rid:%s,err:%v", idStr, err)
-					continue
-				}
-				pms = append(pms, pm)
+			//if i%2 == 1 {
+			//	fmt.Printf("GetPlayerMails:%s\n",idStr)
+			//	logID = tools.StringParseInt(strings.Split(idStr, ":")[1])
+			//} else if i%2 == 0 {
+			//	pm, err := GetPlayerMail(uid, logID)
+			//	if err != nil {
+			//		log.Err("get player mails rid:%s,err:%v", idStr, err)
+			//		continue
+			//	}
+			//	pms = append(pms, pm)
+			//}
+			if i%2 == 0 {
+				continue
 			}
+			pm := &mdgame.PlayerMail{}
+			if err := json.Unmarshal([]byte(idStr), pm); err != nil {
+				//fmt.Printf("BBBBGetPlayerMails:%s\n",idStr)
+				return nil, errors.Internal("get player mail failed", err)
+			}
+			pms = append(pms, pm)
 		}
 		curson = cur
 		if curson == 0 {
@@ -296,6 +306,9 @@ func GetPlayerMails(uid int32) ([]*mdgame.PlayerMail, error) {
 }
 
 func PagePlayerMailList(page int32, pms []*mdgame.PlayerMail) ([]*mdgame.PlayerMail, int32, int32) {
+	if page == 0{
+		page = 1
+	}
 	total := int32(len(pms))
 	var pageList []*mdgame.PlayerMail
 	count := float64(len(pms)) / float64(enumgame.MaxMailRecordCount)
@@ -311,6 +324,7 @@ func PagePlayerMailList(page int32, pms []*mdgame.PlayerMail) ([]*mdgame.PlayerM
 	}
 	for i, pm := range pms {
 		index := i + 1
+		//fmt.Printf("GetAndRefreshPlayerMailByID:%d|%d|%d|%d\n",index,pageStart,pageEnd,len(pms))
 		if index <= pageStart || index > pageEnd {
 			continue
 		}

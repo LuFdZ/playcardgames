@@ -43,6 +43,9 @@ message RoomUser {
     repeated int32 Ids = 13;
     int32 Diamond = 14;
     int32 OwnerID = 15;
+    int32 Online = 16;
+    int32 BankerID = 17;
+    int64 Gold = 18;
 }
 
 message ClubRoomUser {
@@ -125,6 +128,23 @@ message GiveUpGameResult {
     CountDown CountDown = 5;
 }
 
+message PlayerSpecialGameRecord {
+    int32 GameID = 1; //游戏ID
+    int32 RoomID = 2; //房间
+    int32 GameType = 3; //游戏类型
+    int32 RoomType = 4; //房间类型
+    string Password = 5;
+    int32 UserID = 6; //玩家id
+    string GameResult = 7; //游戏结算json
+    int64 CreatedAt = 8;
+    int64 UpdatedAt = 9;
+}
+
+message PageSpecialGameListRequest {
+    page.PageOption Page = 1;
+    PlayerSpecialGameRecord GameRecord = 2;
+}
+
 message PageFeedbackListRequest {
     page.PageOption Page = 1;
     Feedback Feedback = 2;
@@ -202,6 +222,12 @@ message RoomUsersReply {
     repeated RoomUser List = 1;
 }
 
+message PageSpecialGameListReply {
+    int32 Result = 1;
+    repeated PlayerSpecialGameRecord List = 2;
+    int64 Count = 3;
+}
+
 //广播
 message UserState {
     int32 State = 1;
@@ -246,12 +272,12 @@ message RoomNotice {
     repeated int32 Ids = 3;
 }
 
-message RoomExist{
+message RoomExist {
     int32 UserID = 1;
     int32 RoomID = 2;
 }
 
-message ShuffleCardBro{
+message ShuffleCardBro {
     int32 UserID = 1;
     repeated int32 Ids = 3;
 }
@@ -297,13 +323,15 @@ service RoomSrv {
     }
     rpc PageRoomList (PageRoomRequest) returns (PageRoomListReply) {
     }
-    rpc GetRoomRecovery(Room) returns (RoomReply) {
+    rpc GetRoomRecovery (Room) returns (RoomReply) {
     }
-    rpc GameStart(Room) returns (RoomReply) {
+    rpc GameStart (Room) returns (RoomReply) {
     }
-    rpc ShuffleCard(Room) returns (RoomReply) {
+    rpc ShuffleCard (Room) returns (RoomReply) {
     }
-    rpc RoomChat(RoomChatRequest) returns (RoomReply) {
+    rpc RoomChat (RoomChatRequest) returns (RoomReply) {
+    }
+    rpc PageSpecialGameList (PageSpecialGameListRequest) returns (PageSpecialGameListReply) {
     }
 }
 

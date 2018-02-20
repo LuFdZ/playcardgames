@@ -12,14 +12,13 @@ import (
 	mdpage "playcards/model/page"
 	mdtime "playcards/model/time"
 	enumbill "playcards/model/bill/enum"
+	utilproto "playcards/utils/proto"
 	"playcards/utils/auth"
 	"playcards/model/bill"
 	"playcards/utils/log"
 	"playcards/utils/db"
 	"github.com/jinzhu/gorm"
-	"strings"
 	"time"
-	"playcards/utils/tools"
 	"fmt"
 )
 
@@ -98,12 +97,12 @@ func SendMail(uid int32, msl *mdgame.MailSendLog, ids []int32, channel string) (
 	if msl.MailInfo == nil {
 		return nil, errgame.ErrMailInfoContent
 	}
-	if msl.MailInfo.ItemList != "" {
-		itemInfo := strings.Split(msl.MailInfo.ItemList, ":")
-		if len(itemInfo) != 4 {
-			return nil, errgame.ErrItemFormat
-		}
-	}
+	//if msl.MailInfo.ItemList != "" {
+	//	itemInfo := strings.Split(msl.MailInfo.ItemList, ":")
+	//	if len(itemInfo) != 4 {
+	//		return nil, errgame.ErrItemFormat
+	//	}
+	//}
 	var err error
 	msl.SendID = uid
 	msl.Status = enumgame.Success
@@ -125,7 +124,7 @@ func SendMail(uid int32, msl *mdgame.MailSendLog, ids []int32, channel string) (
 
 func createPlayerMail(msl *mdgame.MailSendLog, ids []int32, channel string) {
 	var haveItem int32 = 0
-	if len(msl.MailInfo.ItemList) > 0 {
+	if len(msl.MailInfo.ItemModeList) > 0 {
 		haveItem = 1
 	}
 	var pms []*mdgame.PlayerMail
@@ -196,32 +195,65 @@ func ReadMail(uid int32, logid int32) error {
 	return nil
 }
 
-func GetMailItems(uid int32, logid int32) (string, error) {
+func GetAllMailItems(uid int32) ([]*mdgame.ItemModel, error) {
+	pms, err := cachegame.GetPlayerMails(uid)
+	if err != nil {
+		return nil, err
+	}
+	if pms == nil {
+		return nil, errgame.ErrMailNotNow
+	}
+	var out []*mdgame.ItemModel
+	m := make(map[string]*mdgame.ItemModel)
+	for _, pm := range pms {
+		if pm.HaveItem == 0 {
+			continue
+		}
+		ils, err := GetMailItems(uid, pm.LogID)
+		if err != nil {
+			continue
+		}
+		for _, item := range ils {
+			key := fmt.Sprintf("%d-%d-%d", item.MainType, item.SubType, item.ItemID)
+			if _, ok := m[key]; ok {
+				m[key].Count+=item.Count
+			}else{
+				m[key] = item
+			}
+		}
+	}
+	for _,v := range m{
+		out = append(out,v)
+	}
+	return out, nil
+}
+
+func GetMailItems(uid int32, logid int32) ([]*mdgame.ItemModel, error) {
 	pm, err := cachegame.GetPlayerMail(uid, logid)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 	if pm == nil {
-		return "", errgame.ErrMailNotFind
+		return nil, errgame.ErrMailNotFind
 	}
 	if pm.HaveItem == 0 {
-		return "", errgame.ErrHasNotItem
+		return nil, errgame.ErrHasNotItem
 	}
 
 	msl, err := cachegame.GetMailSendLog(pm.SendLogID)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 	if msl == nil {
-		return "", errgame.ErrMailNotFind
+		return nil, errgame.ErrMailNotFind
 	}
 
 	if pm.Status > enumgame.PlayermailReadClose {
-		return "", errgame.ErrArealyGetMailItem
+		return nil, errgame.ErrArealyGetMailItem
 	}
 	err = cachegame.DeletePlayerMail(uid, pm.LogID)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 	f := func(tx *gorm.DB) error {
 		pm, err = dbgame.UpdatePlayerMail(tx, pm)
@@ -232,13 +264,13 @@ func GetMailItems(uid int32, logid int32) (string, error) {
 	}
 	err = db.Transaction(f)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
-	err = awardItemList(msl)
+	err = awardItemList(uid,msl)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
-	return msl.MailInfo.ItemList, nil
+	return msl.MailInfo.ItemModeList, nil
 }
 
 func RefreshAllMailInfoFromDB() error {
@@ -269,7 +301,7 @@ func RefreshAllPlayerMailFromDB() error {
 func PagePlayerMail(page int32, uid int32) (*pbgame.PagePlayerMailReply, error) {
 	var list []*pbgame.PlayerMail
 	pms, count, _ := cachegame.GetPlayerMailByID(page, uid)
-	fmt.Printf("PagePlayerMail:%d|%d\n",pms,count)
+	//fmt.Printf("PagePlayerMail:%d|%d\n",pms,count)
 	mpr := &mdpage.PageReply{
 		PageNow:   page,
 		PageTotal: count,
@@ -282,7 +314,7 @@ func PagePlayerMail(page int32, uid int32) (*pbgame.PagePlayerMailReply, error) 
 	}
 	for _, pbpm := range pms {
 		pm := &pbgame.PlayerMail{
-			LogID:     pbpm.SendID,
+			LogID:     pbpm.LogID,
 			SendLogID: pbpm.SendLogID,
 			UserID:    pbpm.UserID,
 			MailType:  pbpm.MailType,
@@ -291,7 +323,8 @@ func PagePlayerMail(page int32, uid int32) (*pbgame.PagePlayerMailReply, error) 
 		msl, _ := cachegame.GetMailSendLog(pm.SendLogID)
 		pm.MailTitle = msl.MailInfo.MailTitle
 		pm.MailContent = msl.MailInfo.MailContent
-		pm.ItemList = msl.MailInfo.ItemList
+		//pm.ItemList = msl.MailInfo.ItemModeList
+		utilproto.ProtoSlice(msl.MailInfo.ItemModeList, &pm.ItemList)
 		_, sn := cacheuser.GetUserByID(pbpm.SendID)
 		pm.SendName = sn.Nickname
 		list = append(list, pm)
@@ -311,37 +344,40 @@ func CleanOverdueByCreateAt() {
 	}
 }
 
-func awardItemList(sendLog *mdgame.MailSendLog) error {
-	itemInfo := strings.Split(sendLog.MailInfo.ItemList, ":")
-	if len(itemInfo) != 4 {
-		return errgame.ErrItemFormat
-	}
-	itemType := itemInfo[0]
-	itemSubType := itemInfo[1]
-	itemID := itemInfo[2]
-	itemCount := itemInfo[3]
-	switch itemType {
-	case enumgame.CurrencyType:
-		currencyType := 0
-		if itemSubType == enumgame.CurrencySubTypeGold {
-			currencyType = enumbill.TypeGold
-		} else if itemSubType == enumgame.CurrencySubTypeDiamond {
-			currencyType = enumbill.TypeDiamond
-		}
-		_, err := bill.GainBalance(sendLog.SendID, time.Now().Unix(), enumbill.JournalTypeMailTitem,
-			&mdbill.Balance{Amount: tools.StringParseInt64(itemCount), CoinType: int32(currencyType)},
-		)
-		if err != nil {
-			return err
-		}
-		break
-	case enumgame.ItemType:
-		//TODO 道具物品类型分解
-		if itemID == "" {
-		}
-		break
+func awardItemList(uid int32,sendLog *mdgame.MailSendLog) error {
+	//itemInfo := strings.Split(sendLog.MailInfo.ItemList, ":")
+	//if len(itemInfo) != 4 {
+	//	return errgame.ErrItemFormat
+	//}
+	//itemType := itemInfo[0]
+	//itemSubType := itemInfo[1]
+	//itemID := itemInfo[2]
+	//itemCount := itemInfo[3]
+	for _, item := range sendLog.MailInfo.ItemModeList {
+		switch item.MainType {
+		case enumgame.CurrencyType:
+			currencyType := 0
+			if item.SubType == enumgame.CurrencySubTypeGold {
+				currencyType = enumbill.TypeGold
+			} else if item.SubType == enumgame.CurrencySubTypeDiamond {
+				currencyType = enumbill.TypeDiamond
+			}
+			_, err := bill.GainBalance(uid, time.Now().Unix(), enumbill.JournalTypeMailTitem,
+				&mdbill.Balance{Amount: item.Count, CoinType: int32(currencyType)},
+			)
+			if err != nil {
+				return err
+			}
+			break
+		case enumgame.ItemType:
+			//TODO 道具物品类型分解
+			if item.ItemID == 0 {
+			}
+			break
 
+		}
 	}
+
 	return nil
 }
 

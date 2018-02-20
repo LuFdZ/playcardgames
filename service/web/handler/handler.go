@@ -77,7 +77,7 @@ func (w *Web) Subscribe(ws *websocket.Conn) {
 	webdoudizhu.SubscribeDoudizhuMessage(c, nil)
 	webfour.SubscribeFourCardMessage(c, nil)
 	webmail.SubscribeMailMessage(c, nil)
-	webclub.ClubOnlineNotice(c)
+
 
 	log.Debug("new client: %v", c)
 	f := func(msg []byte) error {
@@ -90,11 +90,13 @@ func (w *Web) Subscribe(ws *websocket.Conn) {
 
 		return request.OnEmit(c, req)
 	}
-
+	webclub.ClubOnlineNotice(c)
+	webroom.RoomOnlineNotice(c)
 	go c.ReadLoop(f, request.OnClose)
 	c.Loop(request.OnHeartbeat)
 
 	log.Debug("%v stream broken", c)
+
 }
 
 func UnsubscribeAll(c *clients.Client, req *request.Request) error {

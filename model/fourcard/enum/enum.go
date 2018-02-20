@@ -4,8 +4,8 @@ const (
 	LoopTime       = 500
 	MaxRecordCount = 50
 	LogTime        = 20
-	SetBetTime     = 17.0
-	SubmitCardTime = 1200.0
+	SetBetTime     = 32.0
+	SubmitCardTime = 32.0
 )
 
 const (

@@ -46,8 +46,18 @@ func (ms *MailSrv) update(gt *gsync.GlobalTimer) {
 }
 
 func (ms *MailSrv) CreateMailInfo(ctx context.Context,
-	req *pbgame.MailInfo, rsp *pbgame.DefaultReply) error {
-	mi := mdgame.MailInfoFromProto(req)
+	req *pbgame.CreateMailInfoRequest, rsp *pbgame.DefaultReply) error {
+	mi := mdgame.MailInfoFromProto(req.MailInfo)
+	if req.ItemModelA != nil {
+		mi.ItemModeList = append(mi.ItemModeList, mdgame.ItemModelFromProto(req.ItemModelA))
+	}
+	if req.ItemModelB != nil {
+		mi.ItemModeList = append(mi.ItemModeList, mdgame.ItemModelFromProto(req.ItemModelB))
+	}
+	if req.ItemModelC != nil {
+		mi.ItemModeList = append(mi.ItemModeList, mdgame.ItemModelFromProto(req.ItemModelC))
+	}
+
 	_, err := mail.CreateMailInfo(mi)
 	if err != nil {
 		return err
@@ -163,6 +173,7 @@ func (ms *MailSrv) ReadMail(ctx context.Context, req *pbgame.ReadMailRequest,
 	}
 	reply := &pbgame.DefaultReply{
 		Result: enumgame.Success,
+		LogID:  req.LogID,
 	}
 	*rsp = *reply
 	return nil
@@ -179,9 +190,36 @@ func (ms *MailSrv) GetMailItems(ctx context.Context, req *pbgame.GetMailItemsReq
 		return err
 	}
 	reply := &pbgame.GetMailItemsReply{
-		ItemList: itemList,
+		LogID: req.LogID,
+	}
+	//ItemList: itemList,
+	for _, im := range itemList {
+		reply.ItemList = append(reply.ItemList, im.ToProto())
+	}
+	//utilproto.ProtoSlice(itemList, reply.ItemList)
+	*rsp = *reply
+	return nil
+}
+
+func (ms *MailSrv) GetAllMailItems(ctx context.Context, req *pbgame.GetMailItemsRequest,
+	rsp *pbgame.GetMailItemsReply) error {
+	u, err := auth.GetUser(ctx)
+	if err != nil {
+		return err
+	}
+	itemList, err := mail.GetAllMailItems(u.UserID)
+	if err != nil {
+		return err
+	}
+	reply := &pbgame.GetMailItemsReply{
+		Result: 1,
+	}
+	//utilproto.ProtoSlice(itemList, reply.ItemList)
+	for _, im := range itemList {
+		reply.ItemList = append(reply.ItemList, im.ToProto())
 	}
 	*rsp = *reply
+	//fmt.Printf("GetAllMailItems:%v\n",itemList)
 	return nil
 }
 

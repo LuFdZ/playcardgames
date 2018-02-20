@@ -16,7 +16,7 @@ import (
 	"playcards/utils/topic"
 	"strings"
 	"time"
-
+	"playcards/model/bill"
 	"golang.org/x/net/context"
 	"github.com/micro/go-micro/server"
 	"github.com/micro/go-micro/broker"
@@ -34,11 +34,12 @@ func NewHandler(s server.Server, gt *gsync.GlobalTimer) *UserSrv {
 		broker: s.Options().Broker,
 	}
 	u.update(gt)
+	user.RefreshAllRobotsFromDB()
 	mdu := &mdu.User{
 		Username: "admin@xnhd",
 		Password: "xnhd@interestgame.com",
 	}
-	mdu, _, _ = user.Login(mdu, "")
+	mdu, _ = user.Login(mdu, "")
 	_, _ = cacheuser.SetUser(mdu)
 	enumuser.AdminUserID = mdu.UserID
 	return u
@@ -97,7 +98,7 @@ func (us *UserSrv) AddUser(ctx context.Context, req *pbu.User,
 func (us *UserSrv) Login(ctx context.Context, req *pbu.User,
 	rsp *pbu.LoginReply) error {
 	address, _ := ctx.Value("X-Real-Ip").(string)
-	u, diamond, err := user.Login(mdu.UserFromProto(req), address)
+	u, err := user.Login(mdu.UserFromProto(req), address)
 	if err != nil {
 		return err
 	}
@@ -109,7 +110,12 @@ func (us *UserSrv) Login(ctx context.Context, req *pbu.User,
 	}
 	rsp.Token = token
 	reply := u.ToProto()
-	reply.Diamond = diamond
+	balance, err := bill.GetAllUserBalance(u.UserID)
+	if err != nil{
+		return err
+	}
+	reply.Diamond = balance.Diamond
+	reply.Gold = balance.Gold
 	rsp.User = reply
 	log.Debug("login: %v", u)
 	//room.AutoSubscribe(u.UserID)
@@ -151,7 +157,7 @@ func (us *UserSrv) PageUserList(ctx context.Context,
 	rsp.Result = 2
 	rsp.Code = 101
 	page := mdpage.PageOptionFromProto(req.Page)
-	l, rows, err := user.PageUserList(page, mdu.UserFromPageRequestProto(req))
+	l, rows, err := user.PageUserList(page, mdu.UserFromPageRequestProto(req),req.Sort)
 	if err != nil {
 		rsp.Code = 102
 		return err
@@ -218,7 +224,7 @@ func (us *UserSrv) WXLogin(ctx context.Context, req *pbu.WXLoginRequest,
 		address = list[0]
 	}
 
-	diamond, u, err := user.WXLogin(mdu.UserFromWXLoginRequestProto(req), req.Code, address)
+	u, err := user.WXLogin(mdu.UserFromWXLoginRequestProto(req), req.Code, address)
 	if err != nil {
 		return err
 	}
@@ -233,7 +239,12 @@ func (us *UserSrv) WXLogin(ctx context.Context, req *pbu.WXLoginRequest,
 	rsp.Token = token
 	log.Debug("login: %v|%s", u, address)
 	reply := u.ToProto()
-	reply.Diamond = diamond
+	balance, err := bill.GetAllUserBalance(u.UserID)
+	if err != nil{
+		return err
+	}
+	reply.Diamond = balance.Diamond
+	reply.Gold =balance.Gold
 	rsp.User = u.ToProto()
 	//fmt.Printf("WXLogin:%v\n",rsp.User)
 	return nil
@@ -294,10 +305,14 @@ func (us *UserSrv) SetLocation(ctx context.Context, req *pbu.SetLocationRequest,
 
 func (us *UserSrv) RefreshUserCount(ctx context.Context, req *pbu.SetLocationRequest,
 	rsp *pbu.UserRsply) error {
+	_ ,err:= auth.GetUser(ctx)
+	if err !=nil{
+		return nil
+	}
 	resply := &pbu.UserRsply{
 		Result: 1,
 	}
-	err := user.RefreshUserCount()
+	err = user.RefreshUserCount()
 	if err != nil {
 		return err
 	}
@@ -305,9 +320,32 @@ func (us *UserSrv) RefreshUserCount(ctx context.Context, req *pbu.SetLocationReq
 	return nil
 }
 
-func (r *UserSrv) Heartbeat(ctx context.Context, req *pbu.HeartbeatRequest,
+func (us *UserSrv) Heartbeat(ctx context.Context, req *pbu.HeartbeatRequest,
 	rsp *pbu.HeartbeatReply) error {
 	u := gctx.GetUser(ctx)
 	cacheuser.UpdateUserHeartbeat(u.UserID)
+	return nil
+}
+
+func (us *UserSrv) RefreshAllRobotsFromDB(ctx context.Context, req *pbu.HeartbeatRequest,
+	rsp *pbu.UserRsply) error {
+	_ ,err:= auth.GetUser(ctx)
+	if err !=nil{
+		return nil
+	}
+	err = user.RefreshAllRobotsFromDB()
+	if err !=nil{
+		return nil
+	}
+	return nil
+}
+
+func (us *UserSrv) RegisterRobot(ctx context.Context, req *pbu.RegisterRobotRequest,
+	rsp *pbu.UserRsply) error {
+	_ ,err:= auth.GetUser(ctx)
+	if err !=nil{
+		return nil
+	}
+	user.RegisterRobotUser(req.Count)
 	return nil
 }

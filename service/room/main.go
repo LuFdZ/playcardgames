@@ -34,6 +34,7 @@ var FuncRights = map[string]int32{
 	"RoomSrv.GameStart":             auth.RightsPlayer,
 	"RoomSrv.ShuffleCard":           auth.RightsPlayer,
 	"RoomSrv.RoomChat":              auth.RightsPlayer,
+	"RoomSrv.PageSpecialGameList":   auth.RightsAdmin,
 	"RoomSrv.PageRoomList":          auth.RightsNoticeAdmin,
 	"RoomSrv.PageFeedbackList":      auth.RightsRoomAdmin,
 }

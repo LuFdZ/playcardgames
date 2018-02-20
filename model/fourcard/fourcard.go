@@ -65,7 +65,7 @@ func CreateGame() []*mdgame.Fourcard {
 			ui := &mdgame.UserInfo{
 				UserID:     user.UserID,
 				Status:     enumgame.UserStatusInit,
-				Bet:        1,
+				Bet:        0,
 				Role:       user.Role,
 				TotalScore: 0,
 			}
@@ -165,6 +165,7 @@ func UpdateGame(goLua *lua.LState) []*mdgame.Fourcard {
 	}
 	//游戏结算结果集合
 	var outGames []*mdgame.Fourcard
+	var specialCardUids []int32
 	for _, game := range games {
 		if game.Status == enumgame.GameStatusInit {
 			sub := time.Now().Sub(*game.OpDateAt)
@@ -254,6 +255,10 @@ func UpdateGame(goLua *lua.LState) []*mdgame.Fourcard {
 						} else if ts < 0 {
 							userResult.Lost += 1
 						}
+						//特殊记录 至尊 天对
+						if result.HeadCards.CardType == 100 || result.TailCards.CardType == 110{
+							specialCardUids = append(specialCardUids, userResult.UserID)
+						}
 					}
 				}
 			}
@@ -269,6 +274,21 @@ func UpdateGame(goLua *lua.LState) []*mdgame.Fourcard {
 				if err != nil {
 					log.Err("four card update room db failed, %v|%v", game, err)
 					return err
+				}
+				for _, uid := range specialCardUids {
+					plsgr := &mdroom.PlayerSpecialGameRecord{
+						GameID:     game.GameID,
+						RoomID:     game.RoomID,
+						GameType:   room.GameType,
+						RoomType:   room.RoomType,
+						Password:   room.Password,
+						UserID:     uid,
+						GameResult: game.GameResultStr,
+					}
+					err = dbroom.CreateSpecialGame(tx, plsgr)
+					if err != nil {
+						return err
+					}
 				}
 				return nil
 			}

@@ -31,9 +31,8 @@ CREATE TABLE `users` (
   #   UNIQUE KEY `email_unique` (`email`),
   UNIQUE KEY `username_unique` (`username`),
   UNIQUE KEY `openid_unique` (`open_id`),
-  UNIQUE KEY `invite_unique` (`invite_user_id`),
-  UNIQUE KEY `invite_unique` (`invite_user_id`),
-  UNIQUE KEY `type_unique` (`type`)
+  KEY `index_invite` (`invite_user_id`),
+  KEY `index_type` (`type`)
 )
   ENGINE = InnoDB
   AUTO_INCREMENT = 100000
@@ -90,6 +89,7 @@ CREATE TABLE `rooms` (
   `giveup`           INT           NOT NULL DEFAULT '0',
   `Shuffle`          INT           NOT NULL DEFAULT '0',
   `room_type`        INT           NOT NULL DEFAULT '0',
+  `level`            INT           NOT NULL DEFAULT '0',
   `payer_id`         INT           NOT NULL DEFAULT '0',
   `game_type`        INT           NOT NULL DEFAULT '0',
   `game_param`       VARCHAR(255)  NOT NULL DEFAULT '',
@@ -366,7 +366,6 @@ CREATE TABLE `examines` (
   ENGINE = InnoDB
   AUTO_INCREMENT = 1
   DEFAULT CHARSET = utf8;
-
 
 
 INSERT INTO users VALUES

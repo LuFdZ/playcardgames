@@ -3,6 +3,8 @@ package tools
 import (
 	"encoding/json"
 	"strconv"
+	"math/rand"
+	"time"
 )
 
 func JsonStrToMap(jsonStr string) (map[string]interface{}, error) {
@@ -84,4 +86,11 @@ func StringParseInt64(s string) int64 {
 func MergeSlice(s1 []string, s2 []string) []string {
 	s3 := append(s1,s2...)
 	return s3
+}
+
+func GenerateRangeNum(min, max int) int32 {
+	rand.Seed(time.Now().UnixNano())
+	randNum := rand.Intn(max - min)
+	randNum = randNum + min
+	return int32(randNum)
 }
