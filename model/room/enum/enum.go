@@ -96,16 +96,19 @@ const (
 	NiuniuGameType   = 1002
 	DoudizhuGameType = 1003
 	FourCardGameType = 1004
+	TowCardGameType  = 1005
 
 	ThirteenGameCost = 1.0
 	NiuniuGameCost   = 1.0
 	DoudizhuGameCost = 1.0
 	FourcardGameCost = 1.0
+	TowcardGameCost  = 1.0
 
-	ThirteenMaxNumber = 4
+	ThirteenMaxNumber = 8
 	NiuniuMaxNumber   = 10
 	DoudizhuMaxNumber = 4
 	FourcardMaxNumber = 8
+	TowcardMaxNumber  = 10
 )
 
 // game recovery room status
@@ -144,4 +147,4 @@ const (
 	Robot  = 2
 )
 
-var GameType = []int32{1001, 1002, 1003,1004}
+var GameType = []int32{1001, 1002, 1003, 1004}

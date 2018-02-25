@@ -55,21 +55,36 @@ func RoomSearchHKey(gtype int32, status int32, password string) string {
 	return fmt.Sprintf("gtype:%d-status:%d-password:%s-", gtype, status, password)
 }
 
+//func GoldRoomSearchKey() string {
+//	return fmt.Sprintf(cache.KeyPrefix("GOLDROOMSEARCH"))
+//}
+//
+func GoldRoomSearchHKey(gtype int32, rType int32, full int32, level int32, pwd string) string {
+	return fmt.Sprintf("gtype:%d-rType:%d-full:%d-level:%d-password:%s-", gtype, rType, full, level, pwd)
+}
+
 func SetRoom(mdroom *mdr.Room) error {
 	lockKey := RoomLockKey(mdroom.Password)
 	roomKey := RoomKey()
 	searchKey := RoomSearcKey()
 	f := func(tx *redis.Tx) error {
-		searchHKey := RoomSearchHKey(mdroom.GameType, mdroom.Status, mdroom.Password)
 		tx.Pipelined(func(p *redis.Pipeline) error {
+			searchHKey := RoomSearchHKey(mdroom.GameType, mdroom.Status, mdroom.Password)
+			if mdroom.RoomType == enumr.RoomTypeGold {
+				searchHKey = GoldRoomSearchHKey(mdroom.GameType,mdroom.RoomType,1,  mdroom.Level, mdroom.Password)
+				tx.HSet(searchKey, searchHKey, fmt.Sprintf("%s:%d",mdroom.Password,mdroom.Status))
+			}else{
+				tx.HSet(searchKey, searchHKey, mdroom.Password)
+			}
 			mdroom.SearchKey = searchHKey
 			b, _ := json.Marshal(mdroom)
 			tx.HSet(roomKey, mdroom.Password, string(b))
-			tx.HSet(searchKey, searchHKey, mdroom.Password)
+
+			//tx.HSet(searchKey, searchHKey, mdroom.Password)
 			if mdroom.RoomType == enumr.RoomTypeAgent {
 				aKey := AgentRoomHKey()
-				subKey := AgentRoomHSubKey(mdroom.PayerID, mdroom.GameType, mdroom.RoomID, mdroom.Password )
-				tx.HSet(aKey, subKey,string(b))
+				subKey := AgentRoomHSubKey(mdroom.PayerID, mdroom.GameType, mdroom.RoomID, mdroom.Password)
+				tx.HSet(aKey, subKey, string(b))
 			}
 			return nil
 		})
@@ -87,16 +102,33 @@ func UpdateRoom(mdroom *mdr.Room) error {
 	lockKey := RoomLockKey(mdroom.Password)
 	roomKey := RoomKey()
 	searchKey := RoomSearcKey()
-
+	//searchHkey := RoomSearchHKey(mdroom.GameType, mdroom.Status, mdroom.Password)
+	//if mdroom.RoomType == enumr.RoomTypeGold {
+	//	var isfull int32 = 1
+	//	if mdroom.MaxNumber == int32(len(mdroom.Ids)) {
+	//		isfull = 2
+	//	}
+	//	searchHkey = GoldRoomSearchHKey(mdroom.GameType, mdroom.Status,mdroom.RoomType,isfull,  mdroom.Level, mdroom.Password)
+	//}
 	f := func(tx *redis.Tx) error {
-		searchHkey := RoomSearchHKey(mdroom.GameType, mdroom.Status, mdroom.Password)
 		tx.Pipelined(func(p *redis.Pipeline) error {
+			searchHKey := RoomSearchHKey(mdroom.GameType, mdroom.Status, mdroom.Password)
+			if mdroom.RoomType == enumr.RoomTypeGold {
+				var isfull int32 = 1
+				if mdroom.MaxNumber == int32(len(mdroom.Ids)) {
+					isfull = 2
+				}
+				searchHKey = GoldRoomSearchHKey(mdroom.GameType,mdroom.RoomType,isfull,  mdroom.Level, mdroom.Password)
+				tx.HSet(searchKey, searchHKey, fmt.Sprintf("%s:%d",mdroom.Password,mdroom.Status))
+			}else{
+				tx.HSet(searchKey, searchHKey, mdroom.Password)
+			}
 			lastKey := mdroom.SearchKey
 			tx.HDel(searchKey, lastKey)
-			mdroom.SearchKey = searchHkey
+			mdroom.SearchKey = searchHKey
 			b, _ := json.Marshal(mdroom)
 			tx.HSet(roomKey, mdroom.Password, string(b))
-			tx.HSet(searchKey, searchHkey, mdroom.Password)
+			//tx.HSet(searchKey, searchHKey, mdroom.Password)
 			if mdroom.RoomType == enumr.RoomTypeAgent {
 				aKey := AgentRoomHKey()
 				subKey := AgentRoomHSubKey(mdroom.PayerID, mdroom.GameType, mdroom.RoomID, mdroom.Password)
@@ -108,7 +140,7 @@ func UpdateRoom(mdroom *mdr.Room) error {
 		return nil
 	}
 	if err := cache.KV().Watch(f, lockKey); err != nil {
-		log.Err("%s set room failed\n",lockKey)
+		log.Err("%s set room failed\n", lockKey)
 		return errors.Internal("set room failed", err)
 	}
 
@@ -234,13 +266,13 @@ func DeleteAllRoomUser(pwd string, callFrom string) error {
 			if err == nil && room != nil {
 				for _, user := range room.Users {
 					value := tx.HGet(userkey, tools.IntToString(user.UserID)).Val()
-					if len(value) == 0{
+					if len(value) == 0 {
 						continue
 					}
 					rid := strings.Split(value, ":")[1]
 					roomid, _ := strconv.Atoi(rid)
 					if int32(roomid) == room.RoomID {
-						tx.HDel(userkey,tools.IntToString(user.UserID) )
+						tx.HDel(userkey, tools.IntToString(user.UserID))
 						str += fmt.Sprintf("|delthisroomuser:%s", user.UserID)
 					} else {
 						str += fmt.Sprintf("|nothisroomuser:%s,roomid:%d|", user.UserID, roomid)
@@ -397,7 +429,7 @@ func FlushAll() {
 func GetAgentRoom(uid int32, gameType int32, rid int32, pwd string) (*mdr.Room, error) {
 	key := AgentRoomHKey()
 	subKey := AgentRoomHSubKey(uid, gameType, rid, pwd)
-	val,err := cache.KV().HGet(key, subKey).Bytes()
+	val, err := cache.KV().HGet(key, subKey).Bytes()
 	if err != nil {
 		return nil, err
 	}
@@ -573,6 +605,7 @@ func GetAllRoomByStatus(status int32) []*mdr.Room {
 func GetAllRoomByGameTypeAndStatus(gtype int32, status int32) []*mdr.Room {
 	var rooms []*mdr.Room
 	match := fmt.Sprintf("*gtype:%d-status:%d-*", gtype, status)
+	fmt.Sprintf("GetAllRoomByGameTypeAndStatus:%s\n",match)
 	rooms, err := GetAllRoomKey(match)
 	if err != nil {
 		log.Err("GetAllRoomByStatus:%v", err)
@@ -621,7 +654,7 @@ func GetAllRoomKey(match string) ([]*mdr.Room, error) {
 				pwd := strings.Split(password, ":")[1]
 				room, err := GetRoom(pwd)
 				if err != nil {
-					log.Err("GetAllRoomKeyErr match:%s,err:%v", match, err)
+					log.Err("get all room key err match:%s,err:%v", match, err)
 				}
 				rs = append(rs, room)
 			}

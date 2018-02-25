@@ -95,7 +95,6 @@ class Client(object):
         }
 
         b = json.dumps(data)
-        print(b)
         self.ws.send(b)
 
     def AddZodiacConfig(self):
@@ -792,3 +791,29 @@ class Client(object):
             "Password":pwd
         })
         return ul
+
+    """
+    两张相关操作
+    """
+
+    def CRTow(self, roomType, maxNumber, roundNumber):  # , scoreType, betType
+        ul = self.Request("/room/roomSrv/CreateRoom", {
+            "RoundNumber": roundNumber,
+            "MaxNumber": maxNumber,
+            "GameType": 1005,
+            "RoomType": roomType,
+            "GameParam": '{\"ScoreType\":2,\"BetType\":1}'  # % (scoreType) % (betType)
+        })
+        return ul
+
+    def SBTow(self, value):
+        ul = self.Request("/towcard/TowCardSrv/SetBet", {
+            "Key": value,
+        })
+        return ul
+
+    def SCTow(self):
+        ul = self.Request("/towcard/TowCardSrv/SubmitCard", {
+        })
+        return ul
+

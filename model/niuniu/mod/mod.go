@@ -29,7 +29,9 @@ type Niuniu struct {
 	SubDateAt     *time.Time   `gorm:"-"`
 	HasNewBanker  bool         `gorm:"-"`
 	RefreshDateAt *time.Time   `gorm:"-"`
+	RoomType      int32        `gorm:"-"`
 	Ids           []int32      `gorm:"-"`
+	WatchIds      []int32      `gorm:"-"`
 }
 
 type GetBanker struct {
@@ -49,16 +51,19 @@ type UserCard struct {
 }
 
 type NiuniuUserResult struct {
-	UserID int32
-	Status int32
-	Info   *BankerAndBet
-	Cards  *UserCard
-	Score  int32
+	UserID   int32
+	Status   int32
+	Info     *BankerAndBet
+	Cards    *UserCard
+	Score    int32
+	Type     int32
+	UpdateAt *time.Time
 }
 
 type NiuniuRoomResult struct {
-	RoomID int32
-	List   []*NiuniuUserResult
+	RoomID   int32
+	List     []*NiuniuUserResult
+	RobotIds []int32
 }
 
 type NiuniuRoomResultList struct {
@@ -73,7 +78,7 @@ type NiuniuRoomResultList struct {
 
 func (bab *BankerAndBet) ToProto() *pbniu.BankerAndBet {
 	return &pbniu.BankerAndBet{
-		BankerScore: bab.BankerScore+1,
+		BankerScore: bab.BankerScore + 1,
 		BetScore:    bab.BetScore,
 		Role:        bab.Role,
 	}

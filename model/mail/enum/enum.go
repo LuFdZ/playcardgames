@@ -4,9 +4,9 @@ import "time"
 
 const (
 	LoopTime             = 1
-	MaxMailRecordCount   = 10              //最大页数
-	PlayerMailOverTime   = 720* time.Hour //720//用户邮件过期时间(小时)
-	MailEndLogOverTime   = 1440* time.Hour //7200//邮件有效期 过期时间(小时)
+	MaxMailRecordCount   = 10               //最大页数
+	PlayerMailOverTime   = 720 * time.Hour  //720//用户邮件过期时间(小时)
+	MailEndLogOverTime   = 1440 * time.Hour //7200//邮件有效期 过期时间(小时)
 	PlayerMailMaxNumber  = 30               //30 用户邮件最大保存天数
 	MailSendLogMaxNumber = 60               //60 邮件发送记录最大保存天数
 )
@@ -41,13 +41,15 @@ const (
 )
 
 const (
-	MailRecharge   = 1001
-	MailClubJoin   = 1101
-	MailClubUnJoin = 1102
-	MailGameGiveUp = 1201
-	MailGameOver   = 1202
-	MailInvite     = 1301
-	MailShare      = 1302
+	MailRecharge      = 1001
+	MailClubJoin      = 1101
+	MailClubUnJoin    = 1102
+	MailGameGiveUp    = 1201
+	MailGameOver      = 1202
+	MailBeInvite      = 1301
+	MailInvite        = 1302
+	MailShare         = 1303
+	MailInviteOverdue = 1304
 )
 
 const (

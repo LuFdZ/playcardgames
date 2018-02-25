@@ -27,6 +27,7 @@ var (
 	SysCode             = 19 //系统
 	MailServiceCode     = 21 //邮件
 	GoldRoomServiceCode = 22 //金币场
+	TowCardServiceCode = 23 //两张
 )
 
 //基本消息标签和编号
@@ -201,4 +202,25 @@ const (
 
 	MsgSendSysMail     = "NewSendSysMail"
 	MsgSendSysMailCode = 210102
+)
+
+//四张标签和编号
+const (
+	MsgTowCardGameStart     = "TowCardGameStart"
+	MsgTowCardGameStartCode = 230101
+
+	MsgTowCardSetBet     = "TowCardSetBet"
+	MsgTowCardSetBetCode = 230102
+
+	MsgTowCardGameReady     = "TowCardGameReady"
+	MsgTowCardGameReadyCode = 230103
+
+	MsgTowCardGameSubmitCard     = "TowCardSubmitCard"
+	MsgTowCardGameSubmitCardCode = 230104
+
+	MsgTowCardGameResult     = "TowCardGameResult"
+	MsgTowCardGameResultCode = 230105
+
+	MsgTowCardExist     = "TowCardExist"
+	MsgTowCardExistCode = 230107
 )

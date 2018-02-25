@@ -51,14 +51,15 @@ func SendSysMail(mailid int32, ids []int32, args []string) error {
 	}
 
 	mi := &mdgame.MailInfo{
-		MailID:      mdMi.MailID,
-		MailName:    mdMi.MailName,
-		MailTitle:   mdMi.MailTitle,
-		MailContent: content,
-		MailType:    mdMi.MailType,
-		ItemList:    mdMi.ItemList,
-		CreatedAt:   mdMi.CreatedAt,
-		UpdatedAt:   mdMi.UpdatedAt,
+		MailID:       mdMi.MailID,
+		MailName:     mdMi.MailName,
+		MailTitle:    mdMi.MailTitle,
+		MailContent:  content,
+		MailType:     mdMi.MailType,
+		ItemList:     mdMi.ItemList,
+		ItemModeList: mdMi.ItemModeList,
+		CreatedAt:    mdMi.CreatedAt,
+		UpdatedAt:    mdMi.UpdatedAt,
 	}
 	msl := &mdgame.MailSendLog{
 		MailID:   mi.MailID,
@@ -216,15 +217,16 @@ func GetAllMailItems(uid int32) ([]*mdgame.ItemModel, error) {
 		for _, item := range ils {
 			key := fmt.Sprintf("%d-%d-%d", item.MainType, item.SubType, item.ItemID)
 			if _, ok := m[key]; ok {
-				m[key].Count+=item.Count
-			}else{
+				m[key].Count += item.Count
+			} else {
 				m[key] = item
 			}
 		}
 	}
-	for _,v := range m{
-		out = append(out,v)
+	for _, v := range m {
+		out = append(out, v)
 	}
+
 	return out, nil
 }
 
@@ -266,7 +268,7 @@ func GetMailItems(uid int32, logid int32) ([]*mdgame.ItemModel, error) {
 	if err != nil {
 		return nil, err
 	}
-	err = awardItemList(uid,msl)
+	err = awardItemList(uid, msl)
 	if err != nil {
 		return nil, err
 	}
@@ -330,6 +332,7 @@ func PagePlayerMail(page int32, uid int32) (*pbgame.PagePlayerMailReply, error) 
 		list = append(list, pm)
 	}
 	out.List = list
+	fmt.Printf("GetAllMailItems:%+v\n", out)
 	return out, nil
 }
 
@@ -344,7 +347,7 @@ func CleanOverdueByCreateAt() {
 	}
 }
 
-func awardItemList(uid int32,sendLog *mdgame.MailSendLog) error {
+func awardItemList(uid int32, sendLog *mdgame.MailSendLog) error {
 	//itemInfo := strings.Split(sendLog.MailInfo.ItemList, ":")
 	//if len(itemInfo) != 4 {
 	//	return errgame.ErrItemFormat

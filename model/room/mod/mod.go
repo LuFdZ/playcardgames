@@ -48,6 +48,7 @@ type Room struct {
 	ReadyUserMap   map[int32]int64   `gorm:"-"`
 	Ids            []int32           `gorm:"-"`
 	PlayerIds      []int32           `gorm:"-"`
+	RobotIds       []int32           `gorm:"-"`
 }
 
 type GiveUpGameResult struct {
@@ -72,10 +73,10 @@ type RoomUser struct {
 	Location     string
 	Online       int32
 	Type         int32
-	ResultAmount int64
 	CoinType     int32
 	Join         int32
 	Gold         int64
+	ResultAmount int32
 }
 
 type GameUserResult struct {
@@ -145,6 +146,11 @@ type DoudizhuRoomParam struct {
 }
 
 type FourCardRoomParam struct {
+	ScoreType int32
+	BetType   int32
+}
+
+type TowCardRoomParam struct {
 	ScoreType int32
 	BetType   int32
 }

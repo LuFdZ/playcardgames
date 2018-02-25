@@ -1134,7 +1134,7 @@ func DelayRoomDestroy() error {
 			if err != nil {
 				log.Err("delay set delete room redis err, %d|%v\n", room.RoomID, err)
 			}
-			room.Status = enumroom.RoomStatusDone
+			room.Status = enumroom.RoomStatusGiveUp
 			log.Debug("DelayRoomDestroyPolling roomid:%d,pwd:%s,subdate:%f m\n", room.RoomID, room.Password, sub.Minutes())
 			f := func(tx *gorm.DB) error {
 				_, err := dbroom.UpdateRoom(tx, room)
@@ -1159,7 +1159,7 @@ func DelayRoomDestroy() error {
 	return nil
 }
 
-func DeadRoomDestroy() error {
+func DeadRoomDestroy() ([]*mdroom.Room,error) {
 	//定时清除不活动的房间
 	f := func(r *mdroom.Room) bool {
 		sub := time.Now().Sub(*r.UpdatedAt)
@@ -1172,8 +1172,9 @@ func DeadRoomDestroy() error {
 	}
 	rooms := cacheroom.GetAllRooms(f)
 	if len(rooms) == 0 {
-		return nil
+		return nil,nil
 	}
+	var mdrList []*mdroom.Room
 	for _, room := range rooms {
 		log.Debug("DeadRoomDestroyPolling roomid:%d,pwd:%s\n", room.RoomID, room.Password)
 		err := cacheroom.DeleteAllRoomUser(room.Password, "DeadRoomDestroy")
@@ -1214,11 +1215,12 @@ func DeadRoomDestroy() error {
 			RoomRefund(room)
 		}
 		UpdateRoom(room)
+		mdrList = append(mdrList,room)
 		//err = mail.SendSysMail()
 
 	}
 
-	return nil
+	return mdrList,nil
 }
 
 func GetRoomUserLocation(user *mduser.User) ([]*pbroom.RoomUser, error) {
@@ -1251,7 +1253,7 @@ func chekcGameParam(maxNumber int32, maxRound int32, gtype int32, gameParam stri
 	//fmt.Printf("ChekcGameParam:%d|%d|%d|%s\n",maxNumber,maxRound,gtype,gameParam)
 	switch gtype {
 	case enumroom.ThirteenGameType:
-		if maxNumber > 4 {
+		if maxNumber > 8 {
 			return errroom.ErrRoomMaxNumber
 		}
 		var roomParam *mdroom.ThirteenRoomParam
@@ -1308,6 +1310,22 @@ func chekcGameParam(maxNumber int32, maxRound int32, gtype int32, gameParam stri
 		var roomParam *mdroom.FourCardRoomParam
 		if err := json.Unmarshal([]byte(gameParam), &roomParam); err != nil {
 			log.Err("fourcard unmarshal room param failed, %v", err)
+			return errroom.ErrGameParam
+		}
+		if roomParam.ScoreType < 1 || roomParam.ScoreType > 2 {
+			return errroom.ErrGameParam
+		}
+		if roomParam.BetType < 1 || roomParam.BetType > 2 {
+			return errroom.ErrGameParam
+		}
+		break
+	case enumroom.TowCardGameType:
+		if maxNumber < 2 && maxNumber > 10 {
+			return errroom.ErrRoomMaxNumber
+		}
+		var roomParam *mdroom.TowCardRoomParam
+		if err := json.Unmarshal([]byte(gameParam), &roomParam); err != nil {
+			log.Err("towcard unmarshal room param failed, %v", err)
 			return errroom.ErrGameParam
 		}
 		if roomParam.ScoreType < 1 || roomParam.ScoreType > 2 {

@@ -94,7 +94,7 @@ func GiveUpGameUpdate(tx *gorm.DB, gids []int32) error {
 	if err := tx.Table(enum.FourCardTableName).Where(" game_id IN (?)", gids).
 		Updates(map[string]interface{}{"status": enum.GameStatusGiveUp}).
 		Error; err != nil {
-		return errors.Internal("get niuniu by room_id failed", err)
+		return errors.Internal("get four card by room_id failed", err)
 	}
 	return nil
 }

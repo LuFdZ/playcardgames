@@ -34,6 +34,7 @@ func RoomLockKey(pwd string) string {
 func UpdateGoldRoom() map[*pbroom.RoomUser]int32 { //
 	rooms := cachegroom.GetAllGRoom(0, []int32{enumroom.RoomStatusInit,
 		enumroom.RoomStatusReInit})
+	//fmt.Printf("UpdateGoldRoom GetAllGRoom:%d\n",len(rooms))
 	if rooms == nil && len(rooms) == 0 {
 		return nil
 	}
@@ -46,24 +47,36 @@ func UpdateGoldRoom() map[*pbroom.RoomUser]int32 { //
 				numberNow := int32(len(mdr.Users))
 				subTime := time.Now().Sub(*mdr.ReadyAt)
 				addTime := float64(tools.GenerateRangeNum(20, 30))
+				//fmt.Printf("UpdateGoldRoomJoinRobot:%d|%d|%f|%f\n",count,numberNow,subTime.Seconds(),addTime)
 				if numberNow < enumgroom.GoldRoomInfoMap[mdr.GameType].MinNumber &&
 					count == 1 &&
 					subTime.Seconds() > addTime {
-					robot, _, err := joinRobot(mdr.Password)
+					robot, mdr, err := joinRobot(mdr.Password)
 					if err != nil || robot == nil {
 						log.Err("join robot err room:%v,err", mdr, err)
 						continue
 					}
+					mdr.RobotIds = append(mdr.RobotIds, robot.UserID)
 					msg := robot.ToProto()
 					msg.Ids = mdr.PlayerIds
 					m[msg] = enumgroom.UserOpJoin
+					err = cacheroom.UpdateRoom(mdr)
+					if err != nil {
+						log.Err("room status init update room err:%v", err)
+						continue
+					}
 				} else if count >= enumgroom.GoldRoomInfoMap[mdr.GameType].MinNumber {
-					if subTime.Seconds() > 5 {
+					if subTime.Seconds() > 10 {
 						mdr.Status = enumroom.RoomStatusAllReady
 						f := func(tx *gorm.DB) error {
 							_, err := dbroom.UpdateRoom(tx, mdr)
 							if err != nil {
 								log.Err("update gold room db err, %v|%v\n", err, mdr)
+								return err
+							}
+							err = cacheroom.UpdateRoom(mdr)
+							if err != nil {
+								log.Err("room status init update room err:%v", err)
 								return err
 							}
 							return nil
@@ -105,6 +118,7 @@ func UpdateGoldRoom() map[*pbroom.RoomUser]int32 { //
 			}
 			break
 		case enumroom.RoomStatusReInit:
+			fmt.Printf("UpdateGoldRoom RoomStatusReInit\n")
 			f := func(tx *gorm.DB) error {
 				//更新玩家游戏局数
 				err := dbroom.UpdateRoomPlayTimes(tx, mdr.RoomID, mdr.GameType)
@@ -113,9 +127,10 @@ func UpdateGoldRoom() map[*pbroom.RoomUser]int32 { //
 					return err
 				}
 				for _, u := range mdr.Users {
+					fmt.Printf("UpdateGoldRoom Player:%d|%d\n",u.UserID,u.Type)
 					if u.Type == enumgroom.Player {
 						err := bill.GainGameBalance(u.UserID, mdr.RoomID, mdr.GameType*100+1,
-							&mbill.Balance{Amount: u.ResultAmount, CoinType: enumbill.TypeGold})
+							&mbill.Balance{Amount: int64(u.ResultAmount), CoinType: enumbill.TypeGold})
 						if err != nil {
 							return err
 						}
@@ -125,10 +140,19 @@ func UpdateGoldRoom() map[*pbroom.RoomUser]int32 { //
 						m[msg] = enumgroom.UserOpRemove
 						removePlayer(mdr.Password, u.UserID)
 					}
+					if _, ok := mdr.ReadyUserMap[u.UserID]; ok {
+						u.Ready = enumroom.UserUnready
+					}
 				}
+				mdr.Status = enumroom.RoomStatusInit
 				_, err = dbroom.UpdateRoom(tx, mdr)
 				if err != nil {
 					log.Err("update gold room db err, %v|%v\n", err, mdr)
+					return err
+				}
+				err = cacheroom.UpdateRoom(mdr)
+				if err != nil {
+					log.Err("room status init update room err:%v", err)
 					return err
 				}
 				return nil
@@ -225,7 +249,7 @@ func SetReady(uid int32, pwd string) ([]int32, error) {
 			mdr.ReadyAt = &t
 		}
 		ids = mdr.Ids
-		err = cachegroom.UpdateRoom(mdr)
+		err = cacheroom.UpdateRoom(mdr)
 		if err != nil {
 			log.Err("update set sit failed, roomid:%d,uid:%d,err:%v\n", mdr.RoomID, uid, err)
 			return err
@@ -358,7 +382,7 @@ func roomAddUserAndSeating(mdu *mduser.User, pwd string) (*mdroom.RoomUser, *mdr
 		if mdr.RoomType != enumroom.RoomTypeNom && len(mdr.Users) == 0 {
 			roomUser.Role = enumroom.UserRoleMaster
 		}
-		err = cachegroom.UpdateRoom(mdr)
+		err = cacheroom.UpdateRoom(mdr)
 		if err != nil {
 			log.Err("room join set session failed, %v|%v\n", err, mdr)
 			return err
@@ -424,7 +448,7 @@ func LeaveRoom(mduser *mduser.User) (*mdroom.RoomUser, *mdroom.Room, error) {
 					mdr.RoomID, err)
 				return err
 			}
-			err = cachegroom.DeleteRoom(mdr)
+			err = cacheroom.DeleteRoom(mdr)
 			if err != nil {
 				log.Err("leave room delete room failed, %d|%v\n",
 					mdr.RoomID, err)
@@ -440,7 +464,7 @@ func LeaveRoom(mduser *mduser.User) (*mdroom.RoomUser, *mdroom.Room, error) {
 			if mdr.RoomType != enumroom.RoomTypeNom && len(newUsers) > 0 {
 				newUsers[0].Role = enumroom.UserRoleMaster
 			}
-			err := cachegroom.UpdateRoom(mdr)
+			err := cacheroom.UpdateRoom(mdr)
 			if err != nil {
 				log.Err("room leave room delete failed, %d|%v\n",
 					mdr.RoomID, err)
@@ -466,23 +490,27 @@ func removePlayer(pwd string, uid int32) error {
 	if err != nil {
 		return err
 	}
-	roomUser := &mdroom.RoomUser{}
+	//roomUser := &mdroom.RoomUser{}
 	f := func() error {
 		newUsers := []*mdroom.RoomUser{}
 		mdr, _ := cacheroom.GetRoom(mdrReturn.Password)
+		//var ids []int32
 		for _, u := range mdr.Users {
 			if u.UserID != uid {
 				newUsers = append(newUsers, u)
-			} else {
-				roomUser = u
+				//ids = append(ids,u.UserID)
 			}
 		}
 		mdr.Users = newUsers
-
+		mdr.Ids = []int32{}
+		mdr.PlayerIds = []int32{}
+		mdr.RobotIds = []int32{}
 		for _, mdu := range mdr.Users {
 			mdr.Ids = append(mdr.Ids, mdu.UserID)
 			if mdu.Type == enumgroom.Player {
 				mdr.PlayerIds = append(mdr.PlayerIds, mdu.UserID)
+			} else if mdu.Type == enumgroom.Robot {
+				mdr.RobotIds = append(mdr.RobotIds, mdu.UserID)
 			}
 		}
 
@@ -495,7 +523,7 @@ func removePlayer(pwd string, uid int32) error {
 					mdr.RoomID, err)
 				return err
 			}
-			err = cachegroom.DeleteRoom(mdr)
+			err = cacheroom.DeleteRoom(mdr)
 			if err != nil {
 				log.Err("leave room delete room failed, %d|%v\n",
 					mdr.RoomID, err)
@@ -607,7 +635,7 @@ func CreateGoldRoom(gtype int32, level int32) (*mdroom.Room, error) {
 			log.Err("room create failed,%v | %v", mdr, err)
 			return err
 		}
-		err = cachegroom.SetRoom(mdr)
+		err = cacheroom.SetRoom(mdr)
 		if err != nil {
 			log.Err("room create set redis failed,%v | %v\n", mdr, err)
 			return err

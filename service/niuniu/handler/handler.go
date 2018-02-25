@@ -49,12 +49,12 @@ func (ns *NiuniuSrv) update(gt *gsync.GlobalTimer, gl *lua.LState) {
 		newGames := niuniu.CreateNiuniu(gl)
 		if newGames != nil {
 			for _, game := range newGames {
-				for _, UserResult := range game.Result.List {
-					cardlist := UserResult.Cards.
-						CardList[:len(UserResult.Cards.CardList)-1]
+				for _, userResult := range game.Result.List {
+					cardlist := userResult.Cards.
+						CardList[:len(userResult.Cards.CardList)-1]
 					msg := &pbniu.NiuniuGameStart{
 						Role:       0,
-						UserID:     UserResult.UserID,
+						UserID:     userResult.UserID,
 						BankerID:   game.BankerID,
 						RoomStatus: enumr.RoomStatusStarted,
 						CardList:   cardlist,
@@ -64,6 +64,20 @@ func (ns *NiuniuSrv) update(gt *gsync.GlobalTimer, gl *lua.LState) {
 							Count:      enumniu.GetBankerTime,
 						},
 					}
+					topic.Publish(ns.broker, msg, TopicNiuniuGameStart)
+				}
+				msg := &pbniu.NiuniuGameStart{
+					Role:       0,
+					BankerID:   game.BankerID,
+					RoomStatus: enumr.RoomStatusStarted,
+					GameStatus: game.Status,
+					CountDown: &pbniu.CountDown{
+						ServerTime: game.OpDateAt.Unix(),
+						Count:      enumniu.GetBankerTime,
+					},
+				}
+				for _, uid := range game.WatchIds {
+					msg.UserID = uid
 					topic.Publish(ns.broker, msg, TopicNiuniuGameStart)
 				}
 			}
@@ -140,6 +154,23 @@ func (ns *NiuniuSrv) update(gt *gsync.GlobalTimer, gl *lua.LState) {
 				}
 			}
 		}
+		updateRobots := niuniu.UpdateRobotGame()
+		for game, v := range updateRobots {
+			if v[0] == enumniu.UserStatusSetBet {
+				msg := &pbniu.SetBet{
+					UserID: v[1],
+					Key:    v[2],
+					Ids:    game.Ids,
+				}
+				topic.Publish(ns.broker, msg, TopicNiuniuSetBet)
+			} else if v[0] == enumniu.UserStatusSubmitCard {
+				msg := &pbniu.GameReady{
+					UserID: v[1],
+					Ids:    game.Ids,
+				}
+				topic.Publish(ns.broker, msg, TopicNiuniuGameReady)
+			}
+		}
 		if ns.count == 3 {
 			err := niuniu.CleanGame()
 			if err != nil {
@@ -166,7 +197,7 @@ func (ns *NiuniuSrv) GetBanker(ctx context.Context, req *pbniu.GetBankerRequest,
 		Result: enumniu.Success,
 	}
 	mdr, err := cacheroom.GetRoomUserID(u.UserID)
-	if err != nil{
+	if err != nil {
 		return err
 	}
 	f := func() error {
@@ -197,7 +228,7 @@ func (ns *NiuniuSrv) SetBet(ctx context.Context, req *pbniu.SetBetRequest,
 		Result: enumniu.Success,
 	}
 	mdr, err := cacheroom.GetRoomUserID(u.UserID)
-	if err != nil{
+	if err != nil {
 		return err
 	}
 	f := func() error {
@@ -234,7 +265,7 @@ func (ns *NiuniuSrv) SubmitCard(ctx context.Context, req *pbniu.SubmitCardReques
 		Result: enumniu.Success,
 	}
 	mdr, err := cacheroom.GetRoomUserID(u.UserID)
-	if err != nil{
+	if err != nil {
 		return err
 	}
 	f := func() error {
@@ -280,7 +311,7 @@ func (ns *NiuniuSrv) NiuniuRecovery(ctx context.Context, req *pbniu.NiuniuRecove
 		return err
 	}
 
-	result, err := niuniu.NiuniuExist(req.UserID,req.RoomID)
+	result, err := niuniu.NiuniuExist(req.UserID, req.RoomID)
 	if err != nil {
 		return err
 	}

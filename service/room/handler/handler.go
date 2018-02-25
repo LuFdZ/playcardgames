@@ -15,6 +15,9 @@ import (
 	"playcards/utils/log"
 	utilpb "playcards/utils/proto"
 	gsync "playcards/utils/sync"
+	pbmail "playcards/proto/mail"
+	srvmail "playcards/service/mail/handler"
+	enummail "playcards/model/mail/enum"
 	"playcards/utils/topic"
 	"time"
 	"strings"
@@ -124,11 +127,33 @@ func (rs *RoomSrv) update(gt *gsync.GlobalTimer) {
 						topic.Publish(rs.broker, msg, TopicClubRoomFinish)
 					}
 				}
+				var userNoVoteIds []int32
+				for _,userVote := range giveup.GiveupGame.UserStateList{
+					if userVote.State > enumr.UserStateDisagree{
+						userNoVoteIds = append(userNoVoteIds,userVote.UserID)
+					}
+				}
+				mailReq := &pbmail.SendSysMailRequest{
+					MailID: enummail.MailGameGiveUp,
+					Ids:    userNoVoteIds,
+					Args:   []string{giveup.Password},
+				}
+				topic.Publish(rs.broker, mailReq, srvmail.TopicSendSysMail)
 			}
 		}
 
 		if rs.count == 120 {
-			room.DeadRoomDestroy()
+			mdrList, _ := room.DeadRoomDestroy()
+			if mdrList != nil {
+				for _,mdr := range mdrList{
+					mailReq := &pbmail.SendSysMailRequest{
+						MailID: enummail.MailGameOver,
+						Ids:    mdr.Ids,
+						Args:   []string{mdr.Password},
+					}
+					topic.Publish(rs.broker, mailReq, srvmail.TopicSendSysMail)
+				}
+			}
 			rs.count = 0
 		}
 		return nil
@@ -308,9 +333,9 @@ func (rs *RoomSrv) EnterRoom(ctx context.Context, req *pbr.Room,
 	msgAll := ru.ToProto()
 	msgAll.OwnerID = msgBack.OwnerID
 	msgAll.Ids = r.Ids
-	for _,ru := range r.Users{
-		if ru.Role == enumr.UserRoleMaster{
-			msgAll.BankerID =ru.UserID
+	for _, ru := range r.Users {
+		if ru.Role == enumr.UserRoleMaster {
+			msgAll.BankerID = ru.UserID
 		}
 	}
 
@@ -764,9 +789,9 @@ func (rs *RoomSrv) GameStart(ctx context.Context, req *pbr.Room,
 	if err != nil {
 		return err
 	}
-	if mr.GameType == enumr.ThirteenGameType {
-		return errorr.ErrGameType
-	}
+	//if mr.GameType == enumr.ThirteenGameType {
+	//	return errorr.ErrGameType
+	//}
 
 	f := func() error {
 		err = room.GameStart(u.UserID)

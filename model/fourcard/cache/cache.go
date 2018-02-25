@@ -46,7 +46,7 @@ func SetGame(fc *mdfour.Fourcard) error {
 	}
 	err := cache.KV().Watch(f, lockKey)
 	if err != nil {
-		return errors.Internal("set niuniu failed", err)
+		return errors.Internal("set four card failed", err)
 	}
 	return nil
 }
@@ -70,7 +70,7 @@ func UpdateGame(fc *mdfour.Fourcard) error {
 	}
 
 	if err := cache.KV().Watch(f, lockKey); err != nil {
-		return errors.Internal("update niuniu game failed", err)
+		return errors.Internal("update four card game failed", err)
 	}
 
 	return nil
@@ -90,7 +90,7 @@ func DeleteGame(fc *mdfour.Fourcard) error {
 	}
 	err := cache.KV().Watch(f, lockKey)
 	if err != nil {
-		return errors.Internal("del niuniu game redis error", err)
+		return errors.Internal("del four card game redis error", err)
 	}
 	return nil
 }
@@ -103,11 +103,11 @@ func GetGame(rid int32) (*mdfour.Fourcard, error) {
 	}
 
 	if err != nil && err != redis.Nil {
-		return nil, errors.Internal("get niuniu failed", err)
+		return nil, errors.Internal("get four card failed", err)
 	}
 	niuniu := &mdfour.Fourcard{}
 	if err := json.Unmarshal(val, niuniu); err != nil {
-		return nil, errors.Internal("get niuniu failed", err)
+		return nil, errors.Internal("get four card failed", err)
 	}
 	return niuniu, nil
 }
@@ -134,7 +134,7 @@ func GetAllGameByStatus(status int32) ([]*mdfour.Fourcard, error) {
 					roomID, _ := tools.StringToInt(ridStr)
 					niu, err := GetGame(roomID)
 					if err != nil {
-						log.Err("GetAllDoudizhuKeyErr rid:%s,err:%v", ridStr, err)
+						log.Err("get all four card key err rid:%s,err:%v", ridStr, err)
 					}
 					ns = append(ns, niu)
 				}
