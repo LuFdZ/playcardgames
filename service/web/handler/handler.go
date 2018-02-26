@@ -15,7 +15,7 @@ import (
 	webfour "playcards/service/web/fourcard"
 	webuser "playcards/service/web/user"
 	webmail "playcards/service/web/mail"
-	webtow "playcards/service/web/towcard"
+	webtow "playcards/service/web/twocard"
 	"playcards/utils/auth"
 	"playcards/utils/log"
 
@@ -79,7 +79,7 @@ func (w *Web) Subscribe(ws *websocket.Conn) {
 	webdoudizhu.SubscribeDoudizhuMessage(c, nil)
 	webfour.SubscribeFourCardMessage(c, nil)
 	webmail.SubscribeMailMessage(c, nil)
-	webtow.SubscribeTowCardMessage(c, nil)
+	webtow.SubscribeTwoCardMessage(c, nil)
 
 	log.Debug("new client: %v", c)
 	f := func(msg []byte) error {

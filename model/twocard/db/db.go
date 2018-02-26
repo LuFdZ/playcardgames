@@ -1,51 +1,51 @@
 package db
 
 import (
-	"playcards/model/towcard/enum"
-	enumtow "playcards/model/towcard/enum"
-	mdtow "playcards/model/towcard/mod"
+	"playcards/model/twocard/enum"
+	enumtow "playcards/model/twocard/enum"
+	mdtwo "playcards/model/twocard/mod"
 	"playcards/utils/errors"
 
 	"github.com/jinzhu/gorm"
 )
 
-func CreateGame(tx *gorm.DB, game *mdtow.Towcard) error {
+func CreateGame(tx *gorm.DB, game *mdtwo.Twocard) error {
 	now := gorm.NowFunc()
 	game.UpdatedAt = &now
 	if err := tx.Create(game).Error; err != nil {
-		return errors.Internal("create tow card failed", err)
+		return errors.Internal("create two card failed", err)
 	}
 	return nil
 }
 
-func UpdateGame(tx *gorm.DB, game *mdtow.Towcard) (*mdtow.Towcard, error) {
+func UpdateGame(tx *gorm.DB, game *mdtwo.Twocard) (*mdtwo.Twocard, error) {
 	now := gorm.NowFunc()
-	towcard := &mdtow.Towcard{
+	towcard := &mdtwo.Twocard{
 		GameResultStr: game.GameResultStr,
 		Status:     game.Status,
 		UpdatedAt:  &now,
 		OpDateAt:   game.OpDateAt,
 	}
 	if err := tx.Model(game).Updates(towcard).Error; err != nil {
-		return nil, errors.Internal("update tow card failed", err)
+		return nil, errors.Internal("update two card failed", err)
 	}
 	return game, nil
 }
 
-func GetTowCardByRoomID(tx *gorm.DB, rid int32) ([]*mdtow.Towcard, error) {
-	var out []*mdtow.Towcard
+func GetTwoCardByRoomID(tx *gorm.DB, rid int32) ([]*mdtwo.Twocard, error) {
+	var out []*mdtwo.Twocard
 	if err := tx.Where(" room_id = ? ", rid).
 		Order("created_at").Find(&out).Error; err != nil {
-		return nil, errors.Internal("get tow card by room_id failed", err)
+		return nil, errors.Internal("get two card by room_id failed", err)
 	}
 	return out, nil
 }
 
-func GetLastTowCardByRoomID(tx *gorm.DB, rid int32) (*mdtow.Towcard, error) {
-	out := &mdtow.Towcard{}
+func GetLastTwoCardByRoomID(tx *gorm.DB, rid int32) (*mdtwo.Twocard, error) {
+	out := &mdtwo.Twocard{}
 	if err := tx.Where(" room_id = ? ", rid).
 		Order("game_id desc").Limit(1).Find(&out).Error; err != nil {
-		return nil, errors.Internal("get last tow card by room_id failed", err)
+		return nil, errors.Internal("get last two card by room_id failed", err)
 	}
 	return out, nil
 }
@@ -54,7 +54,7 @@ func GiveUpGameUpdate(tx *gorm.DB, gids []int32) error {
 	if err := tx.Table(enumtow.TowCardTableName).Where(" game_id IN (?)", gids).
 		Updates(map[string]interface{}{"status": enum.GameStatusGiveUp}).
 		Error; err != nil {
-		return errors.Internal("get tow by room_id failed", err)
+		return errors.Internal("get two by room_id failed", err)
 	}
 	return nil
 }

@@ -1,4 +1,4 @@
-package towcard
+package twocard
 
 import (
 	"encoding/json"
@@ -8,12 +8,12 @@ import (
 	enumroom "playcards/model/room/enum"
 	errroom"playcards/model/room/errors"
 	mdroom "playcards/model/room/mod"
-	cachegame "playcards/model/towcard/cache"
-	dbgame "playcards/model/towcard/db"
-	enumgame "playcards/model/towcard/enum"
-	errgame "playcards/model/towcard/errors"
-	mdgame "playcards/model/towcard/mod"
-	pbtow "playcards/proto/towcard"
+	cachegame "playcards/model/twocard/cache"
+	dbgame "playcards/model/twocard/db"
+	enumgame "playcards/model/twocard/enum"
+	errgame "playcards/model/twocard/errors"
+	mdgame "playcards/model/twocard/mod"
+	pbtwo "playcards/proto/twocard"
 	"playcards/model/room"
 	"math/rand"
 	"playcards/utils/db"
@@ -30,15 +30,15 @@ import (
 //	GoLua = gl
 //}
 
-func CreateGame() []*mdgame.Towcard {
-	rooms := cacheroom.GetAllRoomByGameTypeAndStatus(enumroom.TowCardGameType, enumroom.RoomStatusAllReady)
+func CreateGame() []*mdgame.Twocard {
+	rooms := cacheroom.GetAllRoomByGameTypeAndStatus(enumroom.TwoCardGameType, enumroom.RoomStatusAllReady)
 	if rooms == nil && len(rooms) == 0 {
 		return nil
 	}
 	if len(rooms) == 0 {
 		return nil
 	}
-	var newGames []*mdgame.Towcard
+	var newGames []*mdgame.Twocard
 
 	for _, mdr := range rooms {
 		var (
@@ -80,10 +80,10 @@ func CreateGame() []*mdgame.Towcard {
 
 		var roomParam *mdroom.FourCardRoomParam
 		if err := json.Unmarshal([]byte(mdr.GameParam), &roomParam); err != nil {
-			log.Err("create towcard unmarshal room param failed, %v", err)
+			log.Err("create two card unmarshal room param failed, %v", err)
 			continue
 		}
-		game := &mdgame.Towcard{
+		game := &mdgame.Twocard{
 			RoomID:     mdr.RoomID,
 			BankerID:   bankerID,
 			Status:     enumgame.GameStatusInit,
@@ -118,25 +118,25 @@ func CreateGame() []*mdgame.Towcard {
 
 			_, err := dbroom.UpdateRoom(tx, mdr)
 			if err != nil {
-				log.Err("tow card room update set session failed, roomid:%d,err:%+v", mdr.RoomID, err)
+				log.Err("two card room update set session failed, roomid:%d,err:%+v", mdr.RoomID, err)
 				return err
 			}
 
 			err = dbgame.CreateGame(tx, game)
 			if err != nil {
-				log.Err("tow card create set session failed,roomid:%d, err:%+v", mdr.RoomID, err)
+				log.Err("two card create set session failed,roomid:%d, err:%+v", mdr.RoomID, err)
 				return err
 			}
 
 			err = cacheroom.UpdateRoom(mdr)
 			if err != nil {
-				log.Err("tow update set session failed,roomid:%d,err: %+v", mdr.RoomID, err)
+				log.Err("two update set session failed,roomid:%d,err: %+v", mdr.RoomID, err)
 				return err
 			}
 
 			err = cachegame.SetGame(game)
 			if err != nil {
-				log.Err("tow card create set redis failed,%v | %+v", mdr, err)
+				log.Err("two card create set redis failed,%v | %+v", mdr, err)
 				return err
 			}
 			return nil
@@ -145,7 +145,7 @@ func CreateGame() []*mdgame.Towcard {
 
 		err := db.Transaction(f)
 		if err != nil {
-			log.Err("tow card create failed,%v | %+v", game, err)
+			log.Err("two card create failed,%v | %+v", game, err)
 			continue
 		}
 		newGames = append(newGames, game)
@@ -154,17 +154,17 @@ func CreateGame() []*mdgame.Towcard {
 }
 
 //游戏结算逻辑
-func UpdateGame(goLua *lua.LState) []*mdgame.Towcard {
+func UpdateGame(goLua *lua.LState) []*mdgame.Twocard {
 	games, err := cachegame.GetAllGameByStatus(enumgame.GameStatusDone)
 	if err != nil {
-		log.Err("tow card get all game by status failed, %v", err)
+		log.Err("two card get all game by status failed, %v", err)
 		return nil
 	}
 	if len(games) == 0 {
 		return nil
 	}
 	//游戏结算结果集合
-	var outGames []*mdgame.Towcard
+	var outGames []*mdgame.Twocard
 	var specialCardUids []int32
 	for _, game := range games {
 		if game.Status == enumgame.GameStatusInit {
@@ -174,7 +174,7 @@ func UpdateGame(goLua *lua.LState) []*mdgame.Towcard {
 				game.Status = enumgame.GameStatusAllBet
 				err := cachegame.UpdateGame(game)
 				if err != nil {
-					log.Err("tow card game status init set session failed, %v", err)
+					log.Err("two card game status init set session failed, %v", err)
 					continue
 				}
 			}
@@ -183,13 +183,13 @@ func UpdateGame(goLua *lua.LState) []*mdgame.Towcard {
 			err := initUserCard(game, goLua)
 			if err != nil {
 				//print(err)
-				log.Err("tow card init user room get session failed, roomid:%d,pwd:%s,err:%v", game.RoomID, game.PassWord, err)
+				log.Err("two card init user room get session failed, roomid:%d,pwd:%s,err:%v", game.RoomID, game.PassWord, err)
 				continue
 			}
 			game.Status = enumgame.GameStatusOrdered
 			err = cachegame.UpdateGame(game)
 			if err != nil {
-				log.Err("tow card game status ordered set session failed, %v", err)
+				log.Err("two card game status ordered set session failed, %v", err)
 				continue
 			}
 		} else if game.Status == enumgame.GameStatusOrdered {
@@ -198,7 +198,7 @@ func UpdateGame(goLua *lua.LState) []*mdgame.Towcard {
 			game.OpDateAt = &t
 			err = cachegame.UpdateGame(game)
 			if err != nil {
-				log.Err("tow card user status submit card set session failed, %v", err)
+				log.Err("two card user status submit card set session failed, %v", err)
 				continue
 			}
 		} else if game.Status == enumgame.GameStatusSubmitCard {
@@ -206,27 +206,27 @@ func UpdateGame(goLua *lua.LState) []*mdgame.Towcard {
 			if sub.Seconds() > enumgame.SubmitCardTime{
 				err := autoSubmitCard(game)
 				if err != nil{
-					log.Err("tow card user all submit card set session failed, %v", err)
+					log.Err("two card user all submit card set session failed, %v", err)
 					continue
 				}
 			}
 
 		} else if game.Status == enumgame.GameStatusAllSubmitCard {
-			room, err := cacheroom.GetRoom(game.PassWord)
+			mdr, err := cacheroom.GetRoom(game.PassWord)
 			if err != nil {
-				log.Err("tow card game status all submit card room get session failed, roomid:%d,pwd:%s,err:%v", game.RoomID, game.PassWord, err)
+				log.Err("two card game status all submit card room get session failed, roomid:%d,pwd:%s,err:%v", game.RoomID, game.PassWord, err)
 				continue
 			}
-			if room == nil {
-				log.Err("tow card room status all submit get session nil, %v|%d", game.PassWord, game.RoomID)
+			if mdr == nil {
+				log.Err("two card room status all submit get session nil, %v|%d", game.PassWord, game.RoomID)
 				continue
 			}
 			game.MarshalGameResult()
 			if err := goLua.DoString(fmt.
 			Sprintf("return G_CalculateRes('%s','%s')",
-				game.GameResultStr, room.GameParam)); err != nil {
-				log.Err("tow card G_CalculateRes err %+v|\n%+v|\n%v\n",
-					game.GameResultStr, room.GameParam, err)
+				game.GameResultStr, mdr.GameParam)); err != nil {
+				log.Err("two card G_CalculateRes err %+v|\n%+v|\n%v\n",
+					game.GameResultStr, mdr.GameParam, err)
 				continue
 			}
 
@@ -235,16 +235,16 @@ func UpdateGame(goLua *lua.LState) []*mdgame.Towcard {
 			var results *mdgame.GameResult
 			if err := json.Unmarshal([]byte(luaResult.String()),
 				&results); err != nil {
-				log.Err("tow card lua str do struct %v", err)
+				log.Err("two card lua str do struct %v", err)
 			}
 			game.GameResult = results
 			for _, result := range game.GameResult.List {
 				m := initFourCardTypeMap()
-				for _, userResult := range room.UserResults {
+				for _, userResult := range mdr.UserResults {
 					if userResult.UserID == result.UserID {
 						if len(userResult.GameCardCount) > 0 {
 							if err := json.Unmarshal([]byte(userResult.GameCardCount), &m); err != nil {
-								log.Err("tow card lua str do struct %v", err)
+								log.Err("two card lua str do struct %v", err)
 							}
 						}
 
@@ -272,25 +272,25 @@ func UpdateGame(goLua *lua.LState) []*mdgame.Towcard {
 				}
 			}
 			game.Status = enumgame.GameStatusDone
-			room.Status = enumroom.RoomStatusReInit
+			mdr.Status = enumroom.RoomStatusReInit
 			f := func(tx *gorm.DB) error {
 				game, err = dbgame.UpdateGame(tx, game)
 				if err != nil {
-					log.Err("tow card update db failed, %v|%v", game, err)
+					log.Err("two card update db failed, %v|%v", game, err)
 					return err
 				}
-				room, err = dbroom.UpdateRoom(tx, room)
+				mdr, err = dbroom.UpdateRoom(tx, mdr)
 				if err != nil {
-					log.Err("tow card update room db failed, %v|%v", game, err)
+					log.Err("two card update room db failed, %v|%v", game, err)
 					return err
 				}
 				for _, uid := range specialCardUids {
 					plsgr := &mdroom.PlayerSpecialGameRecord{
 						GameID:     game.GameID,
 						RoomID:     game.RoomID,
-						GameType:   room.GameType,
-						RoomType:   room.RoomType,
-						Password:   room.Password,
+						GameType:   mdr.GameType,
+						RoomType:   mdr.RoomType,
+						Password:   mdr.Password,
 						UserID:     uid,
 						GameResult: game.GameResultStr,
 					}
@@ -303,19 +303,19 @@ func UpdateGame(goLua *lua.LState) []*mdgame.Towcard {
 			}
 			err = db.Transaction(f)
 			if err != nil {
-				log.Err("tow card update failed, %v", err)
+				log.Err("two card update failed, %v", err)
 				continue
 			}
 			err = cachegame.DeleteGame(game)
 			if err != nil {
-				log.Err("tow card room del session failed, roomid:%d,pwd:%s,err:%v", game.RoomID, game.PassWord, err)
+				log.Err("two card room del session failed, roomid:%d,pwd:%s,err:%v", game.RoomID, game.PassWord, err)
 				continue
 			}
 
-			err = cacheroom.UpdateRoom(room)
+			err = cacheroom.UpdateRoom(mdr)
 			if err != nil {
-				log.Err("tow card room update room redis failed,%v | %v",
-					room, err)
+				log.Err("two card room update room redis failed,%v | %v",
+					mdr, err)
 				continue
 			}
 		}
@@ -332,15 +332,15 @@ func initFourCardTypeMap() map[int32]int32 {
 	return m
 }
 
-func initUserCard(game *mdgame.Towcard, goLua *lua.LState) error {
+func initUserCard(game *mdgame.Twocard, goLua *lua.LState) error {
 
 	if err := goLua.DoString("return G_Reset()"); err != nil {
-		log.Err("tow card G_Reset %+v", err)
+		log.Err("two card G_Reset %+v", err)
 		return errgame.ErrGoLua
 	}
 	for _, ui := range game.GameResult.List {
 		if err := goLua.DoString("return G_GetCards()"); err != nil {
-			log.Err("tow card G_GetCards err %v", err)
+			log.Err("two card G_GetCards err %v", err)
 			return errgame.ErrGoLua
 		}
 		getCards := goLua.Get(-1)
@@ -363,25 +363,25 @@ func initUserCard(game *mdgame.Towcard, goLua *lua.LState) error {
 					cardList = append(cardList,
 						cardType+"_"+cardValue)
 				} else {
-					log.Err("tow card cardsMap value err %v",
+					log.Err("two card cardsMap value err %v",
 						value)
 				}
 			})
 			if len(cardList) == 0 {
-				log.Err("tow card cardList nil err %v", cardsMap)
+				log.Err("two card cardList nil err %v", cardsMap)
 				return errgame.ErrGoLua
 			}
 			ui.CardList = cardList
 			ui.TotalScore = 0
 		} else {
-			log.Err("tow card cardsMap err %v", cardsMap)
+			log.Err("two card cardsMap err %v", cardsMap)
 			return errgame.ErrGoLua
 		}
 	}
 	return nil
 }
 
-func autoSetBankerScore(game *mdgame.Towcard) {
+func autoSetBankerScore(game *mdgame.Twocard) {
 	for _, userResult := range game.GameResult.List {
 		if userResult.Status == enumgame.UserStatusInit {
 			userResult.Bet = 1
@@ -441,14 +441,14 @@ func SetBet(uid int32, key int32, mdr *mdroom.Room) error {
 
 	err = cachegame.UpdateGame(game)
 	if err != nil {
-		log.Err("tow card set session failed, %v", err)
+		log.Err("two card set session failed, %v", err)
 		return err
 	}
 
 	return nil //
 }
 
-func autoSubmitCard(game *mdgame.Towcard) error {
+func autoSubmitCard(game *mdgame.Twocard) error {
 	for _, userResult := range game.GameResult.List {
 		if userResult.Status == enumgame.UserStatusSetBet {
 			sort.Strings(userResult.CardList)
@@ -462,13 +462,13 @@ func autoSubmitCard(game *mdgame.Towcard) error {
 	game.Status = enumgame.GameStatusAllSubmitCard
 	err := cachegame.UpdateGame(game)
 	if err != nil {
-		log.Err("tow card set session failed, %v", err)
+		log.Err("two card set session failed, %v", err)
 		return err
 	}
 	return nil
 }
 
-func SubmitCard(uid int32, room *mdroom.Room) (*mdgame.Towcard, error) {
+func SubmitCard(uid int32, room *mdroom.Room) (*mdgame.Twocard, error) {
 	if room.Status > enumroom.RoomStatusStarted {
 		if room.Giveup == enumroom.WaitGiveUp {
 			return nil, errroom.ErrInGiveUp
@@ -508,13 +508,13 @@ func SubmitCard(uid int32, room *mdroom.Room) (*mdgame.Towcard, error) {
 
 	err = cachegame.UpdateGame(game)
 	if err != nil {
-		log.Err("tow card set session failed, %v", err)
+		log.Err("two card set session failed, %v", err)
 		return nil, err
 	}
 	return game, nil //
 }
 
-func getUserAndAllOtherStatusReady(game *mdgame.Towcard, uid int32,
+func getUserAndAllOtherStatusReady(game *mdgame.Twocard, uid int32,
 	getType int32) (bool, *mdgame.UserInfo) {
 	var userResult *mdgame.UserInfo
 	allReady := true
@@ -541,22 +541,22 @@ func getUserAndAllOtherStatusReady(game *mdgame.Towcard, uid int32,
 	return allReady, userResult
 }
 
-func GameResultList(rid int32) (*pbtow.GameResultListReply, error) {
-	var list []*pbtow.GameResult
-	games, err := dbgame.GetTowCardByRoomID(db.DB(), rid)
+func GameResultList(rid int32) (*pbtwo.GameResultListReply, error) {
+	var list []*pbtwo.GameResult
+	games, err := dbgame.GetTwoCardByRoomID(db.DB(), rid)
 	if err != nil {
 		return nil, err
 	}
 	for _, game := range games {
 		list = append(list, game.ToProto())
 	}
-	out := &pbtow.GameResultListReply{
+	out := &pbtwo.GameResultListReply{
 		List: list,
 	}
 	return out, nil
 }
 
-func randomUserDice(game *mdgame.Towcard) {
+func randomUserDice(game *mdgame.Twocard) {
 	ud := &mdgame.UserDice{}
 	ud.DiceAPoints = rand.Int31n(5) + 1
 	ud.DiceBPoints = rand.Int31n(5) + 1
@@ -565,13 +565,13 @@ func randomUserDice(game *mdgame.Towcard) {
 	game.GameResult.UserDice = ud
 }
 
-func GameRecovery(rid int32) (*mdgame.Towcard, error) {
+func GameRecovery(rid int32) (*mdgame.Twocard, error) {
 	game, err := cachegame.GetGame(rid)
 	if err != nil {
 		return nil, err
 	}
 	if game == nil {
-		game, err = dbgame.GetLastTowCardByRoomID(db.DB(), rid)
+		game, err = dbgame.GetLastTwoCardByRoomID(db.DB(), rid)
 		if err != nil {
 			return nil, err
 		}
@@ -582,8 +582,8 @@ func GameRecovery(rid int32) (*mdgame.Towcard, error) {
 	return game, nil
 }
 
-func GameExist(uid int32, rid int32) (*pbtow.RecoveryReply, error) {
-	out := &pbtow.RecoveryReply{}
+func GameExist(uid int32, rid int32) (*pbtwo.RecoveryReply, error) {
+	out := &pbtwo.RecoveryReply{}
 	_, roomRecovery, err := room.CheckRoomExist(uid, rid)
 	if err != nil {
 		return nil, err
@@ -598,8 +598,8 @@ func GameExist(uid int32, rid int32) (*pbtow.RecoveryReply, error) {
 	if err != nil {
 		return nil, err
 	}
-	out.FourCardExist = game.ToProto()
-	for _, gr := range out.FourCardExist.List {
+	out.TwoCardExist = game.ToProto()
+	for _, gr := range out.TwoCardExist.List {
 		if gr.UserID != uid && game.Status < enumgame.GameStatusDone {
 			gr.CardList = nil
 			gr.Cards = nil
@@ -614,7 +614,7 @@ func GameExist(uid int32, rid int32) (*pbtow.RecoveryReply, error) {
 		time = enumgame.SubmitCardTime
 		break
 	}
-	out.CountDown = &pbtow.CountDown{
+	out.CountDown = &pbtwo.CountDown{
 		ServerTime: game.OpDateAt.Unix(),
 		Count:      time,
 	}
@@ -625,34 +625,34 @@ func CleanGame() error {
 	var gids []int32
 	rids, err := cacheroom.GetAllDeleteRoomKey(enumroom.FourCardGameType)
 	if err != nil {
-		log.Err("get tow card clean room err:%v", err)
+		log.Err("get two card clean room err:%v", err)
 		return err
 	}
 	for _, rid := range rids {
 		game, err := cachegame.GetGame(rid)
 		if err != nil {
-			log.Err("get tow card give up room err:%d|%v", rid, err)
+			log.Err("get two card give up room err:%d|%v", rid, err)
 			continue
 		}
 		if game != nil {
-			log.Debug("clean tow card game:%d|%d|%+v\n", game.GameID, game.RoomID, game.Ids)
+			log.Debug("clean two card game:%d|%d|%+v\n", game.GameID, game.RoomID, game.Ids)
 			gids = append(gids, game.GameID)
 			err = cachegame.DeleteGame(game)
 			if err != nil {
-				log.Err(" delete tow card set session failed, %v",
+				log.Err(" delete two card set session failed, %v",
 					err)
 				continue
 			}
 			err = cacheroom.CleanDeleteRoom(enumgame.GameID, game.RoomID)
 			if err != nil {
-				log.Err(" delete tow card delete room session failed,roomid:%d,err: %v", game.RoomID,
+				log.Err(" delete two card delete room session failed,roomid:%d,err: %v", game.RoomID,
 					err)
 				continue
 			}
 		} else {
 			err = cacheroom.CleanDeleteRoom(enumgame.GameID, rid)
 			if err != nil {
-				log.Err(" delete null game tow card delete room session failed,roomid:%d,err: %v", rid,
+				log.Err(" delete null game two card delete room session failed,roomid:%d,err: %v", rid,
 					err)
 				continue
 			}

@@ -295,6 +295,11 @@ class Client(object):
         })
         return ul
 
+    def GetRoomRecoveryA(self):
+        ul = self.Request("/room/roomSrv/GetRoomRecovery", {
+        })
+        return ul
+
     def ShuffleCard(self, rid, gtype):
         ul = self.Request("/room/roomSrv/ShuffleCard", {
         })
@@ -807,13 +812,25 @@ class Client(object):
         return ul
 
     def SBTow(self, value):
-        ul = self.Request("/towcard/TowCardSrv/SetBet", {
+        ul = self.Request("/twocard/TwoCardSrv/SetBet", {
             "Key": value,
         })
         return ul
 
     def SCTow(self):
-        ul = self.Request("/towcard/TowCardSrv/SubmitCard", {
+        ul = self.Request("/twocard/TwoCardSrv/SubmitCard", {
         })
         return ul
 
+    def GetTwoRecovery(self, uid, rid):
+        ul = self.Request("/twocard/TwoCardSrv/TwoCardRecovery", {
+            "UserID": uid,
+            "RoomID": rid,
+        })
+        return ul
+
+    def TowGameResultList(self, rid):
+        ul = self.Request("/twocard/TwoCardSrv/GameResultList", {
+            "RoomID": rid,
+        })
+        return ul

@@ -38,7 +38,7 @@ func GetLockClients(topic string) map[*Client]bool {
 	return topics[topic]
 }
 
-func GetClients()map[int32]map[*Client]bool{
+func GetClients() map[int32]map[*Client]bool {
 	return clients
 }
 
@@ -71,6 +71,16 @@ func Lock() {
 
 func Unlock() {
 	lock.Unlock()
+}
+
+func SendClientMsg(uid int32, topic, typ string, msg interface{}, code int) {
+	if cs, ok := clients[uid]; ok {
+		for k, v := range cs {
+			if v {
+				k.SendMessage(topic, typ, msg, code)
+			}
+		}
+	}
 }
 
 func Send(topic, typ string, msg interface{}, code int) error {

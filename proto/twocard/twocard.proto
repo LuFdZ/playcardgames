@@ -1,7 +1,7 @@
 syntax = "proto3";
 import "playcards/proto/room/room.proto";
 
-package towcard;
+package twocard;
 
 //***********************************************结构体***********************************************
 
@@ -111,7 +111,7 @@ message GameResultListReply {
 //游戏恢复
 message RecoveryReply {
     room.CheckRoomExistReply RoomExist = 1; //房间信息
-    GameResult FourCardExist = 2; //四张信息结构体
+    GameResult TwoCardExist = 2; //四张信息结构体
     CountDown CountDown = 3;
 }
 
@@ -141,13 +141,13 @@ message GameResultBro {
     repeated int32 Ids = 2;
 }
 
-service TowCardSrv {
+service TwoCardSrv {
     rpc SetBet (SetBetRequest) returns (DefaultReply) {
     }
     rpc SubmitCard (SubmitCardRequest) returns (DefaultReply) {
     }
     rpc GameResultList (GameResultListRequest) returns (GameResultListReply) {
     }
-    rpc TowCardRecovery (RecoveryRequest) returns (RecoveryReply) {
+    rpc TwoCardRecovery (RecoveryRequest) returns (RecoveryReply) {
     }
 }

@@ -1,8 +1,8 @@
-package fourcard
+package twocard
 
 import (
-	pbtow "playcards/proto/towcard"
-	srvtow "playcards/service/towcard/handler"
+	pbtwo "playcards/proto/twocard"
+	srvtwo "playcards/service/twocard/handler"
 	srvroom "playcards/service/room/handler"
 	pbroom "playcards/proto/room"
 	apienum "playcards/service/api/enum"
@@ -17,7 +17,7 @@ import (
 	gctx "playcards/utils/context"
 )
 
-var rpc pbtow.TowCardSrvClient
+var rpc pbtwo.TwoCardSrvClient
 
 var (
 	brok broker.Broker
@@ -25,35 +25,35 @@ var (
 
 func Init(brk broker.Broker) error {
 	brok = brk
-	if err := SubscribeAllFourCardMessage(brk); err != nil {
+	if err := SubscribeAllTwoCardMessage(brk); err != nil {
 		return err
 	}
-	rpc = pbtow.NewTowCardSrvClient(
-		apienum.FourCardServiceName,
+	rpc = pbtwo.NewTwoCardSrvClient(
+		apienum.TwoCardServiceName,
 		client.DefaultClient,
 	)
 	return nil
 }
 
-func SubscribeAllFourCardMessage(brk broker.Broker) error {
-	subscribe.SrvSubscribe(brk, topic.Topic(srvtow.TopicTowCardGameStart),
+func SubscribeAllTwoCardMessage(brk broker.Broker) error {
+	subscribe.SrvSubscribe(brk, topic.Topic(srvtwo.TopicTwoCardGameStart),
 		GameStartHandler,
 	)
-	subscribe.SrvSubscribe(brk, topic.Topic(srvtow.TopicTowCardSetBet),
+	subscribe.SrvSubscribe(brk, topic.Topic(srvtwo.TopicTwoCardSetBet),
 		SetBetHandler,
 	)
-	subscribe.SrvSubscribe(brk, topic.Topic(srvtow.TopicTowCardGameReady),
+	subscribe.SrvSubscribe(brk, topic.Topic(srvtwo.TopicTwoCardGameReady),
 		GameReadyHandler,
 	)
-	subscribe.SrvSubscribe(brk, topic.Topic(srvtow.TopicTowCardGameSubmitCard),
+	subscribe.SrvSubscribe(brk, topic.Topic(srvtwo.TopicTwoCardGameSubmitCard),
 		SubmitCardHandler,
 	)
-	subscribe.SrvSubscribe(brk, topic.Topic(srvtow.TopicTowCardGameResult),
+	subscribe.SrvSubscribe(brk, topic.Topic(srvtwo.TopicTwoCardGameResult),
 		GameResultHandler,
 	)
 	subscribe.SrvSubscribe(brk, topic.Topic(srvroom.
-	TopicRoomTowCardExist),
-		TowCardExistHandle,
+	TopicRoomTwoCardExist),
+		TwoCardExistHandle,
 	)
 	return nil
 }
@@ -61,12 +61,12 @@ func SubscribeAllFourCardMessage(brk broker.Broker) error {
 func GameStartHandler(p broker.Publication) error {
 	t := p.Topic()
 	msg := p.Message()
-	rs := &pbtow.GameStart{}
+	rs := &pbtwo.GameStart{}
 	err := proto.Unmarshal(msg.Body, rs)
 	if err != nil {
 		return err
 	}
-	err = clients.SendTo(rs.UserID, t, enum.MsgTowCardGameStart, rs,enum.MsgTowCardGameStartCode)
+	err = clients.SendTo(rs.UserID, t, enum.MsgTwoCardGameStart, rs,enum.MsgTwoCardGameStartCode)
 	if err != nil {
 		return err
 	}
@@ -76,12 +76,12 @@ func GameStartHandler(p broker.Publication) error {
 func SetBetHandler(p broker.Publication) error {
 	t := p.Topic()
 	msg := p.Message()
-	rs := &pbtow.SetBetBro{}
+	rs := &pbtwo.SetBetBro{}
 	err := proto.Unmarshal(msg.Body, rs)
 	if err != nil {
 		return err
 	}
-	err = clients.SendToUsers(rs.Ids, t, enum.MsgTowCardSetBet, rs.Context,enum.MsgTowCardSetBetCode)
+	err = clients.SendToUsers(rs.Ids, t, enum.MsgTwoCardSetBet, rs.Context,enum.MsgTwoCardSetBetCode)
 	if err != nil {
 		return err
 	}
@@ -91,12 +91,12 @@ func SetBetHandler(p broker.Publication) error {
 func GameReadyHandler(p broker.Publication) error {
 	t := p.Topic()
 	msg := p.Message()
-	rs := &pbtow.GameResult{}
+	rs := &pbtwo.GameResult{}
 	err := proto.Unmarshal(msg.Body, rs)
 	if err != nil {
 		return err
 	}
-	err = clients.SendTo(rs.UserID, t, enum.MsgTowCardGameReady, rs,enum.MsgTowCardGameReadyCode)
+	err = clients.SendTo(rs.UserID, t, enum.MsgTwoCardGameReady, rs,enum.MsgTwoCardGameReadyCode)
 	if err != nil {
 		return err
 	}
@@ -106,12 +106,12 @@ func GameReadyHandler(p broker.Publication) error {
 func SubmitCardHandler(p broker.Publication) error {
 	t := p.Topic()
 	msg := p.Message()
-	rs := &pbtow.SubmitCardBro{}
+	rs := &pbtwo.SubmitCardBro{}
 	err := proto.Unmarshal(msg.Body, rs)
 	if err != nil {
 		return err
 	}
-	err = clients.SendToUsers(rs.Ids, t, enum.MsgTowCardGameSubmitCard, rs.Context,enum.MsgTowCardGameSubmitCardCode)
+	err = clients.SendToUsers(rs.Ids, t, enum.MsgTwoCardGameSubmitCard, rs.Context,enum.MsgTwoCardGameSubmitCardCode)
 	if err != nil {
 		return err
 	}
@@ -121,20 +121,19 @@ func SubmitCardHandler(p broker.Publication) error {
 func GameResultHandler(p broker.Publication) error {
 	t := p.Topic()
 	msg := p.Message()
-	rs := &pbtow.GameResultBro{}
+	rs := &pbtwo.GameResultBro{}
 	err := proto.Unmarshal(msg.Body, rs)
 	if err != nil {
 		return err
 	}
-	err = clients.SendToUsers(rs.Ids, t, enum.MsgTowCardGameResult, rs.Context,enum.MsgTowCardGameResultCode)
+	err = clients.SendToUsers(rs.Ids, t, enum.MsgTwoCardGameResult, rs.Context,enum.MsgTwoCardGameResultCode)
 	if err != nil {
 		return err
 	}
 	return nil
 }
 
-func TowCardExistHandle(p broker.Publication) error {
-
+func TwoCardExistHandle(p broker.Publication) error {
 	t := p.Topic()
 	msg := p.Message()
 	rs := &pbroom.RoomExist{}
@@ -143,16 +142,17 @@ func TowCardExistHandle(p broker.Publication) error {
 		return err
 	}
 	ctx := gctx.NewContext(clients.GetClientByUserID(rs.UserID)[0].Token())
-	dr := &pbtow.RecoveryRequest{
+	dr := &pbtwo.RecoveryRequest{
 		UserID: rs.UserID,
 		RoomID: rs.RoomID,
 	}
-	reply, err := rpc.TowCardRecovery(ctx, dr)
+
+	reply, err := rpc.TwoCardRecovery(ctx, dr)
 	if err != nil {
-		log.Err("tow card exist handle http err:%v|%v\n", rs, err)
+		log.Err("two card exist handle http err:%v|%v\n", rs, err)
 		return err
 	}
-	err = clients.SendTo(rs.UserID, t, enum.MsgTowCardExist, reply,enum.MsgTowCardExistCode)
+	err = clients.SendTo(rs.UserID, t, enum.MsgTwoCardExist, reply,enum.MsgTwoCardExistCode)
 	if err != nil {
 		return err
 	}

@@ -28,6 +28,7 @@ var RoomEvent = []string{
 	srvroom.TopicRoomNiuniuExist,
 	srvroom.TopicRoomDoudizhuExist,
 	srvroom.TopicRoomFourCardExist,
+	srvroom.TopicRoomTwoCardExist,
 	srvroom.TopicRoomNotice,
 	srvroom.TopicRoomGShuffleCardBro,
 	srvroom.TopicRoomChat,

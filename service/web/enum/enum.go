@@ -206,21 +206,21 @@ const (
 
 //四张标签和编号
 const (
-	MsgTowCardGameStart     = "TowCardGameStart"
-	MsgTowCardGameStartCode = 230101
+	MsgTwoCardGameStart     = "TwoCardGameStart"
+	MsgTwoCardGameStartCode = 230101
 
-	MsgTowCardSetBet     = "TowCardSetBet"
-	MsgTowCardSetBetCode = 230102
+	MsgTwoCardSetBet     = "TwoCardSetBet"
+	MsgTwoCardSetBetCode = 230102
 
-	MsgTowCardGameReady     = "TowCardGameReady"
-	MsgTowCardGameReadyCode = 230103
+	MsgTwoCardGameReady     = "TwoCardGameReady"
+	MsgTwoCardGameReadyCode = 230103
 
-	MsgTowCardGameSubmitCard     = "TowCardSubmitCard"
-	MsgTowCardGameSubmitCardCode = 230104
+	MsgTwoCardGameSubmitCard     = "TwoCardSubmitCard"
+	MsgTwoCardGameSubmitCardCode = 230104
 
-	MsgTowCardGameResult     = "TowCardGameResult"
-	MsgTowCardGameResultCode = 230105
+	MsgTwoCardGameResult     = "TwoCardGameResult"
+	MsgTwoCardGameResultCode = 230105
 
-	MsgTowCardExist     = "TowCardExist"
-	MsgTowCardExistCode = 230107
+	MsgTwoCardExist     = "TwoCardExist"
+	MsgTwoCardExistCode = 230107
 )

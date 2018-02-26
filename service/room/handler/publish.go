@@ -22,7 +22,7 @@ const (
 	TopicRoomNiuniuExist   = "playcards.room.NiuniuExist"
 	TopicRoomDoudizhuExist = "playcards.room.DoudizhuExist"
 	TopicRoomFourCardExist = "playcards.room.FourCardExist"
-	TopicRoomTowCardExist  = "playcards.room.TowCardExist"
+	TopicRoomTwoCardExist  = "playcards.room.TwoCardExist"
 )
 
 const (

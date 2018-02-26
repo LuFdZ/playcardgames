@@ -771,6 +771,9 @@ func (rs *RoomSrv) GetRoomRecovery(ctx context.Context, req *pbr.Room, rsp *pbr.
 		case enumr.FourCardGameType:
 			top = TopicRoomFourCardExist
 			break
+		case enumr.TwoCardGameType:
+			top = TopicRoomTwoCardExist
+			break
 
 		}
 		topic.Publish(rs.broker, msg, top)

@@ -2,8 +2,8 @@ package mod
 
 import (
 	"encoding/json"
-	pbtow "playcards/proto/towcard"
-	enumtow "playcards/model/towcard/enum"
+	pbtow "playcards/proto/twocard"
+	enumtow "playcards/model/twocard/enum"
 	utilproto "playcards/utils/proto"
 	"playcards/utils/tools"
 	"time"
@@ -11,7 +11,7 @@ import (
 	"github.com/jinzhu/gorm"
 )
 
-type Towcard struct {
+type Twocard struct {
 	GameID        int32       `gorm:"primary_key"`
 	RoomID        int32
 	Status        int32
@@ -96,7 +96,7 @@ func (ur *UserInfo) ToProto() *pbtow.UserInfo {
 	return out
 }
 
-func (tc *Towcard) ToProto() *pbtow.GameResult {
+func (tc *Twocard) ToProto() *pbtow.GameResult {
 	out := &pbtow.GameResult{
 		RoomID:     tc.RoomID,
 		GameID:     tc.GameID,
@@ -115,19 +115,19 @@ func (rrl *RoomResultList) ToProto() *pbtow.GameResultListReply {
 	return out
 }
 
-func (tc *Towcard) BeforeUpdate(scope *gorm.Scope) error {
+func (tc *Twocard) BeforeUpdate(scope *gorm.Scope) error {
 	tc.MarshalGameResult()
 	scope.SetColumn("game_result_str", tc.GameResultStr)
 	return nil
 }
 
-func (tc *Towcard) BeforeCreate(scope *gorm.Scope) error {
+func (tc *Twocard) BeforeCreate(scope *gorm.Scope) error {
 	tc.MarshalGameResult()
 	scope.SetColumn("game_result_str", tc.GameResultStr)
 	return nil
 }
 
-func (tc *Towcard) AfterFind() error {
+func (tc *Twocard) AfterFind() error {
 	err := tc.UnmarshalGameResult()
 	if err != nil {
 		return err
@@ -135,13 +135,13 @@ func (tc *Towcard) AfterFind() error {
 	return nil
 }
 
-func (tc *Towcard) MarshalGameResult() error {
+func (tc *Twocard) MarshalGameResult() error {
 	data, _ := json.Marshal(&tc.GameResult)
 	tc.GameResultStr = string(data)
 	return nil
 }
 
-func (tc *Towcard) UnmarshalGameResult() error {
+func (tc *Twocard) UnmarshalGameResult() error {
 	var out *GameResult
 	if err := json.Unmarshal([]byte(tc.GameResultStr), &out); err != nil {
 		return err

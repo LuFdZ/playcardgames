@@ -1,1 +1,1 @@
-DROP TABLE IF EXISTS `towcards`;
+DROP TABLE IF EXISTS `twocards`;

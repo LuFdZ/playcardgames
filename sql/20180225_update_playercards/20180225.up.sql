@@ -1,4 +1,4 @@
-CREATE TABLE `towcards` (
+CREATE TABLE `twocards` (
   `game_id`          INT           NOT NULL AUTO_INCREMENT,
   `room_id`          INT           NOT NULL DEFAULT '0',
   `index`            INT           NOT NULL DEFAULT '0',

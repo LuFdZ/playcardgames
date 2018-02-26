@@ -1319,7 +1319,7 @@ func chekcGameParam(maxNumber int32, maxRound int32, gtype int32, gameParam stri
 			return errroom.ErrGameParam
 		}
 		break
-	case enumroom.TowCardGameType:
+	case enumroom.TwoCardGameType:
 		if maxNumber < 2 && maxNumber > 10 {
 			return errroom.ErrRoomMaxNumber
 		}

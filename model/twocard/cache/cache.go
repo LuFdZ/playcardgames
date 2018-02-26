@@ -3,7 +3,7 @@ package cache
 import (
 	"encoding/json"
 	"fmt"
-	mdtow "playcards/model/towcard/mod"
+	mdtwo "playcards/model/twocard/mod"
 	"playcards/utils/cache"
 	"playcards/utils/errors"
 	"playcards/utils/log"
@@ -13,29 +13,29 @@ import (
 	"strings"
 )
 
-func TowCardKey() string {
-	return fmt.Sprintf(cache.KeyPrefix("TOWCARDMAP"))
+func TwoCardKey() string {
+	return fmt.Sprintf(cache.KeyPrefix("TWOCARDMAP"))
 }
 
-func TowCardSearchKey() string {
-	return fmt.Sprintf(cache.KeyPrefix("TOWCARDSEARCH"))
+func TwoCardSearchKey() string {
+	return fmt.Sprintf(cache.KeyPrefix("TWOCARDSEARCH"))
 }
 
-func TowCardSearchHKey(status int32, rid int32) string {
+func TwoCardSearchHKey(status int32, rid int32) string {
 	return fmt.Sprintf("status:%d-rid:%d-", status, rid)
 }
 
-func TowCardLockKey(rid int32) string {
-	return fmt.Sprintf("TOWCARDLOCK:%d", rid)
+func TwoCardLockKey(rid int32) string {
+	return fmt.Sprintf("TWOCARDLOCK:%d", rid)
 }
 
-func SetGame(tc *mdtow.Towcard) error {
-	lockKey := TowCardLockKey(tc.RoomID)
-	key := TowCardKey()
-	searchKey := TowCardSearchKey()
+func SetGame(tc *mdtwo.Twocard) error {
+	lockKey := TwoCardLockKey(tc.RoomID)
+	key := TwoCardKey()
+	searchKey := TwoCardSearchKey()
 	f := func(tx *redis.Tx) error {
 		tx.Pipelined(func(p *redis.Pipeline) error {
-			searchHKey := TowCardSearchHKey(tc.Status, tc.RoomID)
+			searchHKey := TwoCardSearchHKey(tc.Status, tc.RoomID)
 			tc.SearchKey = searchHKey
 			niuniu, _ := json.Marshal(tc)
 			tx.HSet(key, tools.IntToString(tc.RoomID), string(niuniu))
@@ -46,18 +46,18 @@ func SetGame(tc *mdtow.Towcard) error {
 	}
 	err := cache.KV().Watch(f, lockKey)
 	if err != nil {
-		return errors.Internal("set tow card failed", err)
+		return errors.Internal("set two card failed", err)
 	}
 	return nil
 }
 
-func UpdateGame(tc *mdtow.Towcard) error {
-	lockKey := TowCardLockKey(tc.RoomID)
-	key := TowCardKey()
-	searchKey := TowCardSearchKey()
+func UpdateGame(tc *mdtwo.Twocard) error {
+	lockKey := TwoCardLockKey(tc.RoomID)
+	key := TwoCardKey()
+	searchKey := TwoCardSearchKey()
 	f := func(tx *redis.Tx) error {
 		tx.Pipelined(func(p *redis.Pipeline) error {
-			searchHKey := TowCardSearchHKey(tc.Status, tc.RoomID)
+			searchHKey := TwoCardSearchHKey(tc.Status, tc.RoomID)
 			lastKey := tc.SearchKey
 			tx.HDel(searchKey, lastKey)
 			tc.SearchKey = searchHKey
@@ -70,16 +70,16 @@ func UpdateGame(tc *mdtow.Towcard) error {
 	}
 
 	if err := cache.KV().Watch(f, lockKey); err != nil {
-		return errors.Internal("update tow card game failed", err)
+		return errors.Internal("update two card game failed", err)
 	}
 
 	return nil
 }
 
-func DeleteGame(tc *mdtow.Towcard) error {
-	lockKey := TowCardLockKey(tc.RoomID)
-	key := TowCardKey()
-	searchKey := TowCardSearchKey()
+func DeleteGame(tc *mdtwo.Twocard) error {
+	lockKey := TwoCardLockKey(tc.RoomID)
+	key := TwoCardKey()
+	searchKey := TwoCardSearchKey()
 	f := func(tx *redis.Tx) error {
 		tx.Pipelined(func(p *redis.Pipeline) error {
 			tx.HDel(key, tools.IntToString(tc.RoomID))
@@ -90,34 +90,34 @@ func DeleteGame(tc *mdtow.Towcard) error {
 	}
 	err := cache.KV().Watch(f, lockKey)
 	if err != nil {
-		return errors.Internal("del tow card game redis error", err)
+		return errors.Internal("del two card game redis error", err)
 	}
 	return nil
 }
 
-func GetGame(rid int32) (*mdtow.Towcard, error) {
-	key := TowCardKey()
+func GetGame(rid int32) (*mdtwo.Twocard, error) {
+	key := TwoCardKey()
 	val, err := cache.KV().HGet(key, tools.IntToString(rid)).Bytes()
 	if err == redis.Nil {
 		return nil, nil
 	}
 
 	if err != nil && err != redis.Nil {
-		return nil, errors.Internal("get tow card failed", err)
+		return nil, errors.Internal("get two card failed", err)
 	}
-	towcard := &mdtow.Towcard{}
+	towcard := &mdtwo.Twocard{}
 	if err := json.Unmarshal(val, towcard); err != nil {
-		return nil, errors.Internal("get tow card failed", err)
+		return nil, errors.Internal("get two card failed", err)
 	}
 	return towcard, nil
 }
 
-func GetAllGameByStatus(status int32) ([]*mdtow.Towcard, error) {
+func GetAllGameByStatus(status int32) ([]*mdtwo.Twocard, error) {
 	var curson uint64
-	var ns []*mdtow.Towcard
+	var ns []*mdtwo.Twocard
 	var count int64
 	count = 999
-	key := TowCardSearchKey()
+	key := TwoCardSearchKey()
 	for {
 		scan := cache.KV().HScan(key, curson, "*", count)
 		keysValues, cur, err := scan.Result()
@@ -134,7 +134,7 @@ func GetAllGameByStatus(status int32) ([]*mdtow.Towcard, error) {
 					roomID, _ := tools.StringToInt(ridStr)
 					niu, err := GetGame(roomID)
 					if err != nil {
-						log.Err("get all tow card key err rid:%s,err:%v", ridStr, err)
+						log.Err("get all two card key err rid:%s,err:%v", ridStr, err)
 					}
 					ns = append(ns, niu)
 				}
