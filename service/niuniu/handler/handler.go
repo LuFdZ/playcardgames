@@ -154,23 +154,23 @@ func (ns *NiuniuSrv) update(gt *gsync.GlobalTimer, gl *lua.LState) {
 				}
 			}
 		}
-		updateRobots := niuniu.UpdateRobotGame()
-		for game, v := range updateRobots {
-			if v[0] == enumniu.UserStatusSetBet {
-				msg := &pbniu.SetBet{
-					UserID: v[1],
-					Key:    v[2],
-					Ids:    game.Ids,
-				}
-				topic.Publish(ns.broker, msg, TopicNiuniuSetBet)
-			} else if v[0] == enumniu.UserStatusSubmitCard {
-				msg := &pbniu.GameReady{
-					UserID: v[1],
-					Ids:    game.Ids,
-				}
-				topic.Publish(ns.broker, msg, TopicNiuniuGameReady)
-			}
-		}
+		//updateRobots := niuniu.UpdateRobotGame()
+		//for game, v := range updateRobots {
+		//	if v[0] == enumniu.UserStatusSetBet {
+		//		msg := &pbniu.SetBet{
+		//			UserID: v[1],
+		//			Key:    v[2],
+		//			Ids:    game.Ids,
+		//		}
+		//		topic.Publish(ns.broker, msg, TopicNiuniuSetBet)
+		//	} else if v[0] == enumniu.UserStatusSubmitCard {
+		//		msg := &pbniu.GameReady{
+		//			UserID: v[1],
+		//			Ids:    game.Ids,
+		//		}
+		//		topic.Publish(ns.broker, msg, TopicNiuniuGameReady)
+		//	}
+		//}
 		if ns.count == 3 {
 			err := niuniu.CleanGame()
 			if err != nil {

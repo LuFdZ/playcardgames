@@ -15,6 +15,7 @@ message UserInfo {
     UserCard TailCards = 6; //玩家尾道牌组信息
     string TotalScore = 7; //总分
     int32 Status = 8; //玩家状态
+    int64 ClubCoinScore = 9;//玩家战绩分成绩
 //    string NickName = 10;//历史查询时才发
 //    string Icon = 11;//历史查询时才发
 }

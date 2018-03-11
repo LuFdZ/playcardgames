@@ -52,6 +52,10 @@ func RobotMap() string {
 	return cache.KeyPrefix("ROBOTMAP")
 }
 
+func RegisterChannelHKey() string {
+	return cache.KeyPrefix("REGISTERCHANNELMAP")
+}
+
 //func RobotHKey(uid int32,nickName string) string {
 //	return fmt.Sprintf("%d:%s", uid, nickName)
 //}
@@ -613,4 +617,44 @@ func GetRobot() (*mdu.User, error) {
 		}
 	}
 	return nil, nil
+}
+
+
+func SetRegisterChannel(unionID string, channel string) error {
+	key := RegisterChannelHKey()
+	f := func(tx *redis.Tx) error {
+		tx.Pipelined(func(p *redis.Pipeline) error {
+			tx.HSet(key, unionID, channel)
+			return nil
+		})
+		return nil
+	}
+
+	err := cache.KV().Watch(f, key)
+	if err != nil {
+		return errors.Internal("register channel set error", err)
+	}
+	return nil
+}
+
+func GetRegisterChannel(unionID string) string {
+	key := RegisterChannelHKey()
+	val := cache.KV().HGet(key, unionID).Val()
+	return val
+}
+
+func DeleteRegisterChannel(unionID string) error {
+	key := RegisterChannelHKey()
+	f := func(tx *redis.Tx) error {
+		tx.Pipelined(func(p *redis.Pipeline) error {
+			tx.HDel(key,unionID)
+			return nil
+		})
+		return nil
+	}
+	err := cache.KV().Watch(f, key)
+	if err != nil {
+		return errors.Internal("delete register channel error", err)
+	}
+	return nil
 }

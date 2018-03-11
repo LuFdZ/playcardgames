@@ -20,22 +20,49 @@ message Club {
     int64 UpdatedAt = 11;
     int64 Diamond = 12; //俱乐部游戏抽成参数json
     int32 MemberNumber = 13;
+    int64 ClubCoin = 14;
+    string Notice = 15;
+    SettingParam SettingParam = 16;
 }
 
 //成员结构体
 message ClubMember {
-    int32 MemberId = 1;
+    int32 MemberID = 1;
     int32 ClubID = 2;
     int32 UserID = 3;
     int32 Role = 4; //俱乐部成员角色
-    int32 Status = 5;//成员状态 1正常 2禁用
+    int32 Status = 5; //成员状态 1正常 2禁用
     string Nickname = 6;
     string Icon = 7;
     int32 Online = 8;
+    int64 ClubCoin = 14;
     int64 CreatedAt = 9;
     int64 UpdatedAt = 10;
 }
 
+//俱乐部流水结构体
+message ClubJournal {
+    int32 ID = 1;
+    int32 ClubID = 2;
+    int32 AmountType = 3;
+    int64 Amount = 4;
+    int64 AmountBefore = 5;
+    int64 AmountAfter = 6;
+    int32 Type = 7;
+    int64 Foreign = 8;
+    int64 OpUserID = 9;
+    int32 Status = 10;
+    int64 CreatedAt = 11;
+    int64 UpdatedAt = 12;
+    string TagName = 13;
+}
+
+//俱乐部设置结构体
+message SettingParam {
+    int32 CostType = 1; //管理费扣费类型 1 百分百 2固定值
+    int32 CostValue = 2; //管理费数值
+    int64 ClubCoinBaseScore = 3; //游戏最低战绩分值
+}
 //***********************************************请求***********************************************
 
 message ClubInfoRequest {
@@ -68,7 +95,7 @@ message SetUserToBlackRequest {
     int32 Status = 2;
 }
 
-message ClubRechargeRequest{
+message ClubRechargeRequest {
     int32 ClubID = 1;
     int64 Amount = 2;
     int32 AmountType = 3;
@@ -89,8 +116,33 @@ message SetClubRoomFlagRequest {
     int32 RoomID = 2;
 }
 
-message CreateClubRoomRequest{
+message CreateClubRoomRequest {
     room.Room Room = 1;
+}
+
+message GainClubCoinRequest {
+    int32 ClubID = 1;
+    int32 UserID = 2;
+    int64 Amount = 3;
+}
+
+message PageClubJournalRequest {
+    page.PageOption Page = 1;
+    int32 ClubID = 2;
+    int32 Status = 3;
+}
+
+message PageClubMemberJournalRequest {
+    page.PageOption Page = 1;
+}
+
+message UpdateClubJournalRequest {
+    int32 ClubJournalID = 1;
+    int32 ClubID = 2;
+}
+
+message GetClubMemberCoinRankRequest {
+    page.PageOption Page = 1;
 }
 
 //***********************************************回应***********************************************
@@ -120,6 +172,17 @@ message PageClubRoomReply {
     int64 Count = 4;
 }
 
+message GainClubCoinReply {
+    int32 Result = 1;
+    int64 ClubCoin = 2;
+}
+
+message PageClubJournalReply {
+    int32 Result = 1;
+    int32 Code = 2;
+    repeated ClubJournal List = 3;
+    int64 Count = 4;
+}
 //***********************************************广播***********************************************
 
 //俱乐部成员变动通知
@@ -131,13 +194,13 @@ message PageClubRoomReply {
 message ClubMemberOnline {
     int32 ClubID = 1;
     int32 UserID = 2;
-    int32 Status = 3;//1 上线 2离线
+    int32 Status = 3; //1 上线 2离线
 }
 
 //俱乐部房间变动通知
 message ClubRoomChange {
     int32 RoomID = 1;
-    int32 Status = 2;//1 新增加入房间 2房间已满退出列表
+    int32 Status = 2; //1 新增加入房间 2房间已满退出列表
 }
 
 //俱乐部房间玩家进出通知
@@ -146,7 +209,7 @@ message ClubRoomUserChange {
     //房间成员
     //下发字段[UserID,Position,Icon,Nickname]
     room.RoomUser RoomUser = 2;
-    int32 Status = 3;//1 新增加入房间 2房间已满退出列表
+    int32 Status = 3; //1 新增加入房间 2房间已满退出列表
 }
 
 //俱乐部信息
@@ -211,17 +274,46 @@ service ClubSrv {
     }
     //处理俱乐部审批
     //必要参数 [ClubID,UserID,Status]
-    rpc UpdateClubExamine(ClubMember) returns (ClubReply) {
+    rpc UpdateClubExamine (ClubMember) returns (ClubReply) {
 
     }
     //标记俱乐部房间
     //必要参数 [ClubID,RoomID]
-    rpc SetClubRoomFlag(SetClubRoomFlagRequest) returns (ClubReply) {
+    rpc SetClubRoomFlag (SetClubRoomFlagRequest) returns (ClubReply) {
 
     }
     //创建俱乐部房间
     //必要参数 [MaxNumber,RoundNumber,GameType,GameParam,RoomType,ClubID]
-    rpc CreateClubRoom(CreateClubRoomRequest) returns (ClubReply) {
+    rpc CreateClubRoom (CreateClubRoomRequest) returns (ClubReply) {
 
+    }
+
+    //俱乐部分配战绩分给成员
+    //必要参数 [ClubID,UserID,Amount]
+    //返回参数 [Result,ClubCoin]
+    rpc AddClubMemberClubCoin (GainClubCoinRequest) returns (GainClubCoinReply) {
+    }
+    //俱乐部成员
+    //必要参数 [ClubID,UserID,Amount]
+    //返回参数 [Result,ClubCoin]
+    rpc ClubMemberOfferUpClubCoin (GainClubCoinRequest) returns (GainClubCoinReply) {
+    }
+    //俱乐部战绩流水分页请求
+    rpc PageClubJournal (PageClubJournalRequest) returns (PageClubJournalReply) {
+    }
+    //玩家流水分页请求
+    rpc PageClubMemberJournal (PageClubMemberJournalRequest) returns (PageClubJournalReply) {
+    }
+
+    //管理员更新俱乐部流水标识
+    rpc UpdateClubJournal (UpdateClubJournalRequest) returns (ClubReply) {
+    }
+
+    //新俱乐战绩分排行部流水
+    rpc GetClubMemberCoinRank (GetClubMemberCoinRankRequest) returns (PageClubMemberReply) {
+    }
+
+    //俱乐部成员状态更新 只能更新 1普通 2禁赛 状态下的成员
+    rpc UpdateClubMemberStatus (ClubMember) returns (ClubReply) {
     }
 }

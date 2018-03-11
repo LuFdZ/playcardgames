@@ -51,19 +51,20 @@ type UserCard struct {
 }
 
 type NiuniuUserResult struct {
-	UserID   int32
-	Status   int32
-	Info     *BankerAndBet
-	Cards    *UserCard
-	Score    int32
-	Type     int32
-	UpdateAt *time.Time
+	UserID        int32
+	Status        int32
+	Info          *BankerAndBet
+	Cards         *UserCard
+	Score         int32
+	Type          int32
+	ClubCoinScore int64
+	UpdateAt      *time.Time
 }
 
 type NiuniuRoomResult struct {
-	RoomID   int32
-	List     []*NiuniuUserResult
-	RobotIds []int32
+	RoomID int32
+	List   []*NiuniuUserResult
+	//RobotIds []int32
 }
 
 type NiuniuRoomResultList struct {

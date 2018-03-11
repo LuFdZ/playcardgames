@@ -114,7 +114,7 @@ func (cs *ClubSrv) RemoveClubMember(ctx context.Context,
 	req *pbclub.ClubMember, rsp *pbclub.ClubReply) error {
 
 	mdClub, err := cacheclub.GetClub(req.ClubID)
-	if err != nil{
+	if err != nil {
 		return err
 	}
 
@@ -197,7 +197,7 @@ func (cs *ClubSrv) JoinClub(ctx context.Context,
 		return err
 	}
 	mdClub, err := cacheclub.GetClub(req.ClubID)
-	if err != nil{
+	if err != nil {
 		return err
 	}
 	err = club.JoinClub(mdClub.ClubID, u)
@@ -223,7 +223,7 @@ func (cs *ClubSrv) LeaveClub(ctx context.Context,
 		return err
 	}
 	mdClub, err := cacheclub.GetClub(req.ClubID)
-	if err != nil{
+	if err != nil {
 		return err
 	}
 	f := func() error {
@@ -272,8 +272,7 @@ func (cs *ClubSrv) PageClub(ctx context.Context,
 	req *pbclub.PageClubRequest, rsp *pbclub.PageClubReply) error {
 	page := mdpage.PageOptionFromProto(req.Page)
 	rsp.Result = 2
-	l, rows, err := club.PageClub(page,
-		mdclub.ClubFromProto(req.Club))
+	l, rows, err := club.PageClub(page, mdclub.ClubFromProto(req.Club))
 	if err != nil {
 		return err
 	}
@@ -331,7 +330,7 @@ func (cs *ClubSrv) ClubRecharge(ctx context.Context,
 	}
 
 	f := func() error {
-		err = club.SetClubBalance(req.Amount, enumclub.TypeDiamond, req.ClubID,
+		err = club.SetClubBalance(req.Amount, req.AmountType, req.ClubID,
 			enumbill.JournalTypeClubRecharge, time.Now().Unix(), int64(u.UserID))
 		if err != nil {
 			return err
@@ -358,7 +357,7 @@ func (cs *ClubSrv) SetBlackList(ctx context.Context,
 		return err
 	}
 	mdClub, err := cacheclub.GetClub(req.ClubID)
-	if err != nil{
+	if err != nil {
 		return err
 	}
 	f := func() error {
@@ -401,7 +400,7 @@ func (cs *ClubSrv) UpdateClubExamine(ctx context.Context,
 	}
 	mdClub := &mdclub.Club{}
 	f := func() error {
-		mdClub,err = club.UpdateClubExamine(req.ClubID, req.UserID, req.Status, u.UserID)
+		mdClub, err = club.UpdateClubExamine(req.ClubID, req.UserID, req.Status, u.UserID)
 		if err != nil {
 			return err
 		}
@@ -432,5 +431,150 @@ func (cs *ClubSrv) UpdateClubExamine(ctx context.Context,
 		Args:   []string{mdClub.ClubName},
 	}
 	topic.Publish(cs.broker, mailReq, srvmail.TopicSendSysMail)
+	return nil
+}
+
+func (cs *ClubSrv) AddClubMemberClubCoin(ctx context.Context,
+	req *pbclub.GainClubCoinRequest, rsp *pbclub.GainClubCoinReply) error {
+	if req.Amount < 0 {
+		return errorclub.ErrClubRecharge
+	}
+	_, err := auth.GetUser(ctx)
+	if err != nil {
+		return err
+	}
+	var amount int64
+	f := func() error {
+		amount, err = club.AddClubMemberClubCoin(req.ClubID, req.UserID, req.Amount)
+		if err != nil {
+			return err
+		}
+		return nil
+	}
+	lock := ClubLockKey(req.ClubID)
+	err = gsync.GlobalTransaction(lock, f)
+	if err != nil {
+		log.Err("%s club recharge failed: %v", lock, err)
+		return err
+	}
+	*rsp = pbclub.GainClubCoinReply{
+		Result:   1,
+		ClubCoin: amount,
+	}
+	return nil
+}
+
+func (cs *ClubSrv) ClubMemberOfferUpClubCoin(ctx context.Context,
+	req *pbclub.GainClubCoinRequest, rsp *pbclub.GainClubCoinReply) error {
+	if req.Amount < 0 {
+		return errorclub.ErrClubRecharge
+	}
+	u, err := auth.GetUser(ctx)
+	if err != nil {
+		return err
+	}
+	var amount int64
+	f := func() error {
+		amount, err = club.ClubMemberOfferUpClubCoin(req.ClubID, u.UserID, req.Amount)
+		if err != nil {
+			return err
+		}
+		return nil
+	}
+	lock := ClubLockKey(req.ClubID)
+	err = gsync.GlobalTransaction(lock, f)
+	if err != nil {
+		log.Err("%s club recharge failed: %v", lock, err)
+		return err
+	}
+	*rsp = pbclub.GainClubCoinReply{
+		Result:   1,
+		ClubCoin: amount,
+	}
+	return nil
+}
+
+func (cs *ClubSrv) PageClubJournal(ctx context.Context,
+	req *pbclub.PageClubJournalRequest, rsp *pbclub.PageClubJournalReply) error {
+	page := mdpage.PageOptionFromProto(req.Page)
+	rsp.Result = 2
+	l, rows, err := club.PageClubJournal(page, req.ClubID, req.Status)
+	if err != nil {
+		return err
+	}
+	err = utilproto.ProtoSlice(l, &rsp.List)
+	if err != nil {
+		return err
+	}
+	rsp.Count = rows
+	rsp.Result = 1
+	return nil
+}
+
+func (cs *ClubSrv) PageClubMemberJournal(ctx context.Context,
+	req *pbclub.PageClubJournalRequest, rsp *pbclub.PageClubJournalReply) error {
+	page := mdpage.PageOptionFromProto(req.Page)
+	rsp.Result = 2
+	u, err := auth.GetUser(ctx)
+	if err != nil {
+		return err
+	}
+	l, rows, err := club.PageClubMemberJournal(page, u.UserID, u.ClubID)
+	if err != nil {
+		return err
+	}
+	//err = utilproto.ProtoSlice(l, &rsp.List)
+	//if err != nil {
+	//	return err
+	//}
+	rsp.List = l
+	rsp.Count = rows
+	rsp.Result = 1
+	return nil
+}
+
+func (cs *ClubSrv) UpdateClubJournal(ctx context.Context,
+	req *pbclub.UpdateClubJournalRequest, rsp *pbclub.ClubReply) error {
+	err := club.UpdateClubJournal(req.ClubJournalID, req.ClubID)
+	if err != nil {
+		return err
+	}
+	*rsp = pbclub.ClubReply{
+		Result: 1,
+	}
+	return nil
+}
+
+func (cs *ClubSrv) UpdateClubMemberStatus(ctx context.Context,
+	req *pbclub.ClubMember, rsp *pbclub.ClubReply) error {
+	err := club.UpdateClubMemberStatus(req.ClubID, req.UserID, req.Status)
+	if err != nil {
+		return err
+	}
+	*rsp = pbclub.ClubReply{
+		Result: 1,
+	}
+	return nil
+}
+
+func (cs *ClubSrv) GetClubMemberCoinRank(ctx context.Context,
+	req *pbclub.GetClubMemberCoinRankRequest, rsp *pbclub.PageClubMemberReply) error {
+	page := mdpage.PageOptionFromProto(req.Page)
+	rsp.Result = 2
+	u, err := auth.GetUser(ctx)
+	if err != nil {
+		return err
+	}
+	l, rows, err := club.GetClubMemberCoinRank(page, u.ClubID)
+	if err != nil {
+		return err
+	}
+	//err = utilproto.ProtoSlice(l, &rsp.List)
+	//if err != nil {
+	//	return err
+	//}
+	rsp.List = l
+	rsp.Count = rows
+	rsp.Result = 1
 	return nil
 }

@@ -78,6 +78,9 @@ func GetLastThirteenByRoomID(tx *gorm.DB, rid int32) (*mdt.Thirteen, error) {
 	out := &mdt.Thirteen{}
 	if err := tx.Where(" room_id = ? ", rid).
 		Order("game_id desc").Limit(1).Find(&out).Error; err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return nil, nil
+		}
 		return nil, errors.Internal("get last thirteen by room_id failed", err)
 	}
 	//if err := tx.Where(" room_id = ? and index = ?", rid,index).

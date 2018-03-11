@@ -24,7 +24,6 @@ all:  api-srv           \
       doudizhu-srv      \
       fourcard-srv      \
       mail-srv          \
-      goldroom-srv      \
       twocard-srv       \
 
 dev:

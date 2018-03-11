@@ -99,6 +99,8 @@ func (rs *RoomSrv) update(gt *gsync.GlobalTimer) {
 						RoomID: room.RoomID,
 						ClubID: room.ClubID,
 					}
+					mClub, _ := club.GetClubFromDB(room.ClubID)
+					msg.Diamond = mClub.Diamond //+ r.Cost
 					topic.Publish(rs.broker, msg, TopicClubRoomFinish)
 				}
 			}
@@ -124,13 +126,15 @@ func (rs *RoomSrv) update(gt *gsync.GlobalTimer) {
 							RoomID: giveup.RoomID,
 							ClubID: giveup.ClubID,
 						}
+						mClub, _ := club.GetClubFromDB(giveup.ClubID)
+						msg.Diamond = mClub.Diamond //+ r.Cost
 						topic.Publish(rs.broker, msg, TopicClubRoomFinish)
 					}
 				}
 				var userNoVoteIds []int32
-				for _,userVote := range giveup.GiveupGame.UserStateList{
-					if userVote.State > enumr.UserStateDisagree{
-						userNoVoteIds = append(userNoVoteIds,userVote.UserID)
+				for _, userVote := range giveup.GiveupGame.UserStateList {
+					if userVote.State > enumr.UserStateDisagree {
+						userNoVoteIds = append(userNoVoteIds, userVote.UserID)
 					}
 				}
 				mailReq := &pbmail.SendSysMailRequest{
@@ -145,7 +149,7 @@ func (rs *RoomSrv) update(gt *gsync.GlobalTimer) {
 		if rs.count == 120 {
 			mdrList, _ := room.DeadRoomDestroy()
 			if mdrList != nil {
-				for _,mdr := range mdrList{
+				for _, mdr := range mdrList {
 					mailReq := &pbmail.SendSysMailRequest{
 						MailID: enummail.MailGameOver,
 						Ids:    mdr.Ids,
@@ -170,8 +174,8 @@ func (rs *RoomSrv) CreateRoom(ctx context.Context, req *pbr.Room,
 	}
 	var r *mdroom.Room
 	f := func() error {
-		r, err = room.CreateRoom(req.RoomType, req.GameType, req.MaxNumber,
-			req.RoundNumber, req.GameParam, u, "")
+		r, err = room.CreateRoom(req.RoomType, req.SubRoomType, req.GameType, req.MaxNumber,
+			req.RoundNumber, req.GameParam, req.SettingParam, u, "")
 		if err != nil {
 			return err
 		}
@@ -208,8 +212,8 @@ func (rs *RoomSrv) CreateClubRoom(ctx context.Context, req *pbr.Room,
 	}
 	var mr *mdroom.Room
 	f := func() error {
-		mr, err = room.CreateRoom(req.RoomType, req.GameType, req.MaxNumber,
-			req.RoundNumber, req.GameParam, u, "")
+		mr, err = room.CreateRoom(req.RoomType, req.SubRoomType, req.GameType, req.MaxNumber,
+			req.RoundNumber, req.GameParam, req.SettingParam, u, "")
 		if err != nil {
 			return err
 		}
@@ -409,6 +413,14 @@ func (rs *RoomSrv) LeaveRoom(ctx context.Context, req *pbr.Room,
 			topic.Publish(rs.broker, msgLeave, TopicClubRoomFinish)
 		}
 	}
+	if r.Status != enumr.RoomStatusDestroy && (r.GameType == enumr.FourCardGameType || r.GameType == enumr.TwoCardGameType) {
+		msgbl := &pbr.UserBankerList{
+			BankerIds: r.BankerList,
+			Ids:       r.Ids,
+		}
+		topic.Publish(rs.broker, msgbl, TopicBankerList)
+	}
+
 	return nil
 
 }
@@ -446,7 +458,7 @@ func (rs *RoomSrv) SetReady(ctx context.Context, req *pbr.Room,
 			UserID: mdr.Shuffle,
 			Ids:    mdr.Ids,
 		}
-		topic.Publish(rs.broker, msg, TopicRoomGShuffleCardBro)
+		topic.Publish(rs.broker, msg, TopicRoomShuffleCardBro)
 	}
 	rsp.Ids = nil
 	return nil
@@ -608,6 +620,35 @@ func (rs *RoomSrv) RoomResultList(ctx context.Context, req *pbr.PageRoomResultLi
 	}
 	page := mdpage.PageOptionFromProto(req.Page)
 	roomresult, err := room.RoomResultList(page, u.UserID, req.GameType)
+	if err != nil {
+		return err
+	}
+	*rsp = *roomresult
+	return nil
+}
+
+func (rs *RoomSrv) GetRoomResultList(ctx context.Context, req *pbr.PageRoomResultListRequest,
+	rsp *pbr.RoomResultListReply) error {
+	u, err := auth.GetUser(ctx)
+	if err != nil {
+		return err
+	}
+	page := mdpage.PageOptionFromProto(req.Page)
+	roomresult, err := room.RoomResultList(page, u.UserID, req.GameType)
+	if err != nil {
+		return err
+	}
+	*rsp = *roomresult
+	return nil
+}
+
+func (rs *RoomSrv) GetRoomResultByID(ctx context.Context, req *pbr.Room,
+	rsp *pbr.RoomResults) error {
+	_, err := auth.GetUser(ctx)
+	if err != nil {
+		return err
+	}
+	roomresult, err := room.GetRoomResultByID(req.RoomID)
 	if err != nil {
 		return err
 	}
@@ -856,7 +897,7 @@ func (rs *RoomSrv) ShuffleCard(ctx context.Context, req *pbr.Room,
 			UserID: mdr.Shuffle,
 			Ids:    mdr.Ids,
 		}
-		topic.Publish(rs.broker, msg, TopicRoomGShuffleCardBro)
+		topic.Publish(rs.broker, msg, TopicRoomShuffleCardBro)
 	}
 	rsp.Result = 1
 	return nil
@@ -895,5 +936,71 @@ func (rs *RoomSrv) PageSpecialGameList(ctx context.Context,
 	}
 	rsp.Count = rows
 	rsp.Result = 1
+	return nil
+}
+
+func (rs *RoomSrv) SetBankerList(ctx context.Context, req *pbr.SetBankerListRequest,
+	rsp *pbr.RoomReply) error {
+	u, err := auth.GetUser(ctx)
+	if err != nil {
+		return err
+	}
+	mdr := &mdroom.Room{}
+	f := func() error {
+		mdr, err = room.SetBankerList(req.Password, u)
+		if err != nil {
+			return err
+		}
+		return nil
+	}
+	lock := RoomLockKey(req.Password)
+
+	err = gsync.GlobalTransaction(lock, f)
+	if err != nil {
+		log.Err("%s set banker list failed: %v", lock, err)
+		return err
+	}
+	//*rsp = pbr.RoomReply{
+	//	Result: 1,
+	//}
+	rsp.Result = 1
+	msg := &pbr.UserBankerList{
+		BankerIds: mdr.BankerList,
+		Ids:       mdr.Ids,
+	}
+	topic.Publish(rs.broker, msg, TopicBankerList)
+	return nil
+}
+
+func (rs *RoomSrv) OutBankerList(ctx context.Context, req *pbr.OutBankerListRequest,
+	rsp *pbr.RoomReply) error {
+	u, err := auth.GetUser(ctx)
+	if err != nil {
+		return err
+	}
+	mdr := &mdroom.Room{}
+	f := func() error {
+		mdr, err = room.OutBankerList(req.Password, u)
+		if err != nil {
+			return err
+		}
+		return nil
+	}
+	lock := RoomLockKey(req.Password)
+
+	err = gsync.GlobalTransaction(lock, f)
+	if err != nil {
+		log.Err("%s out banker list failed: %v", lock, err)
+		return err
+	}
+	//*rsp = pbr.RoomReply{
+	//	Result: 1,
+	//}
+	rsp.Result = 1
+	msg := &pbr.UserBankerList{
+		BankerIds: mdr.BankerList,
+		Ids:       mdr.Ids,
+	}
+	topic.Publish(rs.broker, msg, TopicBankerList)
 	return nil
 }

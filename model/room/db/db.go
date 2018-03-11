@@ -28,13 +28,14 @@ func CreateRoom(tx *gorm.DB, r *mdr.Room) error {
 func UpdateRoom(tx *gorm.DB, r *mdr.Room) (*mdr.Room, error) {
 	now := gorm.NowFunc()
 	room := &mdr.Room{
-		Users:     r.Users,
-		Status:    r.Status,
-		Giveup:    r.Giveup,
-		RoundNow:  r.RoundNow,
-		UpdatedAt: &now,
-		GiveupAt:  r.GiveupAt,
-		GameParam: r.GameParam,
+		Users:          r.Users,
+		Status:         r.Status,
+		Giveup:         r.Giveup,
+		RoundNow:       r.RoundNow,
+		StartMaxNumber: r.StartMaxNumber,
+		UpdatedAt:      &now,
+		GiveupAt:       r.GiveupAt,
+		GameParam:      r.GameParam,
 	}
 	if err := tx.Model(r).Updates(room).Error; err != nil {
 		return nil, errors.Internal("update room failed", err)
@@ -304,9 +305,9 @@ func PageRoomList(tx *gorm.DB, clubid int32, page int32, pagesize int32, flag in
 	//	return nil, errr.ErrRoomNotExisted
 	//}
 
-	strWhere := fmt.Sprintf("club_id = ? and flag = %d and status >3", flag)
-	if flag == -1 {
-		strWhere = "club_id = ? and status >3"
+	strWhere := fmt.Sprintf("club_id = ? and status > %d ", enum.RoomStatusStarted)
+	if flag > 0 {
+		strWhere += fmt.Sprintf(" and flag = %d ", flag)
 	}
 	sql, param, err := squirrel.
 	Select(" room_id,password,status,game_type,max_number,round_now,round_number,game_param,game_user_result,created_at").

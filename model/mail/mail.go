@@ -332,7 +332,7 @@ func PagePlayerMail(page int32, uid int32) (*pbgame.PagePlayerMailReply, error) 
 		list = append(list, pm)
 	}
 	out.List = list
-	fmt.Printf("GetAllMailItems:%+v\n", out)
+	//fmt.Printf("GetAllMailItems:%+v\n", out)
 	return out, nil
 }
 

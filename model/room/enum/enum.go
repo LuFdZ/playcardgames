@@ -45,6 +45,8 @@ const (
 	RoomTypeAgent = 2 //代理开房
 	RoomTypeClub  = 3 //俱乐部
 	RoomTypeGold  = 4 //金币场
+
+	SubTypeClubMatch = 301
 )
 
 // give up vote status
@@ -102,7 +104,7 @@ const (
 	NiuniuGameCost   = 1.0
 	DoudizhuGameCost = 1.0
 	FourcardGameCost = 1.0
-	TowcardGameCost  = 1.0
+	TwocardGameCost  = 1.0
 
 	ThirteenMaxNumber = 8
 	NiuniuMaxNumber   = 10
@@ -146,5 +148,19 @@ const (
 	Player = 1
 	Robot  = 2
 )
+
+const (
+	RoomNoFull int32 = 1
+	RoomFull   int32 = 2
+)
+
+//金币场配置表
+//map[游戏类型ID]{map[游戏场等级ID]{底分，入场条件，收费}}
+var GoldRoomCostMap = map[int32]map[int32][]int64{
+	1001: {1: []int64{100, 20000, 100}, 2: []int64{500, 100000, 100}},
+	1002: {1: []int64{100, 20000, 100}, 2: []int64{500, 100000, 100}},
+	1003: {1: []int64{100, 20000, 100}, 2: []int64{500, 100000, 100}},
+	1004: {1: []int64{100, 20000, 100}, 2: []int64{500, 100000, 100}},
+}
 
 var GameType = []int32{1001, 1002, 1003, 1004}

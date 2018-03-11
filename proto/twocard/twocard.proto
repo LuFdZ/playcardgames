@@ -14,6 +14,7 @@ message UserInfo {
     UserCard Cards = 5; //玩家头道牌组信息
     string TotalScore = 7; //总分
     int32 Status = 8; //玩家状态
+    int64 ClubCoinScore = 9;//俱乐部战绩分
 //    string NickName = 10;//历史查询时才发
 //    string Icon = 11;//历史查询时才发
 }
@@ -74,6 +75,7 @@ message GameResult {
     UserDice UserDice = 4;
     repeated UserInfo List = 5; //用户信息
     int32 UserID = 6;
+    CountDown CountDown = 7;
 }
 
 

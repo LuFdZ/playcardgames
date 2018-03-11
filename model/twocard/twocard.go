@@ -24,12 +24,6 @@ import (
 	"sort"
 )
 
-//var GoLua *lua.LState
-//
-//func InitGoLua(gl *lua.LState) {
-//	GoLua = gl
-//}
-
 func CreateGame() []*mdgame.Twocard {
 	rooms := cacheroom.GetAllRoomByGameTypeAndStatus(enumroom.TwoCardGameType, enumroom.RoomStatusAllReady)
 	if rooms == nil && len(rooms) == 0 {
@@ -47,6 +41,7 @@ func CreateGame() []*mdgame.Twocard {
 		)
 		newGameResult := &mdgame.GameResult{}
 		var bankerID int32
+		bankerID = mdr.BankerList[0]
 		for _, user := range mdr.Users {
 			if mdr.RoundNow == 1 {
 				userResult := &mdroom.GameUserResult{
@@ -59,8 +54,13 @@ func CreateGame() []*mdgame.Twocard {
 				}
 				userResults = append(userResults, userResult)
 			}
-			if user.Role == enumroom.UserRoleMaster {
-				bankerID = user.UserID
+			//if user.Role == enumroom.UserRoleMaster {
+			//	bankerID = user.UserID
+			//}
+			if user.UserID == bankerID {
+				user.Role = enumroom.UserRoleMaster
+			}else{
+				user.Role = enumroom.UserRoleSlave
 			}
 			ui := &mdgame.UserInfo{
 				UserID:     user.UserID,
@@ -268,11 +268,29 @@ func UpdateGame(goLua *lua.LState) []*mdgame.Twocard {
 						if result.Cards.CardType == 100 || result.Cards.CardType == 110 {
 							specialCardUids = append(specialCardUids, userResult.UserID)
 						}
+						userResult.RoundScore = ts
 					}
 				}
 			}
 			game.Status = enumgame.GameStatusDone
 			mdr.Status = enumroom.RoomStatusReInit
+
+			if mdr.RoomType == enumroom.RoomTypeClub && mdr.SubRoomType == enumroom.SubTypeClubMatch {
+				err := room.GetRoomClubCoin(mdr)
+				if err != nil{
+					log.Err("room club member game balance failed,rid:%d,uid:%d, err:%v", mdr.RoomID, err)
+					continue
+				}
+				for _,ur := range mdr.UserResults{
+					for _,ugr := range game.GameResult.List{
+						if ugr.UserID == ugr.UserID{
+							ugr.ClubCoinScore = ur.RoundClubCoinScore
+							break
+						}
+					}
+				}
+			}
+
 			f := func(tx *gorm.DB) error {
 				game, err = dbgame.UpdateGame(tx, game)
 				if err != nil {

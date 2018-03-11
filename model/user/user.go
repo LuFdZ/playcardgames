@@ -534,3 +534,11 @@ func RefreshAllRobotsFromDB() error {
 	}
 	return cacheuser.SetRobots(rs)
 }
+
+func SetRegisterChannel(unionID string,channel string) error {
+	err := cacheuser.SetRegisterChannel(unionID,channel)
+	if err != nil{
+		return nil
+	}
+	return nil
+}

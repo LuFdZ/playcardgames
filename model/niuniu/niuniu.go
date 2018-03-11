@@ -15,7 +15,8 @@ import (
 	errroom "playcards/model/room/errors"
 	mdroom "playcards/model/room/mod"
 	pbniu "playcards/proto/niuniu"
-	gsync "playcards/utils/sync"
+	//gsync "playcards/utils/sync"
+	enumroom "playcards/model/room/enum"
 	"playcards/model/room"
 	"playcards/utils/db"
 	"playcards/utils/log"
@@ -23,7 +24,7 @@ import (
 
 	"github.com/jinzhu/gorm"
 	"github.com/yuin/gopher-lua"
-	"playcards/utils/tools"
+	//"playcards/utils/tools"
 )
 
 //var GoLua *lua.LState
@@ -89,9 +90,9 @@ func CreateNiuniu(goLua *lua.LState) []*mdniu.Niuniu {
 		}
 
 		roomResult := &mdniu.NiuniuRoomResult{
-			RoomID:   mdr.RoomID,
-			List:     niuUsers,
-			RobotIds: mdr.RobotIds,
+			RoomID: mdr.RoomID,
+			List:   niuUsers,
+			//RobotIds: mdr.RobotIds,
 		}
 
 		now := gorm.NowFunc()
@@ -416,12 +417,13 @@ func UpdateGame(goLua *lua.LState) []*mdniu.Niuniu {
 						if result.Cards.CardType == "13" {
 							specialCardUids = append(specialCardUids, userResult.UserID)
 						}
-						for _,ru := range mdr.Users{
-							if ru.UserID == userResult.UserID{
+						for _, ru := range mdr.Users {
+							if ru.UserID == userResult.UserID {
 								ru.ResultAmount = userResult.Score
 								break
 							}
 						}
+						userResult.RoundScore = ts
 					}
 				}
 				if result.Info.Role == enumniu.Banker {
@@ -435,9 +437,26 @@ func UpdateGame(goLua *lua.LState) []*mdniu.Niuniu {
 			}
 			data, _ := json.Marshal(&roomparam)
 			mdr.GameParam = string(data)
+			mdr.GameIDNow = niuniu.GameID
 			niuniu.Status = enumniu.GameStatusDone
 			niuniu.BroStatus = enumniu.GameStatusDone
 			mdr.Status = enumr.RoomStatusReInit
+
+			if mdr.RoomType == enumroom.RoomTypeClub && mdr.SubRoomType == enumroom.SubTypeClubMatch {
+				err := room.GetRoomClubCoin(mdr)
+				if err != nil{
+					log.Err("room club member game balance failed,rid:%d,uid:%d, err:%v", mdr.RoomID, err)
+					continue
+				}
+				for _,ur := range mdr.UserResults{
+					for _,ugr := range niuniu.Result.List{
+						if ugr.UserID == ugr.UserID{
+							ugr.ClubCoinScore = ur.RoundClubCoinScore
+							break
+						}
+					}
+				}
+			}
 			f := func(tx *gorm.DB) error {
 				niuniu, err = dbniu.UpdateNiuniu(tx, niuniu)
 				if err != nil {
@@ -490,77 +509,77 @@ func UpdateGame(goLua *lua.LState) []*mdniu.Niuniu {
 	return updateGames
 }
 
-func UpdateRobotGame() (map[*mdniu.Niuniu][]int32) {
-	niunius, err := cacheniu.GetRobotNiuniuByStatus(enumniu.GameStatusDone)
-	if err != nil {
-		log.Err("GetAllNiuniuByStatusErr err:%v", err)
-		return nil
-	}
-	//fmt.Printf("UpdateRobotGame:%d\n",len(niunius))
-	if len(niunius) == 0 {
-		return nil
-	}
-	m := make(map[*mdniu.Niuniu][]int32)
-	for _, niuniu := range niunius {
-		for _, niuUser := range niuniu.Result.List {
-			if niuUser.Type != enumr.Robot {
-				continue
-			}
-			subTime := time.Now().Sub(*niuUser.UpdateAt)
-			addTime := float64(tools.GenerateRangeNum(4, 9))
-			//fmt.Printf("UpdateRobotGame:%d|%f\n",niuniu.Status,subTime.Seconds())
-			if niuniu.Status == enumniu.GameStatusInit && niuUser.Status == enumniu.UserStatusInit {
-				if subTime.Seconds() > addTime {
-					f := func() error {
-						err := GetBanker(niuUser.UserID, int32(addTime-4))
-						if err != nil {
-							return nil
-						}
-						return nil
-					}
-					lock := RoomLockKey(niuniu.PassWord)
-					err = gsync.GlobalTransaction(lock, f)
-					if err != nil {
-						log.Err("%s get banker failed: %v", lock, err)
-						continue
-					}
-				}
-			} else if niuniu.Status == enumniu.GameStatusSetBet && niuUser.Status == enumniu.UserStatusGetBanker  {
-				f := func() error {
-					key := int32(addTime-4)
-					err := SetBet(niuUser.UserID,key)
-					if err != nil {
-						return nil
-					}
-					m[niuniu]=[]int32{enumniu.UserStatusSetBet,niuUser.UserID,key}
-					return nil
-				}
-				lock := RoomLockKey(niuniu.PassWord)
-				err = gsync.GlobalTransaction(lock, f)
-				if err != nil {
-					log.Err("%s get banker failed: %v", lock, err)
-					continue
-				}
-			} else if niuniu.Status == enumniu.GameStatusSubmitCard && niuUser.Status == enumniu.UserStatusSetBet{
-				f := func() error {
-					err := SubmitCard(niuUser.UserID)
-					if err != nil {
-						return nil
-					}
-					m[niuniu]=[]int32{enumniu.UserStatusSubmitCard,niuUser.UserID}
-					return nil
-				}
-				lock := RoomLockKey(niuniu.PassWord)
-				err = gsync.GlobalTransaction(lock, f)
-				if err != nil {
-					log.Err("%s get banker failed: %v", lock, err)
-					continue
-				}
-			}
-		}
-	}
-	return m
-}
+//func UpdateRobotGame() (map[*mdniu.Niuniu][]int32) {
+//	niunius, err := cacheniu.GetRobotNiuniuByStatus(enumniu.GameStatusDone)
+//	if err != nil {
+//		log.Err("GetAllNiuniuByStatusErr err:%v", err)
+//		return nil
+//	}
+//	//fmt.Printf("UpdateRobotGame:%d\n",len(niunius))
+//	if len(niunius) == 0 {
+//		return nil
+//	}
+//	m := make(map[*mdniu.Niuniu][]int32)
+//	for _, niuniu := range niunius {
+//		for _, niuUser := range niuniu.Result.List {
+//			if niuUser.Type != enumr.Robot {
+//				continue
+//			}
+//			subTime := time.Now().Sub(*niuUser.UpdateAt)
+//			addTime := float64(tools.GenerateRangeNum(4, 9))
+//			//fmt.Printf("UpdateRobotGame:%d|%f\n",niuniu.Status,subTime.Seconds())
+//			if niuniu.Status == enumniu.GameStatusInit && niuUser.Status == enumniu.UserStatusInit {
+//				if subTime.Seconds() > addTime {
+//					f := func() error {
+//						err := GetBanker(niuUser.UserID, int32(addTime-4))
+//						if err != nil {
+//							return nil
+//						}
+//						return nil
+//					}
+//					lock := RoomLockKey(niuniu.PassWord)
+//					err = gsync.GlobalTransaction(lock, f)
+//					if err != nil {
+//						log.Err("%s get banker failed: %v", lock, err)
+//						continue
+//					}
+//				}
+//			} else if niuniu.Status == enumniu.GameStatusSetBet && niuUser.Status == enumniu.UserStatusGetBanker {
+//				f := func() error {
+//					key := int32(addTime - 4)
+//					err := SetBet(niuUser.UserID, key)
+//					if err != nil {
+//						return nil
+//					}
+//					m[niuniu] = []int32{enumniu.UserStatusSetBet, niuUser.UserID, key}
+//					return nil
+//				}
+//				lock := RoomLockKey(niuniu.PassWord)
+//				err = gsync.GlobalTransaction(lock, f)
+//				if err != nil {
+//					log.Err("%s get banker failed: %v", lock, err)
+//					continue
+//				}
+//			} else if niuniu.Status == enumniu.GameStatusSubmitCard && niuUser.Status == enumniu.UserStatusSetBet {
+//				f := func() error {
+//					err := SubmitCard(niuUser.UserID)
+//					if err != nil {
+//						return nil
+//					}
+//					m[niuniu] = []int32{enumniu.UserStatusSubmitCard, niuUser.UserID}
+//					return nil
+//				}
+//				lock := RoomLockKey(niuniu.PassWord)
+//				err = gsync.GlobalTransaction(lock, f)
+//				if err != nil {
+//					log.Err("%s get banker failed: %v", lock, err)
+//					continue
+//				}
+//			}
+//		}
+//	}
+//	return m
+//}
 
 func UpdateNiuniu(niu *mdniu.Niuniu) error {
 	err := cacheniu.UpdateGame(niu)

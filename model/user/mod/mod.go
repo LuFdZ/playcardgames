@@ -11,35 +11,36 @@ import (
 )
 
 type User struct {
-	UserID        int32  `gorm:"primary_key"`
-	Username      string `reg:"required,min=6,max=32,excludesall= 	"`
-	Password      string `reg:"required,min=6,max=32,excludesall= 	"`
-	Nickname      string `reg:"required,min=6,max=16,excludesall= 	"`
-	Mobile        string `reg:"omitempty,min=6,max=16,excludesall= 	"`
-	Email         string `reg:"min=6,max=30,email,excludesall= 	"`
-	Avatar        string
-	Status        int32
-	Type          int32
-	Channel       string `reg:"omitempty,min=6,max=64,excludesall= 	"`
-	Version       string `reg:"omitempty,min=6,max=64,excludesall= 	"`
-	Icon          string
-	Sex           int32
-	Rights        int32
-	CreatedAt     *time.Time
-	UpdatedAt     *time.Time
-	LastLoginAt   *time.Time
-	InviteUserID  int32
-	ClubID        int32
-	MobileUuID    string
-	MobileModel   string
-	MobileNetWork string
-	MobileOs      string `reg:"omitempty,min=1,max=64,excludesall= 	"`
-	LastLoginIP   string
-	RegIP         string
-	OpenID        string
-	UnionID       string
-	AccessToken   string `gorm:"-"`
-	Location      string `gorm:"-"`
+	UserID          int32  `gorm:"primary_key"`
+	Username        string `reg:"required,min=6,max=32,excludesall= 	"`
+	Password        string `reg:"required,min=6,max=32,excludesall= 	"`
+	Nickname        string `reg:"required,min=6,max=16,excludesall= 	"`
+	Mobile          string `reg:"omitempty,min=6,max=16,excludesall= 	"`
+	Email           string `reg:"min=6,max=30,email,excludesall= 	"`
+	Avatar          string
+	Status          int32
+	Type            int32
+	Channel         string `reg:"omitempty,min=6,max=64,excludesall= 	"`
+	Version         string `reg:"omitempty,min=6,max=64,excludesall= 	"`
+	Icon            string
+	Sex             int32
+	Rights          int32
+	CreatedAt       *time.Time
+	UpdatedAt       *time.Time
+	LastLoginAt     *time.Time
+	InviteUserID    int32
+	ClubID          int32
+	MobileUuID      string
+	MobileModel     string
+	MobileNetWork   string
+	MobileOs        string `reg:"omitempty,min=1,max=64,excludesall= 	"`
+	LastLoginIP     string
+	RegIP           string
+	OpenID          string
+	UnionID         string
+	RegisterChannel string
+	AccessToken     string `gorm:"-"`
+	Location        string `gorm:"-"`
 }
 
 type UserInfo struct {
@@ -124,6 +125,7 @@ func UserFromPageRequestProto(u *pbu.PageUserListRequest) *User {
 		Rights:   u.Rights,
 		OpenID:   u.OpenID,
 		UnionID:  u.UnionID,
+		Channel:  u.Channel,
 	}
 }
 
@@ -167,6 +169,7 @@ func UserFromWXLoginRequestProto(u *pbu.WXLoginRequest) *User {
 		MobileModel:   u.MobileModel,
 		MobileNetWork: u.MobileNetWork,
 		MobileOs:      u.MobileOs,
+		UnionID:       u.UnionID,
 	}
 }
 

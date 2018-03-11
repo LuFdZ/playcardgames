@@ -47,6 +47,7 @@ func CreateGame() []*mdgame.Fourcard {
 		)
 		newGameResult := &mdgame.GameResult{}
 		var bankerID int32
+		bankerID = mdr.BankerList[0]
 		for _, user := range mdr.Users {
 			if mdr.RoundNow == 1 {
 				userResult := &mdroom.GameUserResult{
@@ -59,8 +60,13 @@ func CreateGame() []*mdgame.Fourcard {
 				}
 				userResults = append(userResults, userResult)
 			}
-			if user.Role == enumroom.UserRoleMaster {
-				bankerID = user.UserID
+			//if user.Role == enumroom.UserRoleMaster {
+			//	bankerID = user.UserID
+			//}
+			if user.UserID == bankerID {
+				user.Role = enumroom.UserRoleMaster
+			}else{
+				user.Role = enumroom.UserRoleSlave
 			}
 			ui := &mdgame.UserInfo{
 				UserID:     user.UserID,
@@ -200,21 +206,21 @@ func UpdateGame(goLua *lua.LState) []*mdgame.Fourcard {
 				continue
 			}
 		} else if game.Status == enumgame.GameStatusAllSubmitCard {
-			room, err := cacheroom.GetRoom(game.PassWord)
+			mdr, err := cacheroom.GetRoom(game.PassWord)
 			if err != nil {
 				log.Err("four card game status all submit card room get session failed, roomid:%d,pwd:%s,err:%v", game.RoomID, game.PassWord, err)
 				continue
 			}
-			if room == nil {
+			if mdr == nil {
 				log.Err("four card room status all submit get session nil, %v|%d", game.PassWord, game.RoomID)
 				continue
 			}
 			game.MarshalGameResult()
 			if err := goLua.DoString(fmt.
 			Sprintf("return G_CalculateRes('%s','%s')",
-				game.GameResultStr, room.GameParam)); err != nil {
+				game.GameResultStr, mdr.GameParam)); err != nil {
 				log.Err("four card G_CalculateRes err %+v|\n%+v|\n%v\n",
-					game.GameResultStr, room.GameParam, err)
+					game.GameResultStr, mdr.GameParam, err)
 				continue
 			}
 
@@ -228,7 +234,7 @@ func UpdateGame(goLua *lua.LState) []*mdgame.Fourcard {
 			game.GameResult = results
 			for _, result := range game.GameResult.List {
 				m := initFourCardTypeMap()
-				for _, userResult := range room.UserResults {
+				for _, userResult := range mdr.UserResults {
 					if userResult.UserID == result.UserID {
 						if len(userResult.GameCardCount) > 0 {
 							if err := json.Unmarshal([]byte(userResult.GameCardCount), &m); err != nil {
@@ -259,18 +265,34 @@ func UpdateGame(goLua *lua.LState) []*mdgame.Fourcard {
 						if result.HeadCards.CardType == 100 || result.TailCards.CardType == 110{
 							specialCardUids = append(specialCardUids, userResult.UserID)
 						}
+						userResult.RoundScore = ts
 					}
 				}
 			}
 			game.Status = enumgame.GameStatusDone
-			room.Status = enumroom.RoomStatusReInit
+			mdr.Status = enumroom.RoomStatusReInit
+			if mdr.RoomType == enumroom.RoomTypeClub && mdr.SubRoomType == enumroom.SubTypeClubMatch {
+				err := room.GetRoomClubCoin(mdr)
+				if err != nil{
+					log.Err("room club member game balance failed,rid:%d,uid:%d, err:%v", mdr.RoomID, err)
+					continue
+				}
+				for _,ur := range mdr.UserResults{
+					for _,ugr := range game.GameResult.List{
+						if ugr.UserID == ugr.UserID{
+							ugr.ClubCoinScore = ur.RoundClubCoinScore
+							break
+						}
+					}
+				}
+			}
 			f := func(tx *gorm.DB) error {
 				game, err = dbgame.UpdateGame(tx, game)
 				if err != nil {
 					log.Err("four card update db failed, %v|%v", game, err)
 					return err
 				}
-				room, err = dbroom.UpdateRoom(tx, room)
+				mdr, err = dbroom.UpdateRoom(tx, mdr)
 				if err != nil {
 					log.Err("four card update room db failed, %v|%v", game, err)
 					return err
@@ -279,9 +301,9 @@ func UpdateGame(goLua *lua.LState) []*mdgame.Fourcard {
 					plsgr := &mdroom.PlayerSpecialGameRecord{
 						GameID:     game.GameID,
 						RoomID:     game.RoomID,
-						GameType:   room.GameType,
-						RoomType:   room.RoomType,
-						Password:   room.Password,
+						GameType:   mdr.GameType,
+						RoomType:   mdr.RoomType,
+						Password:   mdr.Password,
 						UserID:     uid,
 						GameResult: game.GameResultStr,
 					}
@@ -303,10 +325,10 @@ func UpdateGame(goLua *lua.LState) []*mdgame.Fourcard {
 				continue
 			}
 
-			err = cacheroom.UpdateRoom(room)
+			err = cacheroom.UpdateRoom(mdr)
 			if err != nil {
 				log.Err("four card room update room redis failed,%v | %v",
-					room, err)
+					mdr, err)
 				continue
 			}
 		}

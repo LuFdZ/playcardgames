@@ -85,7 +85,7 @@ func GainGameBalance(uid int32, aid int32, balanceType int32, balance *mdbill.Ba
 
 func Recharge(uid int32, aid int32, diamond int64, orderid string,
 	rechangeType int32, channel string, coinType int32) (int32, *mdbill.Balance, error) {
-	exist := CheckDiamondBalanceIsDone(uid, orderid)
+	exist := CheckDiamondBalanceIsDone(uid, orderid,coinType)
 	if exist == enumbill.OrderExist {
 		return enumbill.OrderExist, nil, nil
 	}
@@ -116,8 +116,8 @@ func Recharge(uid int32, aid int32, diamond int64, orderid string,
 	return enumbill.OrderSuccess, b, nil
 }
 
-func CheckDiamondBalanceIsDone(uid int32, orderid string) int32 {
-	return dbbill.GetJournal(db.DB(), uid, orderid, enumcom.Diamond)
+func CheckDiamondBalanceIsDone(uid int32, orderid string,coinype int32) int32 {
+	return dbbill.GetJournal(db.DB(), uid, orderid, coinype)
 }
 
 func SetBalanceFreeze(uid int32, aid int64, balance *mdbill.Balance, balanceType int32,

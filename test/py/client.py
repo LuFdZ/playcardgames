@@ -305,6 +305,26 @@ class Client(object):
         })
         return ul
 
+    def SetBankerList(self, pwd):
+        ul = self.Request("/room/roomSrv/SetBankerList", {
+            "Password": pwd,
+        })
+        return ul
+
+    def OutBankerList(self, pwd):
+        ul = self.Request("/room/roomSrv/OutBankerList", {
+            "Password": pwd,
+        })
+        return ul
+
+    def GetRoomResult(self, rid):
+        ul = self.Request("/room/roomSrv/GetRoomResultByID", {
+            "RoomID": rid,
+        })
+        return ul
+
+
+
     """
     充值相关操作
     """
@@ -451,6 +471,18 @@ class Client(object):
         })
         return ul
 
+    def CreateNRoomClub(self, maxNumber, roundNumber):
+        ul = self.Request("/room/roomSrv/CreateRoom", {
+            "RoundNumber": roundNumber,
+            "MaxNumber": maxNumber,
+            "GameType": 1002,
+            "SubRoomType": 301,
+            "RoomType": 3,
+            "GameParam": "{\"Times\":3,\"BankerType\":2}",
+            "SettingParam": "{\"ClubCoinRate\":2}",
+        })
+        return ul
+
     def GetBanker(self, value):
         ul = self.Request("/niuniu/niuniuSrv/GetBanker", {
             "Key": value,
@@ -520,6 +552,17 @@ class Client(object):
         })
         return ul
 
+    def SetRegisterChannel(self, uiid, channel):
+        ul = self.Request("/user/userSrv/SetRegisterChannel", {
+            "UnionID": uiid,
+            "RegistChannel": channel,
+        })
+        return ul
+
+    """
+    俱乐部相关操作
+    """
+
     def PageClub(self, page, pagesize):
         ul = self.Request("/club/clubSrv/PageClub", {
             "Page": {
@@ -565,10 +608,23 @@ class Client(object):
         })
         return ul
 
-    def UpdateClub(self, clubid, status):
+    def UpdateClub(self, clubid):
         ul = self.Request("/club/clubSrv/UpdateClub", {
             "ClubID": clubid,
-            "Status": status,
+            "SettingParam": {
+                "CostType": 1,
+                "CostValue": 5,
+                "ClubCoinBaseScore": 1000,
+            },
+            "Notice": "测试测试123",
+        })
+        return ul
+
+    def UpdateClubB(self, clubid):
+        ul = self.Request("/club/clubSrv/UpdateClub", {
+            "ClubID": clubid,
+            "Notice": "测试测试",
+            "Status": 0,
         })
         return ul
 
@@ -579,11 +635,11 @@ class Client(object):
         })
         return ul
 
-    def ClubRecharge(self, amount, clubid):
+    def ClubRecharge(self, amount, clubid, type):
         ul = self.Request("/club/clubSrv/ClubRecharge", {
             "ClubID": clubid,
             "Amount": amount,
-            "AmountType": 2,
+            "AmountType": type,
         })
         return ul
 
@@ -631,6 +687,80 @@ class Client(object):
             "Type": 1,
             "OriginID": originID,
             "TargetID": targetID,
+        })
+        return ul
+
+    def AddClubMemberClubCoin(self, clubid, uid, amount):
+        ul = self.Request("/club/clubSrv/AddClubMemberClubCoin", {
+            "ClubID": clubid,
+            "UserID": uid,
+            "Amount": amount,
+        })
+        return ul
+
+    def ClubMemberOfferUpClubCoin(self, clubid, amount):
+        ul = self.Request("/club/clubSrv/ClubMemberOfferUpClubCoin", {
+            "ClubID": clubid,
+            "Amount": amount,
+        })
+        return ul
+
+    def PageClubJournal(self, page, pagesize, clubid, status):
+        ul = self.Request("/club/clubSrv/PageClubJournal", {
+            "Page": {
+                "Page": page,
+                "PageSize": pagesize,
+                "Time": {
+                    "Start": 0,
+                    "End": 0,
+                },
+                "Sum": False,
+            },
+            "ClubID": clubid,
+            "Status": status,
+        })
+        return ul
+
+    def PageClubMemberJournal(self, page, pagesize):
+        ul = self.Request("/club/clubSrv/PageClubMemberJournal", {
+            "Page": {
+                "Page": page,
+                "PageSize": pagesize,
+                "Time": {
+                    "Start": 0,
+                    "End": 0,
+                },
+                "Sum": False,
+            },
+        })
+        return ul
+
+    def UpdateClubJournal(self, cjid, clubid):
+        ul = self.Request("/club/clubSrv/UpdateClubJournal", {
+            "ClubJournalID": cjid,
+            "ClubID": clubid,
+        })
+        return ul
+
+    def GetClubMemberCoinRank(self, page, pagesize):
+        ul = self.Request("/club/clubSrv/GetClubMemberCoinRank", {
+            "Page": {
+                "Page": page,
+                "PageSize": pagesize,
+                "Time": {
+                    "Start": 0,
+                    "End": 0,
+                },
+                "Sum": False,
+            },
+        })
+        return ul
+
+    def UpdateClubMemberStatus(self, clubid, uid, status):
+        ul = self.Request("/club/clubSrv/UpdateClubMemberStatus", {
+            "ClubID": clubid,
+            "UserID": uid,
+            "Status": status,
         })
         return ul
 
@@ -793,7 +923,7 @@ class Client(object):
 
     def SetGReady(self, pwd):
         ul = self.Request("/goldroom/GoldRoomSrv/SetReady", {
-            "Password":pwd
+            "Password": pwd
         })
         return ul
 
@@ -832,5 +962,15 @@ class Client(object):
     def TowGameResultList(self, rid):
         ul = self.Request("/twocard/TwoCardSrv/GameResultList", {
             "RoomID": rid,
+        })
+        return ul
+
+    def CRTest(self, roomType, maxNumber, roundNumber):  # , scoreType, betType
+        ul = self.Request("/room/roomSrv/CreateRoom", {
+            "RoundNumber": roundNumber,
+            "MaxNumber": maxNumber,
+            "GameType": 1002,
+            "RoomType": roomType,
+            "GameParam": '{\"ScoreType\":2,\"BetType\":2}'  # % (scoreType) % (betType)
         })
         return ul

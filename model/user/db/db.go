@@ -96,6 +96,7 @@ func PageUserList(tx *gorm.DB, page *mdpage.PageOption, u *mdu.User, sort int32)
 			str += " and"
 		}
 		str += " channel like '%" + u.Channel + "%'"
+		//TODO register channel select
 	}
 	//if page.StartAt != nil {
 	//	if len(str) > 0 {

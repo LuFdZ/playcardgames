@@ -30,6 +30,7 @@ message ThirteenResult {
     ThirteenSettle Settle =2;
     int32 UserID = 3;
     int32 Role = 4;
+    int64 ClubCoinScore = 5;//俱乐部战绩分
 }
 
 message ThirteenGroupResult {

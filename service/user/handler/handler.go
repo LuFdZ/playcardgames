@@ -243,9 +243,10 @@ func (us *UserSrv) WXLogin(ctx context.Context, req *pbu.WXLoginRequest,
 	if err != nil{
 		return err
 	}
+
 	reply.Diamond = balance.Diamond
 	reply.Gold =balance.Gold
-	rsp.User = u.ToProto()
+	rsp.User = reply
 	//fmt.Printf("WXLogin:%v\n",rsp.User)
 	return nil
 }
@@ -347,5 +348,15 @@ func (us *UserSrv) RegisterRobot(ctx context.Context, req *pbu.RegisterRobotRequ
 		return nil
 	}
 	user.RegisterRobotUser(req.Count)
+	return nil
+}
+
+func (us *UserSrv) SetRegisterChannel(ctx context.Context, req *pbu.User,
+	rsp *pbu.UserRsply) error {
+	_ ,err:= auth.GetUser(ctx)
+	if err !=nil{
+		return nil
+	}
+	user.SetRegisterChannel(req.UnionID,req.RegistChannel)
 	return nil
 }

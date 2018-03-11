@@ -4,13 +4,15 @@ import (
 	mdtime "playcards/model/time"
 	cacheuser "playcards/model/user/cache"
 	pbclub "playcards/proto/club"
+	"encoding/json"
 	"time"
 	//cacheclub "playcards/model/club/cache"
 	//"playcards/model/user/mod"
+	"github.com/jinzhu/gorm"
 )
 
 type Club struct {
-	ClubID       int32 `gorm:"primary_key"`
+	ClubID       int32         `gorm:"primary_key"`
 	ClubName     string
 	Status       int32
 	CreatorID    int32
@@ -20,7 +22,11 @@ type Club struct {
 	ClubParam    string
 	Diamond      int64
 	Gold         int64
-	MemberNumber int32 `gorm:"-"`
+	ClubCoin     int64
+	Notice       string
+	SettingParam string
+	MemberNumber int32         `gorm:"-"`
+	Setting      *SettingParam `gorm:"-"`
 	CreatedAt    *time.Time
 	UpdatedAt    *time.Time
 }
@@ -31,13 +37,14 @@ type ClubMember struct {
 	UserID    int32
 	Role      int32
 	Status    int32
+	ClubCoin  int64
 	Online    int32 `gorm:"-"`
 	CreatedAt *time.Time
 	UpdatedAt *time.Time
 }
 
 type ClubJournal struct {
-	ID           int64 `gorm:"primary_key"`
+	ID           int32 `gorm:"primary_key"`
 	ClubID       int32
 	AmountType   int32
 	Amount       int64
@@ -46,12 +53,19 @@ type ClubJournal struct {
 	Type         int32
 	Foreign      int64
 	OpUserID     int64
+	Status       int32
 	CreatedAt    *time.Time
 	UpdatedAt    *time.Time
 }
 
+type SettingParam struct {
+	CostType          int32
+	CostValue         int32
+	ClubCoinBaseScore int64
+}
+
 func ClubFromProto(pclub *pbclub.Club) *Club {
-	return &Club{
+	out := &Club{
 		ClubID:       pclub.ClubID,
 		ClubName:     pclub.ClubName,
 		Status:       pclub.Status,
@@ -60,14 +74,28 @@ func ClubFromProto(pclub *pbclub.Club) *Club {
 		ClubRemark:   pclub.ClubRemark,
 		Icon:         pclub.Icon,
 		ClubParam:    pclub.ClubParam,
+		Notice:       pclub.Notice,
 		CreatedAt:    mdtime.TimeFromProto(pclub.CreatedAt),
 		UpdatedAt:    mdtime.TimeFromProto(pclub.UpdatedAt),
+	}
+	if pclub.SettingParam != nil {
+		out.Setting = SettingParamFromProto(pclub.SettingParam)
+	}
+
+	return out
+}
+
+func SettingParamFromProto(pbsp *pbclub.SettingParam) *SettingParam {
+	return &SettingParam{
+		CostType:          pbsp.CostType,
+		CostValue:         pbsp.CostValue,
+		ClubCoinBaseScore: pbsp.ClubCoinBaseScore,
 	}
 }
 
 func ClubMemberFromProto(pcm *pbclub.ClubMember) *ClubMember {
 	return &ClubMember{
-		MemberId:  pcm.MemberId,
+		MemberId:  pcm.MemberID,
 		ClubID:    pcm.ClubID,
 		UserID:    pcm.UserID,
 		Role:      pcm.Role,
@@ -89,6 +117,9 @@ func (club *Club) ToProto() *pbclub.Club {
 		Icon:         club.Icon,
 		ClubParam:    club.ClubParam,
 		Diamond:      club.Diamond,
+		Notice:       club.Notice,
+		ClubCoin:     club.ClubCoin,
+		SettingParam: club.Setting.ToProto(),
 		CreatedAt:    mdtime.TimeToProto(club.CreatedAt),
 		UpdatedAt:    mdtime.TimeToProto(club.UpdatedAt),
 		MemberNumber: club.MemberNumber,
@@ -97,11 +128,11 @@ func (club *Club) ToProto() *pbclub.Club {
 
 func (mcm *ClubMember) ToProto() *pbclub.ClubMember {
 	mCm := &pbclub.ClubMember{
-		ClubID: mcm.ClubID,
-		UserID: mcm.UserID,
-		Status: mcm.Status,
-		Role:   mcm.Role,
-
+		ClubID:    mcm.ClubID,
+		UserID:    mcm.UserID,
+		Status:    mcm.Status,
+		Role:      mcm.Role,
+		ClubCoin:  mcm.ClubCoin,
 		Online:    mcm.Online,
 		CreatedAt: mdtime.TimeToProto(mcm.CreatedAt),
 		UpdatedAt: mdtime.TimeToProto(mcm.UpdatedAt),
@@ -112,4 +143,78 @@ func (mcm *ClubMember) ToProto() *pbclub.ClubMember {
 		mCm.Nickname = u.Nickname
 	}
 	return mCm
+}
+
+func (club *ClubJournal) ToProto() *pbclub.ClubJournal {
+	return &pbclub.ClubJournal{
+		ID:           club.ID,
+		ClubID:       club.ClubID,
+		AmountType:   club.AmountType,
+		Amount:       club.Amount,
+		AmountBefore: club.AmountBefore,
+		AmountAfter:  club.AmountAfter,
+		Type:         club.Type,
+		Foreign:      club.Foreign,
+		OpUserID:     club.OpUserID,
+		Status:       club.Status,
+		CreatedAt:    mdtime.TimeToProto(club.CreatedAt),
+		UpdatedAt:    mdtime.TimeToProto(club.UpdatedAt),
+	}
+}
+
+func (mdsp *SettingParam) ToProto() *pbclub.SettingParam {
+	if mdsp == nil {
+		return nil
+	}
+	return &pbclub.SettingParam{
+		CostType:          mdsp.CostType,
+		CostValue:         mdsp.CostValue,
+		ClubCoinBaseScore: mdsp.ClubCoinBaseScore,
+	}
+}
+
+func (c *Club) BeforeUpdate(scope *gorm.Scope) error {
+	if c.Setting == nil {
+		return nil
+	}
+	c.MarshalSettingParam()
+	scope.SetColumn("setting_param", c.SettingParam)
+	return nil
+}
+
+func (c *Club) BeforeCreate(scope *gorm.Scope) error {
+	if c.Setting == nil {
+		return nil
+	}
+	c.MarshalSettingParam()
+	scope.SetColumn("setting_param", c.SettingParam)
+	return nil
+}
+
+func (c *Club) AfterFind() error {
+	err := c.UnmarshalSettingParam()
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (c *Club) MarshalSettingParam() error {
+	if c.Setting == nil {
+		return nil
+	}
+	data, _ := json.Marshal(&c.Setting)
+	c.SettingParam = string(data)
+	return nil
+}
+
+func (c *Club) UnmarshalSettingParam() error {
+	var out *SettingParam
+	if len(c.SettingParam) > 0 {
+		if err := json.Unmarshal([]byte(c.SettingParam), &out); err != nil {
+			return err
+		}
+		c.Setting = out
+	}
+	return nil
 }

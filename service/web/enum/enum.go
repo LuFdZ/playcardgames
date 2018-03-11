@@ -79,6 +79,9 @@ const (
 
 	MsgRoomChat     = "RoomChatBro"
 	MsgRoomChatCode = 400113
+
+	MsgBankerList     = "RoomBankerList"
+	MsgBankerListCode = 400114
 )
 
 //十三张标签和编号

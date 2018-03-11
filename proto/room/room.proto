@@ -27,6 +27,10 @@ message Room {
     repeated GameUserResult ResultList = 20;
     int32 OwnerID = 21;
     int32 Shuffle = 22;
+    repeated int32 BankerList = 23; //准备上庄列表
+    int32 StartMaxNumber = 24;
+    int32 SubRoomType = 25;
+    string SettingParam = 26;
 }
 
 message RoomUser {
@@ -46,6 +50,7 @@ message RoomUser {
     int32 Online = 16;
     int32 BankerID = 17;
     int64 Gold = 18;
+    int64 ClubCoin = 19;
 }
 
 message ClubRoomUser {
@@ -72,6 +77,7 @@ message GameUserResult {
     string GameCardCount = 6;
     string Nickname = 7;
     string Icon = 8;
+    int64 TotalClubCoinScore = 9;
 }
 
 message RoomResults {
@@ -88,6 +94,8 @@ message RoomResults {
     int32 MaxPlayerNumber = 11;
     int32 PlayerNumberNow = 12;
     int32 OwnerID = 13;
+    int32 RoomType = 14;
+    int32 SubRoomType = 15;
 }
 
 message Feedback {
@@ -172,7 +180,15 @@ message CheckRoomExistRequest {
 }
 
 message RenewalRequest {
-    string Password = 2;
+    string Password = 1;
+}
+
+message SetBankerListRequest {
+    string Password = 1;
+}
+
+message OutBankerListRequest {
+    string Password = 1;
 }
 
 //回应
@@ -279,7 +295,12 @@ message RoomExist {
 
 message ShuffleCardBro {
     int32 UserID = 1;
-    repeated int32 Ids = 3;
+    repeated int32 Ids = 2;
+}
+
+message UserBankerList {
+    repeated int32 BankerIds = 1;
+    repeated int32 Ids = 2;
 }
 
 service RoomSrv {
@@ -332,6 +353,12 @@ service RoomSrv {
     rpc RoomChat (RoomChatRequest) returns (RoomReply) {
     }
     rpc PageSpecialGameList (PageSpecialGameListRequest) returns (PageSpecialGameListReply) {
+    }
+    rpc SetBankerList (SetBankerListRequest) returns (RoomReply) {
+    }
+    rpc OuttBankerList (OutBankerListRequest) returns (RoomReply) {
+    }
+    rpc GetRoomResultByID (Room) returns (RoomResults) {
     }
 }
 

@@ -31,7 +31,8 @@ var FuncRights = map[string]int32{
 	"UserSrv.UpdateUser":             auth.RightsUserEdit,
 	"UserSrv.UpdateProperty":         auth.RightsUserEdit,
 	"UserSrv.RefreshAllRobotsFromDB": auth.RightsAdmin,
-	"UserSrv.RegisterRobot": auth.RightsAdmin,
+	"UserSrv.RegisterRobot":          auth.RightsAdmin,
+	"UserSrv.SetRegisterChannel":     auth.RightsAdmin,
 }
 
 func main() {

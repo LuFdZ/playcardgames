@@ -83,6 +83,10 @@ func (tcs *TwoCardSrv) update(gt *gsync.GlobalTimer, gl *lua.LState) {
 						}
 						msg.UserID = ui.UserID
 						msg.List = uis
+						msg.CountDown = &pbtwo.CountDown{
+							ServerTime: game.OpDateAt.Unix(),
+							Count:      enumgame.SetBetTime,
+						}
 						topic.Publish(tcs.broker, msg, TopicTwoCardGameReady)
 					}
 				} else if game.Status == enumgame.GameStatusDone {

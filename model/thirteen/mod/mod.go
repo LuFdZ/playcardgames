@@ -44,10 +44,11 @@ type ThirteenSettle struct {
 }
 
 type ThirteenResult struct {
-	UserID int32
-	Role   int32
-	Settle ThirteenSettle
-	Result ThirteenGroupResult
+	UserID        int32
+	Role          int32
+	Settle        ThirteenSettle
+	Result        ThirteenGroupResult
+	ClubCoinScore int64
 }
 
 type ThirteenGroupResult struct {
@@ -149,10 +150,11 @@ func (sc *SubmitCard) ToProto() *pbt.SubmitCard {
 
 func (ts *ThirteenResult) ToProto() *pbt.ThirteenResult {
 	return &pbt.ThirteenResult{
-		UserID: ts.UserID,
-		Settle: ts.Settle.ToProto(),
-		Result: ts.Result.ToProto(),
-		Role:   ts.Role,
+		UserID:        ts.UserID,
+		Settle:        ts.Settle.ToProto(),
+		Result:        ts.Result.ToProto(),
+		Role:          ts.Role,
+		ClubCoinScore: ts.ClubCoinScore,
 	}
 }
 

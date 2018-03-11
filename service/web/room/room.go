@@ -69,11 +69,14 @@ func SubscribeAllRoomMessage(brk broker.Broker) error {
 	subscribe.SrvSubscribe(brk, topic.Topic(srvroom.TopicRoomNotice),
 		RoomNoticeHandler,
 	)
-	subscribe.SrvSubscribe(brk, topic.Topic(srvroom.TopicRoomGShuffleCardBro),
+	subscribe.SrvSubscribe(brk, topic.Topic(srvroom.TopicRoomShuffleCardBro),
 		ShuffleCardHandler,
 	)
 	subscribe.SrvSubscribe(brk, topic.Topic(srvroom.TopicRoomChat),
 		RoomChatHandler,
+	)
+	subscribe.SrvSubscribe(brk, topic.Topic(srvroom.TopicBankerList),
+		BankerListHandler,
 	)
 	return nil
 }
@@ -341,14 +344,32 @@ func UserConnectionHandler(p broker.Publication) error {
 func ShuffleCardHandler(p broker.Publication) error {
 	t := p.Topic()
 	msg := p.Message()
-	rs := &pbroom.UserConnection{}
+	rs := &pbroom.ShuffleCardBro{}
 	err := proto.Unmarshal(msg.Body, rs)
 	if err != nil {
 		return err
 	}
 	ids := rs.Ids
 	rs.Ids = nil
+
 	err = clients.SendToUsers(ids, t, enum.MsgShuffleCard, rs,enum.MsgShuffleCardCode)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func BankerListHandler(p broker.Publication) error {
+	t := p.Topic()
+	msg := p.Message()
+	rs := &pbroom.UserBankerList{}
+	err := proto.Unmarshal(msg.Body, rs)
+	if err != nil {
+		return err
+	}
+	ids := rs.Ids
+	rs.Ids = nil
+	err = clients.SendToUsers(ids, t, enum.MsgBankerList, rs,enum.MsgBankerListCode)
 	if err != nil {
 		return err
 	}

@@ -17,6 +17,7 @@ import (
 	mduser "playcards/model/user/mod"
 	pbroom "playcards/proto/room"
 	enumcom "playcards/model/common/enum"
+	"playcards/utils/errors"
 	//"playcards/model/mail"
 	"playcards/model/config"
 	"playcards/utils/db"
@@ -25,6 +26,8 @@ import (
 	"time"
 
 	"github.com/jinzhu/gorm"
+	"fmt"
+	"math"
 )
 
 func GenerateRangeNum(min, max int) string {
@@ -67,8 +70,8 @@ func RenewalRoom(pwd string, mduser *mduser.User) (int32, []int32, *mdroom.Room,
 		}
 	}
 	oldID := mr.RoomID
-	newRoom, err := CreateRoom(mr.RoomType, mr.GameType, mr.StartMaxNumber,
-		mr.RoundNumber, mr.GameParam, mduser, pwd)
+	newRoom, err := CreateRoom(mr.RoomType, mr.SubRoomType, mr.GameType, mr.StartMaxNumber,
+		mr.RoundNumber, mr.GameParam, mr.SettingParam, mduser, pwd)
 	if err != nil {
 		log.Err("room Renewal create new room failed,%v | %v\n", mr, err)
 		return 0, nil, nil, err
@@ -82,8 +85,8 @@ func RenewalRoom(pwd string, mduser *mduser.User) (int32, []int32, *mdroom.Room,
 	return oldID, ids, newRoom, nil
 }
 
-func CreateRoom(rtype int32, gtype int32, maxNum int32, roundNum int32,
-	gParam string, user *mduser.User, pwd string) (*mdroom.Room,
+func CreateRoom(rtype int32, srtype int32, gtype int32, maxNum int32, roundNum int32,
+	gParam string, setting string, user *mduser.User, pwd string) (*mdroom.Room,
 	error) {
 	clubID := user.ClubID
 	var err error
@@ -95,13 +98,16 @@ func CreateRoom(rtype int32, gtype int32, maxNum int32, roundNum int32,
 		return nil, errroom.ErrNotClubMember
 	}
 
-	if cacheroom.GetRoomTestConfigKey("CheckGameParam") != "0" {
-		err = chekcGameParam(maxNum, roundNum, gtype, gParam)
-		if err != nil {
-			return nil, err
-		}
+	if rtype == enumroom.RoomTypeClub && srtype > 0 && len(setting) == 0 {
+		return nil, errroom.ErrSettingParam
 	}
 
+	err = chekcGameParam(maxNum, roundNum, gtype, gParam)
+	if err != nil {
+		return nil, err
+	}
+	//****************************************
+	roundNum = 2
 	users := []*mdroom.RoomUser{}
 	ids := []int32{}
 	if rtype == 0 {
@@ -111,6 +117,7 @@ func CreateRoom(rtype int32, gtype int32, maxNum int32, roundNum int32,
 	version := user.Version
 	mobileOs := user.MobileOs
 	payerID := user.UserID
+	settingParam := ""
 	if rtype == enumroom.RoomTypeClub {
 		mdclub, _ := club.GetClubFromDB(clubID)
 		_, creater := cacheuser.GetUserByID(mdclub.CreatorID)
@@ -121,6 +128,32 @@ func CreateRoom(rtype int32, gtype int32, maxNum int32, roundNum int32,
 		version = creater.Version
 		mobileOs = creater.MobileOs
 		payerID = mdclub.CreatorID
+
+		if srtype == enumroom.SubTypeClubMatch {
+			mdcm, _ := club.GetClubMember(clubID, user.UserID)
+			if mdcm.Status != 1 {
+				return nil, errroom.ErrCanNotIntoClubRoom
+			}
+
+			if mdcm.ClubCoin < mdclub.Setting.ClubCoinBaseScore {
+				mderr := errors.Parse(errroom.ErrNotEnoughClubCoin.Error())
+				mderr.Detail = fmt.Sprintf(mderr.Detail, mdclub.Setting.ClubCoinBaseScore)
+				return nil, mderr
+			}
+			var setttingParam *mdroom.SettingParam
+			if err := json.Unmarshal([]byte(setting), &setttingParam); err != nil {
+				log.Err("room check thirteen clean unmarshal room param failed, %v", err)
+				return nil, errroom.ErrGameParam
+			}
+			if setttingParam.ClubCoinRate != 1 && setttingParam.ClubCoinRate != 2 && setttingParam.ClubCoinRate != 5 && setttingParam.ClubCoinRate != 10 {
+				return nil, errroom.ErrGameParam
+			}
+			setttingParam.CostType = mdclub.Setting.CostType
+			setttingParam.CostValue = mdclub.Setting.CostValue
+			setttingParam.ClubCoinBaseScore = mdclub.Setting.ClubCoinBaseScore
+			data, _ := json.Marshal(&setttingParam)
+			settingParam = string(data)
+		}
 	}
 	cost := getRoomCost(gtype, maxNum, roundNum, channel, version, mobileOs, rtype)
 
@@ -148,6 +181,7 @@ func CreateRoom(rtype int32, gtype int32, maxNum int32, roundNum int32,
 		if mdclub.Diamond < cost {
 			return nil, errroom.ErrNotEnoughDiamond
 		}
+		roomUser.ClubCoin = mdclub.ClubCoin
 	} else if rtype == enumroom.RoomTypeAgent {
 		f := func(r *mdroom.Room) bool {
 			if r.Status < enumroom.RoomStatusStarted {
@@ -192,6 +226,9 @@ func CreateRoom(rtype int32, gtype int32, maxNum int32, roundNum int32,
 		StartMaxNumber: maxNum,
 		CostType:       enumroom.CostTypeDiamond,
 		Flag:           enumroom.RoomNoFlag,
+		BankerList:     []int32{user.UserID},
+		SubRoomType:    srtype,
+		SettingParam:   settingParam,
 	}
 	if mr.RoomType == enumroom.RoomTypeClub {
 		mr.ClubID = clubID
@@ -259,6 +296,8 @@ func getRoomCost(gType int32, maxNumber int32, roundNumber int32, channel string
 		cost = enumroom.DoudizhuGameCost
 	} else if gType == enumroom.FourCardGameType {
 		cost = enumroom.FourcardGameCost
+	} else if gType == enumroom.TwoCardGameType {
+		cost = enumroom.TwocardGameCost
 	}
 
 	diamond = int64(maxNumber * roundNumber * cost)
@@ -322,9 +361,31 @@ func JoinRoom(pwd string, mduser *mduser.User) (*mdroom.RoomUser, *mdroom.Room, 
 	}
 	roomUser := GetRoomUser(mduser, enumroom.UserUnready, int32(p+1),
 		enumroom.UserRoleSlave)
-	if mdr.RoomType != enumroom.RoomTypeNom && len(mdr.Users) == 0 {
+	if mdr.RoomType == enumroom.RoomTypeAgent && len(mdr.Users) == 0 {
 		roomUser.Role = enumroom.UserRoleMaster
+		if mdr.GameType == enumroom.FourCardGameType || mdr.GameType == enumroom.TwoCardGameType {
+			mdr.BankerList[0] = roomUser.UserID
+		}
 	}
+
+	if mdr.RoomType == enumroom.RoomTypeClub && mdr.SubRoomType == enumroom.SubTypeClubMatch {
+		mdcm, _ := club.GetClubMember(mdr.ClubID, mduser.UserID)
+		if mdcm.Status != 1 {
+			return nil, nil, errroom.ErrCanNotIntoClubRoom
+		}
+		var setttingParam *mdroom.SettingParam
+		if err := json.Unmarshal([]byte(mdr.SettingParam), &setttingParam); err != nil {
+			log.Err("room check thirteen clean unmarshal room param failed, %v", err)
+			return nil, nil, errroom.ErrGameParam
+		}
+		if mdcm.ClubCoin < setttingParam.ClubCoinBaseScore {
+			mderr := errors.Parse(errroom.ErrNotEnoughClubCoin.Error())
+			mderr.Detail = fmt.Sprintf(mderr.Detail, setttingParam.ClubCoinBaseScore)
+			return nil, nil, mderr
+		}
+		roomUser.ClubCoin = mdcm.ClubCoin
+	}
+
 	mdr.Users = append(mdr.Users, roomUser)
 	mdr.Ids = append(mdr.Ids, mduser.UserID)
 
@@ -375,6 +436,18 @@ func LeaveRoom(mduser *mduser.User) (*mdroom.RoomUser, *mdroom.Room, error) {
 	}
 	mr.Users = newUsers
 
+	if mr.GameType == enumroom.FourCardGameType || mr.GameType == enumroom.TwoCardGameType {
+		var blist []int32
+		for _, bid := range mr.BankerList {
+			if bid != mduser.UserID {
+				blist = append(blist, bid)
+			}
+		}
+		if len(blist) == 0 && len(mr.Users) > 0 {
+			blist = append(blist, mr.Users[0].UserID)
+		}
+		mr.BankerList = blist
+	}
 	var ids []int32
 	for _, user := range mr.Users {
 		ids = append(ids, user.UserID)
@@ -383,7 +456,7 @@ func LeaveRoom(mduser *mduser.User) (*mdroom.RoomUser, *mdroom.Room, error) {
 	if handle == 0 {
 		return nil, nil, errroom.ErrUserNotInRoom
 	}
-	if roomUser.Role == enumroom.UserRoleMaster && mr.RoomType != enumroom.RoomTypeNom && len(mr.Users) >0 {
+	if roomUser.Role == enumroom.UserRoleMaster && mr.RoomType != enumroom.RoomTypeNom && len(mr.Users) > 0 {
 		mr.Users[0].Role = enumroom.UserRoleMaster
 	}
 	//RoomTypeNom 普通开房解散条件 人员全部退出 || 房主退出
@@ -443,6 +516,20 @@ func GetReady(pwd string, uid int32, shuffle bool) (bool, *mdroom.Room, error) {
 	if mdr.Giveup == enumroom.WaitGiveUp {
 		return false, nil, errroom.ErrInGiveUp
 	}
+	//if mdr.RoomType == enumroom.RoomTypeClub && mdr.SubRoomType == enumroom.SubTypeClubMatch {
+	//	mdcm, err := club.GetClubMember(mdr.ClubID, uid)
+	//	if err != nil {
+	//		return false, nil, errroom.ErrNotClubMember
+	//	}
+	//	var setttingParam *mdroom.SettingParam
+	//	if err := json.Unmarshal([]byte(mdr.SettingParam), &setttingParam); err != nil {
+	//		log.Err("room check thirteen clean unmarshal room param failed, %v", err)
+	//		return false, nil, errroom.ErrGameParam
+	//	}
+	//	if mdcm.ClubCoin < setttingParam.ClubCoinBaseScore {
+	//		return false, nil, errroom.ErrNotEnoughClubCoin
+	//	}
+	//}
 	if shuffle {
 		//if !isBeginOrEndRound(mdr, uid) {
 		//	return false,nil, errroom.ErrShuffle
@@ -541,6 +628,7 @@ func GiveUpGame(pwd string, uid int32) ([]int32, *mdroom.GiveUpGameResult, *mdro
 	giveUpResult.UserStateList = list
 	mr.GiveupGame = giveUpResult
 	if mr.Status == enumroom.RoomStatusGiveUp {
+		//RoundOverRoomClubCoin(mr)
 		err = cacheroom.DeleteAllRoomUser(mr.Password, "GiveUpGame")
 		if err != nil {
 			log.Err("room give up delete room users redis err, %v", err)
@@ -613,6 +701,7 @@ func GiveUpVote(pwd string, status int32, uid int32) ([]int32, *mdroom.GiveUpGam
 		}
 	}
 	if agreeGiveUp == len(mr.GiveupGame.UserStateList) {
+		RoundOverRoomClubCoin(mr)
 		mr.Status = enumroom.RoomStatusGiveUp
 		giveUpResult.Status = enumroom.GiveupStatusAgree
 		err = cacheroom.DeleteAllRoomUser(mr.Password, "GiveUpVote")
@@ -742,6 +831,8 @@ func RoomResultList(page *mdpage.PageOption, uid int32, gtype int32) (*pbroom.Ro
 			CreatedAt: mr.CreatedAt,
 			RoundNow:  mr.RoundNow,
 			List:      mr.UserResults,
+			SubRoomType:mr.SubRoomType,
+			RoomType:mr.RoomType,
 		}
 		list = append(list, result.ToProto())
 	}
@@ -750,6 +841,25 @@ func RoomResultList(page *mdpage.PageOption, uid int32, gtype int32) (*pbroom.Ro
 		Count: rows,
 	}
 	return out, nil
+}
+
+func GetRoomResultByID(rid int32) (*pbroom.RoomResults, error) {
+	//var result *pbroom.RoomResults
+	mdr, err := dbroom.GetRoomByID(db.DB(), rid)
+	if err != nil {
+		return nil, err
+	}
+	result := &mdroom.RoomResults{
+		Status:    mdr.Status,
+		Password:  mdr.Password,
+		GameType:  mdr.GameType,
+		CreatedAt: mdr.CreatedAt,
+		RoundNow:  mdr.RoundNow,
+		List:      mdr.UserResults,
+		SubRoomType:mdr.SubRoomType,
+		RoomType:mdr.RoomType,
+	}
+	return result.ToProto(),nil
 }
 
 func CheckRoomExist(uid int32, rid int32) (int32, *mdroom.CheckRoomExist, error) {
@@ -765,7 +875,7 @@ func CheckRoomExist(uid int32, rid int32) (int32, *mdroom.CheckRoomExist, error)
 				log.Err("room give up delete room users redis err, %v", err)
 				return 4, nil, err
 			}
-			log.Err("CheckRoomExistROOMNULL:%s|%d", mr.Password, uid)
+			log.Err("check room exist ROOMNULL:%s|%d", mr.Password, uid)
 			return 5, nil, nil
 		} else {
 			mr, err = dbroom.GetRoomByID(db.DB(), rid)
@@ -879,7 +989,7 @@ func DeleteAgentRoomRecord(uid int32, gameType int32, rid int32, pwd string) err
 	if mr.PayerID != uid {
 		return errroom.ErrNotPayer
 	}
-	if mr.Status < enumroom.RoomStatusDelay &&  mr.Status < enumroom.RoomStatusOverTimeClean{
+	if mr.Status < enumroom.RoomStatusDelay && mr.Status < enumroom.RoomStatusOverTimeClean {
 		return errroom.ErrGameHasBegin
 	}
 
@@ -1009,8 +1119,16 @@ func ReInit() []*mdroom.Room {
 			err := cacheroom.DeleteAllRoomUser(mdr.Password, "ReInitRoomDelay")
 			if err != nil {
 				log.Err("reinit delete all room user set redis err, %v\n", err)
+				continue
+			}
+			if mdr.RoundNow == mdr.RoundNumber {
+				err := RoundOverRoomClubCoin(mdr)
+				if err != nil {
+					continue
+				}
 			}
 		}
+
 		err := cacheroom.UpdateRoom(mdr)
 		if err != nil {
 			log.Err("reinit update room redis err, %v", err)
@@ -1043,8 +1161,98 @@ func ReInit() []*mdroom.Room {
 	return rooms
 }
 
-func GiveUpRoomDestroy() []*mdroom.Room {
+func RoundOverRoomClubCoin(mdr *mdroom.Room) error {
+	//fmt.Printf("RoundOverRoomClubCoin:%d|%d\n", mdr.Status, enumroom.RoomStatusReInit)
+	if mdr.Status <= enumroom.RoomStatusDelay && mdr.RoundNow > 1 && mdr.RoomType == enumroom.RoomTypeClub && mdr.SubRoomType == enumroom.SubTypeClubMatch {
+		var setttingParam *mdroom.SettingParam
+		if err := json.Unmarshal([]byte(mdr.SettingParam), &setttingParam); err != nil {
+			log.Err("room check thirteen clean unmarshal room param failed, %v", err)
+			return err
+		}
+		var maxScore int64 = 0
+		var bigids []int32
+		for _, ur := range mdr.UserResults {
+			if ur.TotalClubCoinScore > maxScore {
+				maxScore = ur.TotalClubCoinScore
+				bigids = []int32{}
+				bigids = append(bigids, ur.UserID)
+			} else if ur.TotalClubCoinScore == maxScore {
+				bigids = append(bigids, ur.UserID)
+			}
+		}
+		mdr.BigWiners = bigids
+		var cost float64
+		if setttingParam.CostType == 1 {
+			tmp := fmt.Sprintf("%0.2f", float64(setttingParam.CostValue)/100.0)
+			cost, _ = strconv.ParseFloat(tmp, 64)
+		} else {
+			cost = float64(setttingParam.CostValue)
+		}
+		for _, ur := range mdr.UserResults {
+			//jType := tools.StringParseInt64(fmt.Sprintf("%d%d", mdr.GameType, mdr.GameIDNow))
+			//jType := mdr.GameType*100 + 2
+			//amount := float64(ur.TotalClubCoinScore * int64(setttingParam.ClubCoinRate))
+			amount := float64(ur.TotalClubCoinScore)
+			for _, uid := range mdr.BigWiners {
+				if ur.UserID == uid {
+					if setttingParam.CostType == 1 {
+						amount = math.Floor(amount * cost)
+					} else {
+						if amount > cost {
+							amount = cost
+						}
+					}
+					if amount != 0 {
+						mcm, err := club.GainClubMemberGameBalance(-int64(amount), ur.UserID, int64(mdr.RoomID), int64(ur.UserID), true)
+						if err != nil {
+							log.Err("room club member game balance failed,rid:%d,uid:%d, err:%v", mdr.RoomID, ur.UserID, err)
+							continue
+						}
+						for _, ru := range mdr.Users {
+							if ru.UserID == ur.UserID {
+								ru.ClubCoin = mcm.ClubCoin
+								break
+							}
+						}
+					}
+					break
+				}
+			}
 
+		}
+	}
+	return nil
+}
+
+func GetRoomClubCoin(mdr *mdroom.Room) error {
+	var setttingParam *mdroom.SettingParam
+	if err := json.Unmarshal([]byte(mdr.SettingParam), &setttingParam); err != nil {
+		//log.Err("room check thirteen clean unmarshal room param failed, %v", err)
+		return err
+	}
+	for _, ur := range mdr.UserResults {
+		//jType := tools.StringParseInt64(fmt.Sprintf("%d%d", mdr.GameType, mdr.GameIDNow))
+		//jType := mdr.GameType*100 + 2
+		amount := float64(ur.RoundScore * setttingParam.ClubCoinRate)
+		if amount != 0 {
+			mcm, err := club.GainClubMemberGameBalance(int64(amount), ur.UserID, int64(mdr.RoomID), int64(ur.UserID), false)
+			if err != nil {
+				return err
+			}
+			ur.RoundClubCoinScore = int64(amount)
+			ur.TotalClubCoinScore += ur.RoundClubCoinScore
+			for _, ru := range mdr.Users {
+				if ru.UserID == ur.UserID {
+					ru.ClubCoin = mcm.ClubCoin
+					break
+				}
+			}
+		}
+	}
+	return nil
+}
+
+func GiveUpRoomDestroy() []*mdroom.Room {
 	f := func(r *mdroom.Room) bool {
 		if r.Giveup == enumroom.WaitGiveUp && r.Status < enumroom.RoomStatusDone {
 			return true
@@ -1061,8 +1269,10 @@ func GiveUpRoomDestroy() []*mdroom.Room {
 		if sub.Minutes() > enumroom.RoomGiveupCleanMinutes {
 			checkRoom, err := cacheroom.GetRoom(room.Password)
 			if checkRoom != nil && checkRoom.RoomID == room.RoomID {
+				RoundOverRoomClubCoin(room)
 				checkRoom.GiveupGame.Status = enumroom.GiveupStatusAgree
 				room.Status = enumroom.RoomStatusGiveUp
+
 				err = cacheroom.DeleteAllRoomUser(room.Password, "GiveUpRoomDestroy")
 				if err != nil {
 					log.Err("room give up destroy delete room users redis err, %v", err)
@@ -1089,7 +1299,7 @@ func GiveUpRoomDestroy() []*mdroom.Room {
 				if room.RoomType == enumroom.RoomTypeAgent {
 					cacheroom.SetAgentRoom(room)
 				}
-				log.Debug("GiveUpRoomDestroyPolling roomid:%d,pwd:%s,subdate:%f m\n", room.RoomID,
+				log.Debug("give up room destroy polling roomid:%d,pwd:%s,subdate:%f m\n", room.RoomID,
 					room.Password, sub.Minutes())
 				//go db.Transaction(f)
 				//读写分离
@@ -1130,11 +1340,12 @@ func DelayRoomDestroy() error {
 					continue
 				}
 			}
+			//RoundOverRoomClubCoin(room)
 			err = cacheroom.SetRoomDelete(room.GameType, room.RoomID)
 			if err != nil {
 				log.Err("delay set delete room redis err, %d|%v\n", room.RoomID, err)
 			}
-			room.Status = enumroom.RoomStatusGiveUp
+			room.Status = enumroom.RoomStatusDone
 			log.Debug("DelayRoomDestroyPolling roomid:%d,pwd:%s,subdate:%f m\n", room.RoomID, room.Password, sub.Minutes())
 			f := func(tx *gorm.DB) error {
 				_, err := dbroom.UpdateRoom(tx, room)
@@ -1159,7 +1370,7 @@ func DelayRoomDestroy() error {
 	return nil
 }
 
-func DeadRoomDestroy() ([]*mdroom.Room,error) {
+func DeadRoomDestroy() ([]*mdroom.Room, error) {
 	//定时清除不活动的房间
 	f := func(r *mdroom.Room) bool {
 		sub := time.Now().Sub(*r.UpdatedAt)
@@ -1172,10 +1383,11 @@ func DeadRoomDestroy() ([]*mdroom.Room,error) {
 	}
 	rooms := cacheroom.GetAllRooms(f)
 	if len(rooms) == 0 {
-		return nil,nil
+		return nil, nil
 	}
 	var mdrList []*mdroom.Room
 	for _, room := range rooms {
+		RoundOverRoomClubCoin(room)
 		log.Debug("DeadRoomDestroyPolling roomid:%d,pwd:%s\n", room.RoomID, room.Password)
 		err := cacheroom.DeleteAllRoomUser(room.Password, "DeadRoomDestroy")
 		if err != nil {
@@ -1215,12 +1427,12 @@ func DeadRoomDestroy() ([]*mdroom.Room,error) {
 			RoomRefund(room)
 		}
 		UpdateRoom(room)
-		mdrList = append(mdrList,room)
+		mdrList = append(mdrList, room)
 		//err = mail.SendSysMail()
 
 	}
 
-	return mdrList,nil
+	return mdrList, nil
 }
 
 func GetRoomUserLocation(user *mduser.User) ([]*pbroom.RoomUser, error) {
@@ -1247,10 +1459,12 @@ func chekcGameParam(maxNumber int32, maxRound int32, gtype int32, gameParam stri
 	if maxNumber < 2 {
 		return errroom.ErrRoomMaxNumber
 	}
-	if maxRound != 10 && maxRound != 20 && maxRound != 30 {
-		return errroom.ErrRoomMaxRound
-	}
+	//TODO 更新正式服前放开限制
+	//if maxRound != 10 && maxRound != 20 && maxRound != 30 {
+	//	return errroom.ErrRoomMaxRound
+	//}
 	//fmt.Printf("ChekcGameParam:%d|%d|%d|%s\n",maxNumber,maxRound,gtype,gameParam)
+
 	switch gtype {
 	case enumroom.ThirteenGameType:
 		if maxNumber > 8 {
@@ -1273,22 +1487,23 @@ func chekcGameParam(maxNumber int32, maxRound int32, gtype int32, gameParam stri
 		if roomParam.Times < 1 || roomParam.Times > 3 {
 			return errroom.ErrGameParam
 		}
+
 		break
 	case enumroom.NiuniuGameType:
-		if maxNumber != 6 && maxNumber != 8 && maxNumber != 10 {
-			return errroom.ErrRoomMaxNumber
-		}
-		var roomParam *mdroom.NiuniuRoomParam
-		if err := json.Unmarshal([]byte(gameParam), &roomParam); err != nil {
-			log.Err("niuniu unmarshal room param failed, %v", err)
-			return errroom.ErrGameParam
-		}
-		if roomParam.BankerType < 1 || roomParam.BankerType > 4 {
-			return errroom.ErrGameParam
-		}
-		if roomParam.Times != 3 && roomParam.Times != 5 && roomParam.Times != 10 {
-			return errroom.ErrGameParam
-		}
+		//if maxNumber != 6 && maxNumber != 8 && maxNumber != 10 {
+		//	return errroom.ErrRoomMaxNumber
+		//}
+		//var roomParam *mdroom.NiuniuRoomParam
+		//if err := json.Unmarshal([]byte(gameParam), &roomParam); err != nil {
+		//	log.Err("niuniu unmarshal room param failed, %v", err)
+		//	return errroom.ErrGameParam
+		//}
+		//if roomParam.BankerType < 1 || roomParam.BankerType > 4 {
+		//	return errroom.ErrGameParam
+		//}
+		//if roomParam.Times != 3 && roomParam.Times != 5 && roomParam.Times != 10 {
+		//	return errroom.ErrGameParam
+		//}
 		break
 	case enumroom.DoudizhuGameType:
 		if maxNumber != 4 {
@@ -1404,6 +1619,9 @@ func RoomCreateBalance(mdr *mdroom.Room, mdu *mduser.User) error {
 	//jType := getRoomJournalType(mdr.GameType)
 	if mdr.Cost != 0 {
 		if mdr.RoomType == enumroom.RoomTypeClub {
+			//if mdr.SubRoomType == enumroom.SubTypeClubMatch {
+			//	return nil
+			//}
 			err := club.SetClubBalance(-mdr.Cost, enumbill.TypeDiamond, mdr.ClubID, mdr.GameType*100+1,
 				int64(mdr.RoomID), int64(mdu.UserID))
 			if err != nil {
@@ -1424,6 +1642,9 @@ func roomBackUnFreezeAndBalance(mdr *mdroom.Room) error {
 	//jType := getRoomJournalType(mdr.GameType)
 	if mdr.Cost != 0 {
 		if mdr.RoomType != enumroom.RoomTypeClub {
+			//if mdr.SubRoomType == enumroom.SubTypeClubMatch {
+			//	return nil
+			//}
 			_, err := bill.SetBalanceFreeze(mdr.PayerID, int64(mdr.RoomID),
 				&mbill.Balance{Amount: -mdr.Cost, CoinType: enumcom.Diamond}, mdr.GameType*100+2)
 			if err != nil {
@@ -1447,6 +1668,9 @@ func roomStartBalance(mdr *mdroom.Room, mdu *mduser.User) error {
 	//jType := getRoomJournalType(mdr.GameType)
 	if mdr.Cost != 0 {
 		if mdr.RoomType == enumroom.RoomTypeClub {
+			//if mdr.SubRoomType == enumroom.SubTypeClubMatch {
+			//	return nil
+			//}
 			err := club.SetClubBalance(-mdr.Cost, enumbill.TypeDiamond, mdr.ClubID, mdr.GameType*100+1,
 				int64(mdr.RoomID), int64(mdu.UserID))
 			if err != nil {
@@ -1468,6 +1692,9 @@ func RoomRefund(mdr *mdroom.Room) error {
 		jType := mdr.GameType*100 + 2 //getRoomJournalType(mdr.GameType)
 		f := func(tx *gorm.DB) error {
 			if mdr.RoomType == enumroom.RoomTypeClub {
+				//if mdr.SubRoomType == enumroom.SubTypeClubMatch {
+				//	return nil
+				//}
 				err := club.SetClubBalance(mdr.Cost, enumbill.TypeDiamond, mdr.ClubID, jType, int64(mdr.RoomID),
 					int64(mdr.PayerID))
 				if err != nil {
@@ -1495,4 +1722,123 @@ func RoomRefund(mdr *mdroom.Room) error {
 func PageSpecialGameList(page *mdpage.PageOption, plgr *mdroom.PlayerSpecialGameRecord) (
 	[]*mdroom.PlayerSpecialGameRecord, int64, error) {
 	return dbroom.PageSpecialGameList(db.DB(), plgr, page)
+}
+
+func SetBankerList(pwd string, mduser *mduser.User) (*mdroom.Room, error) {
+	hasRoom := cacheroom.ExistRoomUser(mduser.UserID)
+	if !hasRoom {
+		return nil, errroom.ErrUserNotInRoom
+	}
+	mdr, err := cacheroom.GetRoom(pwd)
+	if err != nil {
+		return nil, err
+	}
+	if mdr.ClubID > 0 && mduser.ClubID != mdr.ClubID {
+		return nil, errroom.ErrNotClubMember
+	}
+	if mdr.Status > enumroom.RoomStatusDelay {
+		return nil, errroom.ErrGameIsDone
+	}
+	if mdr.Giveup == enumroom.WaitGiveUp {
+		return nil, errroom.ErrInGiveUp
+	}
+
+	for _, uid := range mdr.BankerList {
+		if uid == mduser.UserID {
+			return nil, errroom.ErrAlreadyInBankerList
+		}
+	}
+	if mdr.RoomType == enumroom.RoomTypeGold {
+		limit := enumroom.GoldRoomCostMap[mdr.GameType][mdr.Level][1]
+		userBalance, err := bill.GetUserBalance(mduser.UserID, enumbill.TypeGold)
+		if err != nil {
+			return nil, err
+		}
+		if userBalance.Balance < limit {
+			return nil, errroom.ErrNotEnoughGold
+		}
+	} else if mdr.RoomType == enumroom.RoomTypeClub && mdr.SubRoomType == enumroom.SubTypeClubMatch {
+		mdcm, _ := club.GetClubMember(mdr.ClubID, mduser.UserID)
+		var setttingParam *mdroom.SettingParam
+		if err := json.Unmarshal([]byte(mdr.SettingParam), &setttingParam); err != nil {
+			log.Err("room check thirteen clean unmarshal room param failed, %v", err)
+			return nil, errroom.ErrGameParam
+		}
+		if mdcm.ClubCoin < setttingParam.ClubCoinBaseScore {
+			mderr := errors.Parse(errroom.ErrNotEnoughClubCoin.Error())
+			mderr.Detail = fmt.Sprintf(mderr.Detail, setttingParam.ClubCoinBaseScore)
+			return nil, mderr
+		}
+	}
+
+	mdr.BankerList = append(mdr.BankerList, mduser.UserID)
+
+	err = cacheroom.UpdateRoom(mdr)
+	if err != nil {
+		log.Err("banker list join set session failed, %v|%v\n", err, mdr)
+		return nil, err
+	}
+	err = cacheroom.SetRoomUser(mdr.RoomID, mdr.Password, mduser.UserID)
+	if err != nil {
+		log.Err("banker list join set session failed, %v|%v\n", err, mdr)
+		return nil, err
+	}
+	//UpdateRoom(mdr)
+	return mdr, nil
+}
+
+func OutBankerList(pwd string, mduser *mduser.User) (*mdroom.Room, error) {
+	hasRoom := cacheroom.ExistRoomUser(mduser.UserID)
+	if !hasRoom {
+		return nil, errroom.ErrUserNotInRoom
+	}
+	mdr, err := cacheroom.GetRoom(pwd)
+	if err != nil {
+		return nil, err
+	}
+	if mdr.ClubID > 0 && mduser.ClubID != mdr.ClubID {
+		return nil, errroom.ErrNotClubMember
+	}
+	if mdr.Status > enumroom.RoomStatusDelay {
+		return nil, errroom.ErrGameIsDone
+	}
+	if mdr.Giveup == enumroom.WaitGiveUp {
+		return nil, errroom.ErrInGiveUp
+	}
+	//if mdr.BankerList == nil || len(mdr.BankerList)== 0{
+	//	return nil, errroom.ErrNoInBankerList
+	//}
+	//if mdr.BankerList[0] == mduser.UserID && (mdr.Status != enumroom.RoomStatusInit &&
+	//	mdr.Status > enumroom.RoomStatusReInit ) {
+	//	return nil, errroom.ErrOutBankerListWithBanker
+	//}
+	if len(mdr.BankerList) == 1 && mdr.BankerList[0] == mduser.UserID {
+		return nil, errroom.ErrOutBankerList
+	}
+
+	var ids []int32
+	inList := false
+	for _, uid := range mdr.BankerList {
+		if uid != mduser.UserID {
+			ids = append(ids, uid)
+		} else {
+			inList = true
+		}
+	}
+	if !inList {
+		return nil, errroom.ErrNoInBankerList
+	}
+	mdr.BankerList = ids
+	err = cacheroom.UpdateRoom(mdr)
+	if err != nil {
+		log.Err("out banker list join set session failed, %v|%v\n", err, mdr)
+		return nil, err
+	}
+	err = cacheroom.SetRoomUser(mdr.RoomID, mdr.Password, mduser.UserID)
+	if err != nil {
+		log.Err("out banker join set session failed, %v|%v\n", err, mdr)
+		return nil, err
+	}
+	//UpdateRoom(mdr)
+	return mdr, nil
 }

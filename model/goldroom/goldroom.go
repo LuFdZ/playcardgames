@@ -56,9 +56,9 @@ func UpdateGoldRoom() map[*pbroom.RoomUser]int32 { //
 						log.Err("join robot err room:%v,err", mdr, err)
 						continue
 					}
-					mdr.RobotIds = append(mdr.RobotIds, robot.UserID)
+					//mdr.RobotIds = append(mdr.RobotIds, robot.UserID)
 					msg := robot.ToProto()
-					msg.Ids = mdr.PlayerIds
+					//msg.Ids = mdr.PlayerIds
 					m[msg] = enumgroom.UserOpJoin
 					err = cacheroom.UpdateRoom(mdr)
 					if err != nil {
@@ -118,7 +118,6 @@ func UpdateGoldRoom() map[*pbroom.RoomUser]int32 { //
 			}
 			break
 		case enumroom.RoomStatusReInit:
-			fmt.Printf("UpdateGoldRoom RoomStatusReInit\n")
 			f := func(tx *gorm.DB) error {
 				//更新玩家游戏局数
 				err := dbroom.UpdateRoomPlayTimes(tx, mdr.RoomID, mdr.GameType)
@@ -127,7 +126,7 @@ func UpdateGoldRoom() map[*pbroom.RoomUser]int32 { //
 					return err
 				}
 				for _, u := range mdr.Users {
-					fmt.Printf("UpdateGoldRoom Player:%d|%d\n",u.UserID,u.Type)
+					fmt.Printf("UpdateGoldRoom Player:%d|%d\n", u.UserID, u.Type)
 					if u.Type == enumgroom.Player {
 						err := bill.GainGameBalance(u.UserID, mdr.RoomID, mdr.GameType*100+1,
 							&mbill.Balance{Amount: int64(u.ResultAmount), CoinType: enumbill.TypeGold})

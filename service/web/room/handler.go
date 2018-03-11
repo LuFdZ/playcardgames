@@ -30,8 +30,9 @@ var RoomEvent = []string{
 	srvroom.TopicRoomFourCardExist,
 	srvroom.TopicRoomTwoCardExist,
 	srvroom.TopicRoomNotice,
-	srvroom.TopicRoomGShuffleCardBro,
+	srvroom.TopicRoomShuffleCardBro,
 	srvroom.TopicRoomChat,
+	srvroom.TopicBankerList,
 }
 
 func RoomOnlineNotice(c *clients.Client) {
@@ -83,7 +84,6 @@ func init() {
 		SubscribeRoomMessage)
 	request.RegisterHandler("UnSubscribeRoomMessage", auth.RightsPlayer,
 		UnsubscribeRoomMessage)
-
 	request.RegisterHandler("ReceiveTestLog", auth.RightsPlayer,
 		ReceiveTestLogMessage)
 	request.RegisterCloseHandler(CloseCallbackHandler)

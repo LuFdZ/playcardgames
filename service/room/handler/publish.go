@@ -13,8 +13,9 @@ const (
 	TopicRoomVoiceChat       = "playcards.room.VoiceChat"
 	TopicRoomNotice          = "playcards.room.Notice"
 	TopicRoomGameStart       = "playcards.room.RoomGameStart"
-	TopicRoomGShuffleCardBro = "playcards.room.ShuffleCardBro"
+	TopicRoomShuffleCardBro = "playcards.room.ShuffleCardBro"
 	TopicRoomChat            = "playcards.room.RoomChat"
+	TopicBankerList          = "playcards.room.BankerList"
 )
 
 const (

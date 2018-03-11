@@ -39,15 +39,16 @@ type UserCard struct {
 }
 
 type UserInfo struct {
-	UserID     int32
-	Status     int32
-	Bet        int32
-	Role       int32
-	Type       int32
-	CardList   []string
-	HeadCards  *UserCard
-	TailCards  *UserCard
-	TotalScore int32
+	UserID        int32
+	Status        int32
+	Bet           int32
+	Role          int32
+	Type          int32
+	CardList      []string
+	HeadCards     *UserCard
+	TailCards     *UserCard
+	TotalScore    int32
+	ClubCoinScore int64
 }
 
 type UserDice struct {
@@ -84,12 +85,13 @@ func (uc *UserCard) ToProto() *pbfour.UserCard {
 
 func (ur *UserInfo) ToProto() *pbfour.UserInfo {
 	out := &pbfour.UserInfo{
-		UserID:     ur.UserID,
-		Status:     ur.Status,
-		Bet:        ur.Bet, //enumfour.BetScoreMap[ur.Bet],
-		Role:       ur.Role,
-		TotalScore: tools.IntToString(ur.TotalScore),
-		CardList:   ur.CardList,
+		UserID:        ur.UserID,
+		Status:        ur.Status,
+		Bet:           ur.Bet, //enumfour.BetScoreMap[ur.Bet],
+		Role:          ur.Role,
+		TotalScore:    tools.IntToString(ur.TotalScore),
+		CardList:      ur.CardList,
+		ClubCoinScore: ur.ClubCoinScore,
 	}
 	if ur.HeadCards != nil && ur.TailCards != nil {
 		out.HeadCards = ur.HeadCards.ToProto()

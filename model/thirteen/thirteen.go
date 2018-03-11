@@ -43,8 +43,8 @@ func CreateThirteen(goLua *lua.LState) []*mdt.Thirteen {
 		var userResults []*mdr.GameUserResult
 		var groupCards []*mdt.GroupCard
 		var bankerID int32
-		if err := goLua.DoString("return G_Reset()"); err != nil {
-			log.Err("thirteen G_Reset %+v", err)
+		if err := goLua.DoString(fmt.Sprintf("return G_Reset(%d)", len(mdroom.Users))); err != nil {
+			log.Err("thirteen G_Reset err %+v", err)
 			continue
 		}
 		for _, user := range mdroom.Users {
@@ -62,6 +62,7 @@ func CreateThirteen(goLua *lua.LState) []*mdt.Thirteen {
 			}
 			if err := goLua.DoString("return G_GetCards()"); err != nil {
 				log.Err("thirteen G_GetCards %+v", err)
+				continue
 			}
 			getCards := goLua.Get(-1)
 			goLua.Pop(1)
@@ -91,6 +92,7 @@ func CreateThirteen(goLua *lua.LState) []*mdt.Thirteen {
 				groupCards = append(groupCards, groupCard)
 			} else {
 				log.Err("thirteen cardsMap err %+v", cardsMap)
+				continue
 			}
 			if user.Role == enumr.UserRoleMaster {
 				bankerID = user.UserID
@@ -175,7 +177,6 @@ func CreateThirteen(goLua *lua.LState) []*mdt.Thirteen {
 			log.Err("thirteen create failed,%v | %+v", thirteen, err)
 			continue
 		}
-
 		//err = cacher.SetRoom(room)
 		//if err != nil {
 		//	log.Err("room create set redis failed,%v | %+v", room, err)
@@ -286,12 +287,29 @@ func UpdateGame(goLua *lua.LState) []*mdt.Thirteen { //[]*mdt.GameResultList
 					if userResult.UserID == thirteen.BankerID {
 						bankerScore = int32(ts)
 					}
+					userResult.RoundScore = int32(ts)
+				}
+			}
+		}
+		thirteen.Result = resultList
+		if mdroom.RoomType == enumr.RoomTypeClub && mdroom.SubRoomType == enumr.SubTypeClubMatch {
+			err := room.GetRoomClubCoin(mdroom)
+			if err != nil {
+				log.Err("room club member game balance failed,rid:%d,uid:%d, err:%v", mdroom.RoomID, err)
+				continue
+			}
+			for _, ur := range mdroom.UserResults {
+				for _, ugr := range thirteen.Result.Result {
+					if ugr.UserID == ugr.UserID {
+						ugr.ClubCoinScore = ur.RoundClubCoinScore
+						break
+					}
 				}
 			}
 		}
 
 		//resultListArray = append(resultListArray, resultList)
-		thirteen.Result = resultList
+
 		mdroom.Status = enumr.RoomStatusReInit
 
 		var roomparam *mdr.ThirteenRoomParam
@@ -609,6 +627,9 @@ func ThirteenExist(uid int32, rid int32) (*pbt.ThirteenRecoveryReply, error) {
 		}
 	}
 	if thirteen == nil {
+		if roomRecovery != nil {
+			return out, nil
+		}
 		return nil, errorst.ErrGameNotExist
 	}
 	recovery := &mdt.ThirteenRecovery{}

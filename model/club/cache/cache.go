@@ -96,7 +96,7 @@ func GetClubMember(clubid int32, uid int32) (*mdclub.ClubMember, error) {
 	//subKey := ClubMemberSubKey(uid)
 	val, err := cache.KV().HGet(key, strconv.Itoa(int(uid))).Bytes()
 	if err == redis.Nil {
-		return nil, errclub.ErrClubNotExisted
+		return nil, errclub.ErrNotInClub
 	}
 
 	if err != nil && err != redis.Nil {
