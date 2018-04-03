@@ -1,21 +1,21 @@
 package handler
 
 const (
-	TopicRoomCreate          = "playcards.room.Create"
-	TopicRoomReady           = "playcards.room.Ready"
-	TopicRoomJoin            = "playcards.room.Join"
-	TopicRoomUnJoin          = "playcards.room.UnJoin"
-	TopicRoomResult          = "playcards.room.Result"
-	TopicRoomGiveup          = "playcards.room.Giveup"
-	TopicRoomShock           = "playcards.room.Shock"
-	TopicRoomUserConnection  = "playcards.room.UserConnection"
-	TopicRoomRenewal         = "playcards.room.Renewal"
-	TopicRoomVoiceChat       = "playcards.room.VoiceChat"
-	TopicRoomNotice          = "playcards.room.Notice"
-	TopicRoomGameStart       = "playcards.room.RoomGameStart"
-	TopicRoomShuffleCardBro = "playcards.room.ShuffleCardBro"
-	TopicRoomChat            = "playcards.room.RoomChat"
-	TopicBankerList          = "playcards.room.BankerList"
+	TopicRoomCreate           = "playcards.room.Create"
+	TopicRoomReady            = "playcards.room.Ready"
+	TopicRoomJoin             = "playcards.room.Join"
+	TopicRoomUnJoin           = "playcards.room.UnJoin"
+	TopicRoomResult           = "playcards.room.Result"
+	TopicRoomGiveup           = "playcards.room.Giveup"
+	TopicRoomShock            = "playcards.room.Shock"
+	TopicRoomUserConnection   = "playcards.room.UserConnection"
+	TopicRoomRenewal          = "playcards.room.Renewal"
+	TopicRoomVoiceChat        = "playcards.room.VoiceChat"
+	TopicRoomNotice           = "playcards.room.Notice"
+	TopicRoomGameStart        = "playcards.room.RoomGameStart"
+	TopicRoomShuffleCardBro   = "playcards.room.ShuffleCardBro"
+	TopicRoomChat             = "playcards.room.RoomChat"
+	TopicBankerList           = "playcards.room.BankerList"
 )
 
 const (

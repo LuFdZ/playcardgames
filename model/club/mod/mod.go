@@ -58,10 +58,28 @@ type ClubJournal struct {
 	UpdatedAt    *time.Time
 }
 
+type VipRoomSetting struct {
+	ID           int32 `gorm:"primary_key"`
+	Name         string
+	ClubID       int32
+	UserID       int32
+	RoomType     int32
+	MaxNumber    int32
+	RoundNumber  int32
+	SubRoomType  int32
+	GameParam    string
+	Status       int32
+	GameType     int32
+	SettingParam string
+	CreatedAt    *time.Time
+	UpdatedAt    *time.Time
+}
+
 type SettingParam struct {
 	CostType          int32
 	CostValue         int32
 	ClubCoinBaseScore int64
+	CostRange         int32
 }
 
 func ClubFromProto(pclub *pbclub.Club) *Club {
@@ -90,6 +108,7 @@ func SettingParamFromProto(pbsp *pbclub.SettingParam) *SettingParam {
 		CostType:          pbsp.CostType,
 		CostValue:         pbsp.CostValue,
 		ClubCoinBaseScore: pbsp.ClubCoinBaseScore,
+		CostRange:         pbsp.CostRange,
 	}
 }
 
@@ -170,7 +189,44 @@ func (mdsp *SettingParam) ToProto() *pbclub.SettingParam {
 		CostType:          mdsp.CostType,
 		CostValue:         mdsp.CostValue,
 		ClubCoinBaseScore: mdsp.ClubCoinBaseScore,
+		CostRange:         mdsp.CostRange,
 	}
+}
+
+func (vrs *VipRoomSetting) ToProto() *pbclub.VipRoomSetting {
+	//clubMemberNumber, _ := cacheclub.CountClubMemberHKeys(club.ClubID)
+	return &pbclub.VipRoomSetting{
+		VipRoomSettingID: vrs.ID,
+		Name:             vrs.Name,
+		ClubID:           vrs.ClubID,
+		UserID:           vrs.UserID,
+		RoomType:         vrs.RoomType,
+		MaxNumber:        vrs.MaxNumber,
+		RoundNumber:      vrs.RoundNumber,
+		SubRoomType:      vrs.SubRoomType,
+		GameParam:        vrs.GameParam,
+		Status:           vrs.Status,
+		GameType:         vrs.GameType,
+		SettingParam:     vrs.SettingParam,
+	}
+}
+
+func VipRoomSettingFromProto(pbvrs *pbclub.VipRoomSetting) *VipRoomSetting {
+	out := &VipRoomSetting{
+		ID:           pbvrs.VipRoomSettingID,
+		Name:         pbvrs.Name,
+		ClubID:       pbvrs.ClubID,
+		UserID:       pbvrs.UserID,
+		RoomType:     pbvrs.RoomType,
+		MaxNumber:    pbvrs.MaxNumber,
+		RoundNumber:  pbvrs.RoundNumber,
+		SubRoomType:  pbvrs.SubRoomType,
+		GameParam:    pbvrs.GameParam,
+		Status:       pbvrs.Status,
+		GameType:     pbvrs.GameType,
+		SettingParam: pbvrs.SettingParam,
+	}
+	return out
 }
 
 func (c *Club) BeforeUpdate(scope *gorm.Scope) error {

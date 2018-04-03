@@ -8,6 +8,7 @@ import (
 	mdr "playcards/model/room/mod"
 	"playcards/utils/db"
 	"playcards/utils/errors"
+	sq "github.com/Masterminds/squirrel"
 
 	"github.com/Masterminds/squirrel"
 	"github.com/jinzhu/gorm"
@@ -167,8 +168,7 @@ func DeleteAll(tx *gorm.DB) error {
 	return nil
 }
 
-func PageRoomResultList(tx *gorm.DB, uid int32, gtype int32, page *mdpage.PageOption,
-) ([]*mdr.Room, int64, error) {
+func PageRoomResultList(tx *gorm.DB, uid int32, gtype int32, page *mdpage.PageOption) ([]*mdr.Room, int64, error) {
 	var out []*mdr.Room
 	//rows, rtx := page.Find(tx.Model(r).Order("created_at desc").
 	//	Where(r), &out)
@@ -178,6 +178,29 @@ func PageRoomResultList(tx *gorm.DB, uid int32, gtype int32, page *mdpage.PageOp
 	sqlstr := " game_type =? and round_now >1 and room_id in (select room_id from player_rooms where user_id = ?)"
 	rows, rtx := page.Find(tx.Where(sqlstr, gtype, uid).
 		Order("created_at desc").Find(&out), &out)
+	if rtx.Error != nil {
+		return nil, 0, errors.Internal("page room result failed", rtx.Error)
+	}
+	return out, rows, nil
+}
+
+func PageClubRoomResultList(tx *gorm.DB, clubid int32, page *mdpage.PageOption) ([]*mdr.Room, int64, error) {
+	var out []*mdr.Room
+	sqlstr := " club_id = ? and round_now >1 and room_type = ? and flag = ? "
+	rows, rtx := page.Find(tx.Model(out).Where(sqlstr, clubid, enumr.RoomTypeClub,  enumr.RoomNoFlag).
+		Order("created_at desc"), &out)
+	if rtx.Error != nil {
+		return nil, 0, errors.Internal("page room result failed", rtx.Error)
+	}
+	return out, rows, nil
+}
+
+func PageClubMemberRoomResultList(tx *gorm.DB, uid int32, clubid int32, page *mdpage.PageOption) ([]*mdr.Room, int64, error) {
+	var out []*mdr.Room
+	sqlstr := " club_id = ? and round_now >1 and room_type = ? and flag = ? " +
+		"and room_id in (select room_id from player_rooms where user_id = ?)"
+	rows, rtx := page.Find(tx.Model(out).Where(sqlstr, clubid, enumr.RoomTypeClub, enumr.RoomNoFlag, uid).
+		Order("created_at desc"), &out)
 	if rtx.Error != nil {
 		return nil, 0, errors.Internal("page room result failed", rtx.Error)
 	}
@@ -305,7 +328,7 @@ func PageRoomList(tx *gorm.DB, clubid int32, page int32, pagesize int32, flag in
 	//	return nil, errr.ErrRoomNotExisted
 	//}
 
-	strWhere := fmt.Sprintf("club_id = ? and status > %d ", enum.RoomStatusStarted)
+	strWhere := fmt.Sprintf("club_id = ? and round_now >1 ")
 	if flag > 0 {
 		strWhere += fmt.Sprintf(" and flag = %d ", flag)
 	}
@@ -321,6 +344,63 @@ func PageRoomList(tx *gorm.DB, clubid int32, page int32, pagesize int32, flag in
 	err = tx.Raw(sql, param...).Scan(&out).Error
 	if err != nil {
 		return nil, errors.Internal("get list failed", err)
+	}
+	return out, nil
+}
+
+func GetClubRoomLog(tx *gorm.DB, clubid int32) ([]*mdr.ClubRoomLog, error) {
+	var out []*mdr.ClubRoomLog
+	//var out []*interface{}
+	sql, ps, err := sq.
+	Select(" DATE_FORMAT(created_at,'%Y-%m-%d') date ,sum(round_now) as total_room_count " +
+		",sum(IF((vip_room_setting_id =0), round_now,0)) as club_room_count" +
+		",sum(IF((vip_room_setting_id >0), round_now,0)) as vip_room_count").
+		From(enum.RoomTableName).
+		Where(" round_now > 1 and room_type = ? and club_id = ?", enumr.RoomTypeClub, clubid).
+		GroupBy(" date ").
+		OrderBy(" date desc ").
+		Limit(uint64(30)).
+		ToSql()
+
+	if err != nil {
+		return nil, errors.Internal("club room log failed", err)
+	}
+
+	err = tx.Raw(sql, ps...).Scan(&out).Error
+	if err != nil {
+		return nil, errors.Internal("club room log failed", err)
+	}
+	return out, nil
+}
+
+func GetRoomRoundNow(tx *gorm.DB, gtype int32) ([]*mdr.ClubRoomLog, error) {
+	var out []*mdr.ClubRoomLog
+	//var out []*interface{}
+	strWhere := " round_now >1  "
+	if gtype > 0 {
+		strWhere = fmt.Sprintf(" round_now >1 and game_type = %d ", gtype)
+	}
+
+	sql, ps, err := sq.
+	Select(" DATE_FORMAT(created_at,'%Y-%m-%d') date " +
+		",sum(round_now) as total_room_count " +
+		",sum(IF((club_id > 0), round_now,0)) as club_room_count" +
+		",sum(IF((club_id > 0), round_now,0)) as club_coin_room_count" +
+		",sum(IF((club_id > 0 and sub_room_type = 301), round_now,0)) as vip_room_count").
+		From(enum.RoomTableName).
+		Where(strWhere).
+		GroupBy(" date ").
+		OrderBy(" date desc ").
+		Limit(uint64(10)).
+		ToSql()
+
+	if err != nil {
+		return nil, errors.Internal("club room log failed", err)
+	}
+
+	err = tx.Raw(sql, ps...).Scan(&out).Error
+	if err != nil {
+		return nil, errors.Internal("club room log failed", err)
 	}
 	return out, nil
 }

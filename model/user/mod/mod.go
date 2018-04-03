@@ -39,6 +39,7 @@ type User struct {
 	OpenID          string
 	UnionID         string
 	RegisterChannel string
+	ProxyID         int32
 	AccessToken     string `gorm:"-"`
 	Location        string `gorm:"-"`
 }
@@ -105,6 +106,7 @@ func (u *User) ToProto() *pbu.User {
 		OpenID:        u.OpenID,
 		UnionID:       u.UnionID,
 		ClubID:        u.ClubID,
+		RegistChannel: u.RegisterChannel,
 	}
 }
 func (u *UserInfo) ToProto() *pbu.UserInfo {
@@ -156,6 +158,7 @@ func UserFromProto(u *pbu.User) *User {
 		Sex:           u.Sex,
 		OpenID:        u.OpenID,
 		UnionID:       u.UnionID,
+		ProxyID:       u.ProxyID,
 	}
 }
 

@@ -27,6 +27,14 @@ func AgentRoomHSubKey(uid int32, gametype int32, rid int32, pwd string) string {
 	return fmt.Sprintf("uid:%d-gametype:%d-rid:%d-pwd:%s-", uid, gametype, rid, pwd)
 }
 
+func VipRoomHKey() string {
+	return fmt.Sprintf(cache.KeyPrefix("VIPROOM"))
+}
+
+func VipRoomHSubKey(clubid int32, sid int32, rid int32) string {
+	return fmt.Sprintf("clubid:%d-sid:%d-rid:%d-", clubid, sid, rid)
+}
+
 func RoomHKeyDelete(gametype int32, rid int32) string {
 	return fmt.Sprintf(cache.KeyPrefix("ROOMDELETE:%d:%d"), gametype, rid)
 }
@@ -59,7 +67,7 @@ func RoomSearchHKey(gtype int32, rtype int32, level int32, password string) stri
 	return fmt.Sprintf("gtype:%d-rtype:%d-level:%d-password:%s-", gtype, rtype, level, password)
 }
 
-func RoomSearchHValue(password string,status int32, full int32) string {
+func RoomSearchHValue(password string, status int32, full int32) string {
 	return fmt.Sprintf("%s-%d-%d", password, status, full)
 }
 
@@ -70,7 +78,7 @@ func SetRoom(mdr *mdroom.Room) error {
 	searchHKey := RoomSearchHKey(mdr.GameType, mdr.RoomType, mdr.Level, mdr.Password)
 	f := func(tx *redis.Tx) error {
 		tx.Pipelined(func(p *redis.Pipeline) error {
-			searchHValue := RoomSearchHValue(mdr.Password,mdr.Status,enumr.RoomNoFull)
+			searchHValue := RoomSearchHValue(mdr.Password, mdr.Status, enumr.RoomNoFull)
 			//mdroom.SearchKey = searchHKey
 			b, _ := json.Marshal(mdr)
 			tx.HSet(roomKey, mdr.Password, string(b))
@@ -79,6 +87,11 @@ func SetRoom(mdr *mdroom.Room) error {
 				aKey := AgentRoomHKey()
 				subKey := AgentRoomHSubKey(mdr.PayerID, mdr.GameType, mdr.RoomID, mdr.Password)
 				tx.HSet(aKey, subKey, string(b))
+			}
+			if mdr.RoomType == enumr.RoomTypeClub && mdr.VipRoomSettingID > 0 {
+				vKey := VipRoomHKey()
+				subVKey := VipRoomHSubKey(mdr.ClubID, mdr.VipRoomSettingID, mdr.RoomID)
+				tx.HSet(vKey, subVKey, mdr.Password)
 			}
 			return nil
 		})
@@ -100,10 +113,10 @@ func UpdateRoom(mdr *mdroom.Room) error {
 	f := func(tx *redis.Tx) error {
 		tx.Pipelined(func(p *redis.Pipeline) error {
 			isFull := enumr.RoomNoFull
-			if mdr.RoomType == enumr.RoomTypeGold && mdr.MaxNumber == int32(len(mdr.Users)){
+			if mdr.RoomType == enumr.RoomTypeGold && mdr.MaxNumber == int32(len(mdr.Users)) {
 				isFull = enumr.RoomFull
 			}
-			searchHValue := RoomSearchHValue(mdr.Password,mdr.Status,isFull)
+			searchHValue := RoomSearchHValue(mdr.Password, mdr.Status, isFull)
 			//lastKey := mdr.SearchKey
 			//tx.HDel(searchKey, lastKey)
 			//mdr.SearchKey = searchHKey
@@ -137,6 +150,11 @@ func DeleteRoom(mdr *mdroom.Room) error {
 		tx.Pipelined(func(p *redis.Pipeline) error {
 			tx.HDel(roomKey, mdr.Password)
 			tx.HDel(searcKey, searchHKey)
+			if mdr.VipRoomSettingID > 0 {
+				vKey := VipRoomHKey()
+				subVKey := VipRoomHSubKey(mdr.ClubID, mdr.VipRoomSettingID, mdr.RoomID)
+				tx.HDel(vKey, subVKey)
+			}
 			//tx.ZRem(rankKey, mdroom.Password)
 			return nil
 		})
@@ -576,8 +594,8 @@ func PageRoomList(page int32, rooms []*mdroom.Room) ([]*mdroom.Room, int32, int3
 
 func GetAllRoomByStatus(status int32) []*mdroom.Room {
 	var rooms []*mdroom.Room
-	match :=  "*"//fmt.Sprintf("*status:%d-*", status)
-	rooms, err := GetAllRoomKey(match,status,0)
+	match := "*" //fmt.Sprintf("*status:%d-*", status)
+	rooms, err := GetAllRoomKey(match, status, 0)
 	if err != nil {
 		log.Err("get all room by status:%v", err)
 	}
@@ -587,7 +605,7 @@ func GetAllRoomByStatus(status int32) []*mdroom.Room {
 func GetAllRoomByGameTypeAndStatus(gtype int32, status int32) []*mdroom.Room {
 	var rooms []*mdroom.Room
 	match := fmt.Sprintf("*gtype:%d-*", gtype)
-	rooms, err := GetAllRoomKey(match,status,0)
+	rooms, err := GetAllRoomKey(match, status, 0)
 	if err != nil {
 		log.Err("get all room by status:%v", err)
 	}
@@ -600,7 +618,7 @@ func GetAllRooms(f func(*mdroom.Room) bool) []*mdroom.Room {
 		out   []*mdroom.Room
 	)
 	match := "*"
-	rooms, err := GetAllRoomKey(match,0,0)
+	rooms, err := GetAllRoomKey(match, 0, 0)
 	if err != nil {
 		log.Err("get all room by status:%v", err)
 	}
@@ -616,8 +634,9 @@ func GetAllRooms(f func(*mdroom.Room) bool) []*mdroom.Room {
 	}
 	return out
 }
+
 //password string,status int32, full int32
-func GetAllRoomKey(match string,status int32,full int32) ([]*mdroom.Room, error) {
+func GetAllRoomKey(match string, status int32, full int32) ([]*mdroom.Room, error) {
 	var curson uint64
 	var rs []*mdroom.Room
 	var count int64
@@ -636,10 +655,10 @@ func GetAllRoomKey(match string,status int32,full int32) ([]*mdroom.Room, error)
 				password := values[0]
 				searchStatus := tools.StringParseInt(values[1])
 				searchFull := tools.StringParseInt(values[2])
-				if status!= 0 && searchStatus != status{
+				if status != 0 && searchStatus != status {
 					continue
 				}
-				if full!= 0 && searchFull != status{
+				if full != 0 && searchFull != status {
 					continue
 				}
 				//password := strings.Split(searchRoom, "-")[3]
@@ -651,6 +670,72 @@ func GetAllRoomKey(match string,status int32,full int32) ([]*mdroom.Room, error)
 				}
 
 				rs = append(rs, room)
+			}
+		}
+		curson = cur
+		if curson == 0 {
+			break
+		}
+	}
+	return rs, nil
+}
+
+func GetAllVipRoom(cid int32,sid int32) ([]*mdroom.Room, error) {
+	var curson uint64
+	var rs []*mdroom.Room
+	var count int64
+	count = 999
+	key := VipRoomHKey()
+	match := fmt.Sprintf("clubid:%d-sid:%d-*", cid,sid)
+	for {
+		scan := cache.KV().HScan(key, curson, match, count)
+		keysValues, cur, err := scan.Result()
+		if err != nil {
+			return nil, errors.Internal("list room list failed", err)
+		}
+		for i, password := range keysValues {
+			if i%2 == 1 {
+				room, err := GetRoom(password)
+				if err != nil {
+					log.Err("get all room key err match:%s,err:%v", match, err)
+					continue
+				}
+				if room.Status < enumr.RoomStatusDelay{
+					rs = append(rs, room)
+				}
+			}
+		}
+		curson = cur
+		if curson == 0 {
+			break
+		}
+	}
+	return rs, nil
+}
+
+func GetAllClubRoom(cid int32) ([]*mdroom.Room, error) {
+	var curson uint64
+	var rs []*mdroom.Room
+	var count int64
+	count = 999
+	key := VipRoomHKey()
+	match := fmt.Sprintf("clubid:%d-*", cid)
+	for {
+		scan := cache.KV().HScan(key, curson, match, count)
+		keysValues, cur, err := scan.Result()
+		if err != nil {
+			return nil, errors.Internal("list room list failed", err)
+		}
+		for i, password := range keysValues {
+			if i%2 == 1 {
+				room, err := GetRoom(password)
+				if err != nil {
+					log.Err("get all room key err match:%s,err:%v", match, err)
+					continue
+				}
+				if room.Status < enumr.RoomStatusDelay{
+					rs = append(rs, room)
+				}
 			}
 		}
 		curson = cur

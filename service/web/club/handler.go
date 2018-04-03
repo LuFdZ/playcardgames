@@ -12,8 +12,8 @@ import (
 )
 
 var ClubEvent = []string{
-	srvclub.TopicClubMemberJoin,
-	srvclub.TopicClubMemberLeave,
+	//srvclub.TopicClubMemberJoin,
+	//srvclub.TopicClubMemberLeave,
 	srvclub.TopicClubInfo,
 	srvclub.TopicClubOnlineStatus,
 	srvroom.TopicClubRoomCreate,
@@ -21,10 +21,20 @@ var ClubEvent = []string{
 	srvroom.TopicClubRoomUnJoin,
 	srvroom.TopicClubRoomFinish,
 	srvroom.TopicRoomGameStart,
+	srvclub.TopicUpdateVipRoomSetting,
+	srvclub.TopicUpdateClub,
+	srvclub.TopicAddClubCoin,
+}
+
+var ClubActiveEvent = []string{
+	srvclub.TopicClubMemberJoin,
+	srvclub.TopicClubMemberLeave,
+	srvclub.TopicClubDelete,
 }
 
 func ClubOnlineNotice(c *clients.Client) {
-	ClubUserOlineChange(c.UserID(), c.User().ClubID, enumweb.SocketAline)
+	c.Subscribe(ClubActiveEvent)
+	ClubUserOlineChange(c.UserID(), enumweb.SocketAline)
 }
 
 func SubscribeClubMessage(c *clients.Client, req *request.Request) error {
@@ -36,7 +46,7 @@ func SubscribeClubMessage(c *clients.Client, req *request.Request) error {
 		mo.ClubID = user.ClubID
 	}
 
-	c.SendMessage("", "ClubSubscribeSuccess",mo, enumweb.MsgSubscribeSuccessCode)
+	c.SendMessage("", "ClubSubscribeSuccess", mo, enumweb.MsgSubscribeSuccessCode)
 	//ClubUserOlineChange(c.UserID(), c.User().ClubID, enumweb.SocketAline)
 	return nil
 }
@@ -47,17 +57,13 @@ func UnsubscribeClubMessage(c *clients.Client, req *request.Request) error {
 }
 
 func CloseCallbackHandler(c *clients.Client) {
-	ClubUserOlineChange(c.UserID(), c.User().ClubID, enumweb.SocketClose)
+	ClubUserOlineChange(c.UserID(), enumweb.SocketClose)
 }
 
-func ClubUserOlineChange(uid int32, clubid int32, status int32) {
-	if clubid == 0 {
-		return
-	}
+func ClubUserOlineChange(uid int32, status int32) {
 	mo := &pbclub.ClubMemberOnline{
 		UserID: uid,
 		Status: status,
-		ClubID: clubid,
 	}
 	ClubOnlineStatus(srvclub.TopicClubOnlineStatus, mo)
 }

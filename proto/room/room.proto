@@ -31,6 +31,8 @@ message Room {
     int32 StartMaxNumber = 24;
     int32 SubRoomType = 25;
     string SettingParam = 26;
+    int32 VipRoomSettingID = 27; //包厢模式
+    int32 UserRole = 28;// 回复标签 1普通玩家 2观察者
 }
 
 message RoomUser {
@@ -59,6 +61,7 @@ message ClubRoomUser {
     int32 RoomID = 3;
     string Icon = 4;
     string Nickname = 5;
+    int32 VipRoomSettingID = 6;
 }
 
 message Position {
@@ -78,6 +81,7 @@ message GameUserResult {
     string Nickname = 7;
     string Icon = 8;
     int64 TotalClubCoinScore = 9;
+    int64 ClubCoin = 10;
 }
 
 message RoomResults {
@@ -110,6 +114,14 @@ message Feedback {
     string LoginIP = 9;
     int64 CreatedAt = 10;
     int64 UpdatedAt = 11;
+}
+
+message ClubRoomLog {
+    string Date = 1;
+    int32 VipRoomCount = 2;
+    int32 ClubRoomCount = 3;
+    int32 TotalRoomCount = 4;
+    int32 ClubCoinRoomCount = 5;
 }
 
 //倒计时结构体
@@ -162,6 +174,7 @@ message PageRoomResultListRequest {
     page.PageOption Page = 1;
     int32 GameType = 2;
 }
+
 
 message PageRoomRequest {
     page.PageOption Page = 1;
@@ -242,6 +255,15 @@ message PageSpecialGameListReply {
     int32 Result = 1;
     repeated PlayerSpecialGameRecord List = 2;
     int64 Count = 3;
+}
+
+message GetVipRoomListReply {
+    int32 Result = 1;
+    repeated Room List = 2;
+}
+
+message ClubRoomLogReply {
+    repeated ClubRoomLog List = 2;
 }
 
 //广播
@@ -359,6 +381,10 @@ service RoomSrv {
     rpc OuttBankerList (OutBankerListRequest) returns (RoomReply) {
     }
     rpc GetRoomResultByID (Room) returns (RoomResults) {
+    }
+    rpc GetVipRoomList (Room) returns (GetVipRoomListReply) {
+    }
+    rpc GetRoomRoundNow (Room) returns (ClubRoomLogReply) {
     }
 }
 

@@ -116,12 +116,19 @@ func RoomLockKey(rid int32) string {
 //}
 
 // gtype:%d-status:%d-rType:%d-full:%d-level:%d-password:%s-
+//func RoomSearchHKey(gtype int32, rtype int32, level int32, password string) string {
+//	return fmt.Sprintf("gtype:%d-rtype:%d-level:%d-password:%s-", gtype, rtype, level, password)
+//}
+//
+//func RoomSearchHValue(password string,status int32, full int32) string {
+//	return fmt.Sprintf("%s-%d-%d", password, status, full)
+//}
 func SelectGRoom(gtype int32, level int32) (*mdroom.Room, error) {
 	var curson uint64
 	var count int64
 	count = 999
 	key := RoomSearcKey()
-	match := fmt.Sprintf("gtype:%d-*rType:%d-full:%d-level:%d-*",gtype,enumroom.RoomTypeGold,1,level)
+	match := fmt.Sprintf("gtype:%d-*rType:%d-level:%d-*",gtype,enumroom.RoomTypeGold,level)
 	for {
 		scan := cache.KV().HScan(key, curson, match, count)
 		keysValues, cur, err := scan.Result()
@@ -131,7 +138,7 @@ func SelectGRoom(gtype int32, level int32) (*mdroom.Room, error) {
 		for i, roomStatus := range keysValues {
 			if i%2 == 1 {
 				str := strings.Split(roomStatus, "-")
-				if str[2] == "1" {
+				if str[1] == string(enumroom.RoomStatusInit) && str[2] == "1" {
 					mdr, err := cacheroom.GetRoom(str[0])
 					if err != nil {
 						log.Err("select groom err str:%s,err:%v", roomStatus, err)

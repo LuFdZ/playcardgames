@@ -8,6 +8,7 @@ import (
 	"playcards/utils/errors"
 	"playcards/utils/log"
 
+
 	redis "gopkg.in/redis.v5"
 	"playcards/utils/tools"
 	"strings"
@@ -82,7 +83,6 @@ func UpdateGame(n *mdniu.Niuniu) error {
 	if err := cache.KV().Watch(f, lockKey); err != nil {
 		return errors.Internal("update niuniu game failed", err)
 	}
-
 	return nil
 }
 

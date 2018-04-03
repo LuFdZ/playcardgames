@@ -85,6 +85,7 @@ func (grs *GoldRoomSrv) EnterRoom(ctx context.Context, req *pbgroom.EnterRoomReq
 	}
 	msgBack := mdroom.ToProto()
 	msgBack.UserID = u.UserID
+	//msgBack.UserRole = enumroom.
 	msgBack.CreateOrEnter = enumroom.EnterRoom
 	topic.Publish(grs.broker, msgBack, TopicRoomCreate)
 	msgAll := mdru.ToProto()

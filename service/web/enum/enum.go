@@ -27,7 +27,7 @@ var (
 	SysCode             = 19 //系统
 	MailServiceCode     = 21 //邮件
 	GoldRoomServiceCode = 22 //金币场
-	TowCardServiceCode = 23 //两张
+	TowCardServiceCode  = 23 //两张
 )
 
 //基本消息标签和编号
@@ -157,6 +157,24 @@ const (
 
 	MsgClubRoomGameStart     = "ClubRoomGameStart"
 	MsgClubRoomGameStartCode = 140109
+
+	MsgClubMemberJoinBack     = "ClubMemberJoinBack"
+	MsgClubMemberJoinBackCode = 140110
+
+	MsgClubMemberLeaveBack     = "ClubMemberLeaveBack"
+	MsgClubMemberLeaveBackCode = 140111
+
+	MsgUpdateVipRoomSetting     = "UpdateVipRoomSettingBro"
+	MsgUpdateVipRoomSettingCode = 140112
+
+	MsgUpdateClub     = "UpdateClubBro"
+	MsgUpdateClubCode = 140113
+
+	MsgClubDelete     = "ClubDeleteBro"
+	MsgClubDeleteCode = 140114
+
+	MsgAddClubCoin     = "AddClubCoin"
+	MsgAddClubCoinCode = 140115
 )
 
 //俱乐部标签和编号

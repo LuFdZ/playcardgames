@@ -7,6 +7,7 @@ import (
 	errclub "playcards/model/club/errors"
 	mdclub "playcards/model/club/mod"
 	"playcards/model/common"
+	"playcards/model/bill"
 	cachecon "playcards/model/common/cache"
 	dbcon "playcards/model/common/db"
 	enumcon "playcards/model/common/enum"
@@ -16,18 +17,25 @@ import (
 	cacheroom "playcards/model/room/cache"
 	dbroom "playcards/model/room/db"
 	enumroom "playcards/model/room/enum"
+	enumbill "playcards/model/bill/enum"
 	mdroom "playcards/model/room/mod"
+	mdbill "playcards/model/bill/mod"
+	"playcards/model/user"
 	cacheuser "playcards/model/user/cache"
 	dbuser "playcards/model/user/db"
 	mduser "playcards/model/user/mod"
 	pbclub "playcards/proto/club"
 	pbroom "playcards/proto/room"
+	"playcards/utils/errors"
 	"encoding/base64"
 	"playcards/utils/db"
+	"encoding/json"
+	"playcards/utils/log"
 	utilpb "playcards/utils/proto"
 	utilproto "playcards/utils/proto"
 
 	"github.com/jinzhu/gorm"
+	"fmt"
 )
 
 func CreateClub(name string, creatorid int32, creatorproxy int32) error {
@@ -38,18 +46,31 @@ func CreateClub(name string, creatorid int32, creatorproxy int32) error {
 	if creatorid == 0 || creatorid < 100000 {
 		return errclub.ErrCreatorid
 	}
-	if creatorproxy == 0 {
-		return errclub.ErrCreatorid
+	//if creatorproxy == 0 {
+	//	return errclub.ErrCreatorid
+	//}
+	//mdcs, err := GetClubsByMemberID(mdu.UserID)
+	//if err != nil {
+	//	return err
+	//}
+	count, err := dbclub.GetClubByCreatorID(db.DB(), creatorid)
+	if err != nil {
+		return err
 	}
+	if (creatorid > 0 && count >= enumclub.ProxyCreateClubLimit) || (creatorproxy == 0 && count >= enumclub.PlayerCreateClubLimit) {
+
+		return errclub.ErrCreateClubLimit
+	}
+
 	mclub := &mdclub.Club{
 		ClubName:     name,
-		Status:       enumclub.ClubStatusExamine,
+		Status:       enumclub.ClubStatusNormal,
 		CreatorID:    creatorid,
 		CreatorProxy: creatorproxy,
-		Setting:      &mdclub.SettingParam{1, 0, 0},
+		Setting:      &mdclub.SettingParam{1, 0, 0, 1},
 		ClubCoin:     enumclub.ClubCoinInit,
 	}
-	err := db.Transaction(func(tx *gorm.DB) error {
+	err = db.Transaction(func(tx *gorm.DB) error {
 		err := dbclub.CreateClub(tx, mclub)
 		if err != nil {
 			return err
@@ -63,6 +84,7 @@ func CreateClub(name string, creatorid int32, creatorproxy int32) error {
 	if err != nil {
 		return err
 	}
+	CreateClubMember(mclub.ClubID, creatorid)
 	return nil
 }
 
@@ -74,7 +96,39 @@ func GetClubMember(clubid int32, uid int32) (*mdclub.ClubMember, error) {
 	return cacheclub.GetClubMember(clubid, uid)
 }
 
-func SetClubBalance(amonut int64, amonuttype int32, clubid int32, typeid int32, foreign int64, opid int64) error {
+func SetClubBalance(amonut int64, amonuttype int32, clubid int32, typeid int32, foreign int64, opid int64, adminOp bool) error {
+	//mClub, err := cacheclub.GetClub(clubid)
+	//if err != nil {
+	//	return err
+	//}
+
+	var mClub *mdclub.Club
+	err := db.Transaction(func(tx *gorm.DB) error {
+		if !adminOp {
+			err := bill.GainGameBalance(int32(opid), clubid, enumbill.JournalTypeClubRecharge,
+				&mdbill.Balance{Amount: int64(-amonut), CoinType: enumbill.TypeDiamond})
+			if err != nil {
+				return err
+			}
+		}
+		c, err := dbclub.ClubBalance(tx, clubid, amonuttype, amonut, typeid, foreign, opid)
+		if err != nil {
+			return err
+		}
+		mClub = c
+		return nil
+	})
+	if err != nil {
+		return err
+	}
+	err = cacheclub.SetClub(mClub)
+	if err != nil {
+		return nil
+	}
+	return nil
+}
+
+func SetClubGameBalance(amonut int64, amonuttype int32, clubid int32, typeid int32, foreign int64, opid int64) error {
 	//mClub, err := cacheclub.GetClub(clubid)
 	//if err != nil {
 	//	return err
@@ -139,6 +193,57 @@ func UpdateClub(mclub *mdclub.Club) error {
 	return nil
 }
 
+func DeleteClub(clubID int32) ([]int32, []int32, error) {
+	mdClub, err := cacheclub.GetClub(clubID)
+	if err != nil {
+		return nil, nil, err
+	}
+	mdClub.Status = enumclub.ClubStatusDel
+	mcms := cacheclub.GetAllClubMember(clubID, false)
+	mdrs, err := cacheroom.GetAllClubRoom(clubID)
+	if err != nil {
+		return nil, nil, err
+	}
+	if len(mdrs) > 0 {
+		return nil, nil, errclub.ErrClubHasGame
+	}
+	var ids []int32
+	var onLineIds []int32
+	for _, mdMember := range mcms {
+		if mdMember.ClubCoin != 0 {
+			return nil, nil, errclub.ErrMemberClubCoinNonZero
+		}
+		ids = append(ids, mdMember.UserID)
+	}
+	mcmsOnLine := cacheclub.GetAllClubMember(clubID, true)
+	for _, mcmsOnLine := range mcmsOnLine {
+		onLineIds = append(onLineIds, mcmsOnLine.UserID)
+	}
+	for _, mdMember := range mcms {
+		err := RemoveClubMember(clubID, mdMember.UserID, enumclub.ClubMemberStatusDissolution)
+		if err != nil {
+			log.Err("delete club member clubid:%d,userid:%d,err:%v", clubID, mdMember.UserID, err)
+		}
+	}
+
+	err = db.Transaction(func(tx *gorm.DB) error {
+		_, err := dbclub.UpdateClub(tx, mdClub)
+		if err != nil {
+			return err
+		}
+		err = cacheclub.DeleteClub(mdClub.ClubID)
+		if err != nil {
+			return nil
+		}
+		return nil
+	})
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return ids, onLineIds, nil
+}
+
 func UpdateClubMemberStatus(clubid int32, uid int32, status int32) error {
 	mcm, err := cacheclub.GetClubMember(clubid, uid)
 	if err != nil {
@@ -186,6 +291,12 @@ func RemoveClubMember(clubid int32, uid int32, removeType int32) error {
 	if mcm.ClubCoin != 0 {
 		return errclub.ErrClubCoinNegative
 	}
+
+	userInRoom := cacheroom.ExistRoomUser(uid)
+	if userInRoom {
+		return errclub.ErrMemberInRoom
+	}
+
 	mcm.Status = removeType
 	muser.ClubID = 0
 	err = db.Transaction(func(tx *gorm.DB) error {
@@ -265,9 +376,9 @@ func CreateClubMember(clubid int32, uid int32) (*mdclub.Club, *mduser.User, erro
 }
 
 func CheckUserJoinClubRoom(clubid int32, muser *mduser.User) (*mdclub.Club, error) {
-	if muser.ClubID > 0 {
-		return nil, errclub.ErrAlreadyInClub
-	}
+	//if muser.ClubID > 0 {
+	//	return nil, errclub.ErrAlreadyInClub
+	//}
 
 	mClub, err := cacheclub.GetClub(clubid)
 	if err != nil {
@@ -350,25 +461,135 @@ func SetBlackList(clubid int32, uid int32, opid int32) error {
 	return nil
 }
 
+func CancelBlackList(clubid int32, uid int32, opid int32) error {
+	mdc := &mdcon.BlackList{
+		OriginID: clubid,
+		TargetID: uid,
+		Type:     enumcon.TypeClub,
+	}
+	err := common.CancelBlackList(mdc, opid)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func PageBlackListMember(page *mdpage.PageOption, clubid int32) (
+	[]*pbclub.ClubMember, int64, error) {
+	page.Page -= 1
+	mdbl := &mdcon.BlackList{
+		OriginID: clubid,
+	}
+	mdms, rows, err := common.PageBlackList(page, mdbl)
+	if err != nil {
+		return nil, 0, err
+	}
+	var out []*pbclub.ClubMember
+	for _, mdm := range mdms {
+		m := &pbclub.ClubMember{
+			ClubID: mdm.OriginID,
+			UserID: mdm.TargetID,
+		}
+		_, u := cacheuser.GetUserByID(mdm.TargetID)
+		if u != nil {
+			m.Nickname = u.Nickname
+		}
+		out = append(out, m)
+	}
+	return out, rows, err
+}
+
+func PageClubExamineMember(page *mdpage.PageOption, clubid int32) (
+	[]*pbclub.ClubMember, int64, error) {
+	page.Page -= 1
+	mdexm := &mdcon.Examine{
+		AuditorID: clubid,
+	}
+	mdexms, rows, err := common.PageExamine(page, mdexm)
+	if err != nil {
+		return nil, 0, err
+	}
+	var out []*pbclub.ClubMember
+	for _, mdexm := range mdexms {
+		m := &pbclub.ClubMember{
+			ClubID: mdexm.AuditorID,
+			UserID: mdexm.ApplicantID,
+		}
+		_, u := cacheuser.GetUserByID(mdexm.ApplicantID)
+		if u != nil {
+			m.Nickname = u.Nickname
+		}
+		out = append(out, m)
+	}
+	return out, rows, err
+}
+
+func CreateClubExamine(clubid int32, uid int32, opid int32) error {
+	mdexm := &mdcon.Examine{
+		Type:        enumcon.TypeClub,
+		AuditorID:   clubid,
+		ApplicantID: uid,
+		Status:      enumcon.ExamineStatusNew,
+	}
+	err := common.CreateExamine(mdexm, opid)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 func UpdateClubExamine(clubid int32, uid int32, status int32, opid int32) (*mdclub.Club, error) {
+	if status != enumcon.ExamineStatusPass && status != enumcon.ExamineStatusRefuse {
+		return nil, errcon.ErrParam
+	}
 	err := common.UpdateExamine(enumcon.TypeClub, clubid, uid, status, opid)
 	if err != nil {
 		return nil, err
 	}
-	maClub, _, err := CreateClubMember(clubid, uid)
-	if err != nil {
-		return nil, err
+	var mdc *mdclub.Club
+	if status == enumcon.ExamineStatusPass {
+		maClub, _, err := CreateClubMember(clubid, uid)
+		if err != nil {
+			return nil, err
+		}
+		mdc = maClub
 	}
-	return maClub, nil
+
+	return mdc, nil
 }
 
-func GetClub(muser *mduser.User) (*pbclub.ClubInfo, error) {
-	if muser.ClubID == 0 {
-		return nil, errclub.ErrNotJoinAnyClub
-	}
-	mClub, err := cacheclub.GetClub(muser.ClubID)
+func GetClub(clubid int32, uid int32, hasClubList bool) (*pbclub.ClubInfo, error) { //muser *mduser.User,, clubID int32
+	//if muser.ClubID == 0 {
+	//	return nil, errclub.ErrNotJoinAnyClub
+	//}
+
+	pbclubs, err := GetClubsByMemberID(uid)
 	if err != nil {
 		return nil, err
+	}
+	if len(pbclubs) == 0 {
+		return nil, errclub.ErrNotJoinAnyClub
+	}
+	var cid int32 = 0
+	for _, mdc := range pbclubs {
+		if mdc.ClubID == clubid {
+			cid = clubid
+		}
+	}
+	if cid == 0 {
+		cid = pbclubs[0].ClubID
+	}
+
+	//fmt.Printf("GetClub:%d|%d|%+v|%+v\n", clubid, cid, pbclubs[0], pbclubs)
+	mClub, err := cacheclub.GetClub(cid)
+	if err != nil {
+		cid = pbclubs[0].ClubID
+		//fmt.Printf("GetClub:%d|%d|%+v|%+v\n", clubid, cid, pbclubs[0], pbclubs)
+		mClub, err = cacheclub.GetClub(cid)
+		if err != nil {
+			return nil, err
+		}
+		//return nil, err
 	}
 
 	if mClub == nil {
@@ -379,33 +600,51 @@ func GetClub(muser *mduser.User) (*pbclub.ClubInfo, error) {
 		return nil, errclub.ErrStatusNoINNormal
 	}
 	ci := &pbclub.ClubInfo{
-		UserID: muser.UserID,
+		UserID: uid,
 		Club:   mClub.ToProto(),
 	}
-	mcms := cacheclub.GetAllClubMember(muser.ClubID, false)
-	utilpb.ProtoSlice(mcms, &ci.ClubMemberList)
-	for _, mcm := range mcms {
-		if mcm.UserID == muser.UserID {
-			ci.Club.ClubCoin = mcm.ClubCoin
-		}
-	}
+
 	f := func(r *mdroom.Room) bool {
 		if r.Status < enumroom.RoomStatusDelay &&
-			r.ClubID == muser.ClubID {
+			r.ClubID == cid && r.VipRoomSettingID == 0 {
 			return true
 		}
 		return false
 	}
 	rooms := cacheroom.GetAllRooms(f)
 	utilpb.ProtoSlice(rooms, &ci.RoomList)
+
+	mcms := cacheclub.GetAllClubMember(cid, false)
+	utilpb.ProtoSlice(mcms, &ci.ClubMemberList)
+	for _, mcm := range mcms {
+		if mcm.UserID == uid {
+			ci.Club.ClubCoin = mcm.ClubCoin
+		}
+	}
+	if hasClubList {
+		for _, pbc := range pbclubs {
+			mcms := cacheclub.GetAllClubMember(pbc.ClubID, false)
+			pbc.MemberCount = int32(len(mcms))
+			var onlineCount int32
+			for _, mcm := range mcms {
+				if mcm.Online == 1 {
+					//fmt.Printf("AAAA:%+v\n",mcm)
+					pbc.MemberOnline += 1
+					onlineCount++
+				}
+			}
+		}
+	}
+
+	ci.ClubList = pbclubs
 	return ci, nil
 }
 
-func GetClubInfo(muser *mduser.User) (*mdclub.Club, error) {
-	if muser.ClubID == 0 {
-		return nil, errclub.ErrNotJoinAnyClub
-	}
-	mClub, err := cacheclub.GetClub(muser.ClubID)
+func GetClubInfo(clubID int32) (*mdclub.Club, error) { //muser *mduser.User
+	//if muser.ClubID == 0 {
+	//	return nil, errclub.ErrNotJoinAnyClub
+	//}
+	mClub, err := cacheclub.GetClub(clubID)
 	if err != nil {
 		return nil, err
 	}
@@ -437,9 +676,28 @@ func PageClub(page *mdpage.PageOption, mclub *mdclub.Club) (
 }
 
 func PageClubMember(page *mdpage.PageOption, mem *mdclub.ClubMember) (
-	[]*mdclub.ClubMember, int64, error) {
+	[]*pbclub.ClubMember, int64, error) {
 	page.Page -= 1
-	return dbclub.PageClubMember(db.DB(), page, mem)
+	mdms, rows, err := dbclub.PageClubMember(db.DB(), page, mem)
+	if err != nil {
+		return nil, 0, err
+	}
+	var out []*pbclub.ClubMember
+	for _, mdm := range mdms {
+		m := &pbclub.ClubMember{
+			ClubID:   mdm.ClubID,
+			UserID:   mdm.UserID,
+			Status:   mdm.Status,
+			ClubCoin: mdm.ClubCoin,
+		}
+		_, u := cacheuser.GetUserByID(mdm.UserID)
+		if u != nil {
+			m.Nickname = u.Nickname
+			m.Icon = u.Icon
+		}
+		out = append(out, m)
+	}
+	return out, rows, err
 }
 
 func PageClubRoom(clubid int32, page int32, pagesize int32, flag int32) (
@@ -566,7 +824,7 @@ func AddClubMemberClubCoin(clubid int32, uid int32, amonut int64, ) (int64, erro
 	if err != nil {
 		return 0, err
 	}
-	return mdClub.ClubCoin, nil
+	return mdCm.ClubCoin, nil
 }
 
 func ClubMemberOfferUpClubCoin(clubid int32, uid int32, amonut int64) (int64, error) {
@@ -604,13 +862,13 @@ func ClubMemberOfferUpClubCoin(clubid int32, uid int32, amonut int64) (int64, er
 	return mdCm.ClubCoin, nil
 }
 
-func GainClubMemberGameBalance(amonut int64, uid int32, fid int64, opid int64, gameCost bool) (*mdclub.ClubMember, error) {
+func GainClubMemberGameBalance(amonut int64, clubid int32, uid int32, fid int64, opid int64, gameCost bool) (*mdclub.ClubMember, error) {
 	var mdCm *mdclub.ClubMember
 	if amonut == 0 {
 		return nil, nil
 	}
 	err := db.Transaction(func(tx *gorm.DB) error {
-		m, err := dbclub.GainClubMemberGameBalance(tx, uid, amonut, fid, opid, gameCost)
+		m, err := dbclub.GainClubMemberGameBalance(tx, clubid, uid, amonut, fid, opid, gameCost)
 		if err != nil {
 			return err
 		}
@@ -650,15 +908,427 @@ func GetClubMemberCoinRank(page *mdpage.PageOption, clubid int32) ([]*pbclub.Clu
 }
 
 func RefreshAllFromDB() error {
-	mClubs, err := dbclub.GetAllAlineClubList(db.DB())
+	err := db.Transaction(func(tx *gorm.DB) error {
+		mClubs, err := dbclub.GetAllAlineClubList(db.DB())
+		if err != nil {
+			return err
+		}
+		cacheclub.SetAllClub(mClubs)
+		mCms, err := dbclub.GetAllAlineClubMemberList(db.DB())
+		if err != nil {
+			return err
+		}
+		cacheclub.SetAllClubMember(mCms)
+
+		mVrs, err := dbclub.GetAllAlineVipRoomSetting(db.DB())
+		if err != nil {
+			return err
+		}
+		cacheclub.SetAllVipRoomSetting(mVrs)
+		//for _,mc := range mClubs{
+		//	CreatorInClub :=cacheclub.CheckClubMemberExist(mc.ClubID,mc.CreatorID)
+		//	if !CreatorInClub {
+		//		CreateClubMember(mc.ClubID,mc.CreatorID)
+		//	}
+		//}
+
+		return nil
+
+	})
 	if err != nil {
-		return err
+		return nil
 	}
-	cacheclub.SetAllClub(mClubs)
-	mCms, err := dbclub.GetAllAlineClubMemberList(db.DB())
-	if err != nil {
-		return err
-	}
-	cacheclub.SetAllClubMember(mCms)
+
 	return nil
+}
+
+func UpdateClubProxyID(uid int32, proxyID int32) error {
+
+	mdu := &mduser.User{
+		UserID:  uid,
+		ProxyID: proxyID,
+	}
+	err := db.Transaction(func(tx *gorm.DB) error {
+		mdu, err := user.UpdateUser(mdu)
+		if err != nil {
+			return err
+		}
+		cacheuser.SimpleUpdateUser(mdu)
+		mdcs, err := dbclub.UpdateClubProxyID(tx, uid, proxyID)
+		if err != nil {
+			return err
+		}
+
+		for _, mdclub := range mdcs {
+			err = cacheclub.SetClub(mdclub)
+			if err != nil {
+				continue
+			}
+		}
+		return nil
+	})
+	if err != nil {
+		return nil
+	}
+	return nil
+}
+
+func GetClubsByMemberID(uid int32) ([]*pbclub.Club, error) {
+	var out []*pbclub.Club
+	mdcs, err := cacheclub.GetClubsByMemberID(uid)
+	if err != nil {
+		return nil, err
+	}
+	for _, mdc := range mdcs {
+		pbc := &pbclub.Club{
+			ClubName:  mdc.ClubName,
+			ClubID:    mdc.ClubID,
+			CreatorID: mdc.CreatorID,
+		}
+		_, mdu := cacheuser.GetUserByID(mdc.CreatorID)
+		if mdu != nil {
+			pbc.CreatorName = mdu.Nickname
+		}
+
+		out = append(out, pbc)
+	}
+	return out, nil
+
+}
+
+func CreateVipRoomSetting(mdu *mduser.User, mvrs *mdclub.VipRoomSetting) error {
+	mdClub, err := cacheclub.GetClub(mvrs.ClubID)
+	if err != nil {
+		return err
+	}
+
+	if mdClub.Status != enumclub.ClubStatusNormal {
+		return errclub.ErrStatusNoINNormal
+	}
+	//if len(mvrs.Name) == 0 {
+	//	return errclub.ErrNameLen
+	//}
+	mvrss, err := cacheclub.GetAllVipRoomSetting(mvrs.ClubID)
+	if err != nil {
+		return err
+	}
+	count := len(mvrss)
+
+	if (mdu.ProxyID > 0 && count >= enumclub.ProxyCreateVipRoomSettingLimit) || (mdu.ProxyID == 0 &&
+		count >= enumclub.PlayerCreateVipRoomSettingLimit) {
+		return errclub.ErrCreateVipRoomLimit
+	}
+	err = chekcGameParam(mvrs.MaxNumber, mvrs.RoundNumber, mvrs.GameType, mvrs.GameParam)
+	if err != nil {
+		return err
+	}
+	if mvrs.RoomType == enumroom.RoomTypeClub && (mvrs.SubRoomType != 0 && mvrs.SubRoomType != enumroom.SubTypeClubMatch) {
+		return errclub.ErrGameParam
+	}
+	if mvrs.SubRoomType == enumroom.SubTypeClubMatch {
+		var setttingParam *mdroom.SettingParam
+		if err := json.Unmarshal([]byte(mvrs.SettingParam), &setttingParam); err != nil {
+			log.Err("club vip room check setting param unmarshal failed, %v", err)
+			return errclub.ErrGameParam
+		}
+		if setttingParam.ClubCoinRate != 1 && setttingParam.ClubCoinRate != 2 && setttingParam.ClubCoinRate != 5 && setttingParam.ClubCoinRate != 10 {
+			return errclub.ErrGameParam
+		}
+	}
+
+	mvrs.Status = enumclub.VipRoomSettingNon
+	err = db.Transaction(func(tx *gorm.DB) error {
+		err := dbclub.CreateVipRoomSetting(tx, mvrs)
+		if err != nil {
+			return err
+		}
+		err = cacheclub.SetVipRoomSetting(mvrs)
+		if err != nil {
+			return nil
+		}
+		return nil
+	})
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func chekcGameParam(maxNumber int32, maxRound int32, gtype int32, gameParam string) error {
+	if len(gameParam) == 0 {
+		return errclub.ErrGameParam
+	}
+	if maxNumber < 2 {
+		return errclub.ErrRoomMaxNumber
+	}
+	//TODO 更新正式服前放开限制
+	if maxRound != 10 && maxRound != 20 && maxRound != 30 {
+		return errclub.ErrRoomMaxRound
+	}
+	//fmt.Printf("ChekcGameParam:%d|%d|%d|%s\n",maxNumber,maxRound,gtype,gameParam)
+	switch gtype {
+	case enumroom.ThirteenGameType:
+		if maxNumber > 8 {
+			return errclub.ErrRoomMaxNumber
+		}
+		var roomParam *mdroom.ThirteenRoomParam
+		mderr := errors.Parse(errclub.ErrGameParam.Error())
+		if err := json.Unmarshal([]byte(gameParam), &roomParam); err != nil {
+			log.Err("room check thirteen clean unmarshal room param failed, %v", err)
+			mderr.Detail = fmt.Sprintf(mderr.Detail, "json解析错误！")
+			return mderr
+		}
+		//if roomParam.BankerType != 1 && roomParam.BankerType != 2 {
+		//	return errors.ErrGameParam
+		//}
+		if roomParam.BankerAddScore < 0 || roomParam.BankerAddScore > 6 || roomParam.BankerAddScore%2 != 0 {
+			mderr.Detail = fmt.Sprintf(mderr.Detail, "当庄加分格式错误！")
+			return mderr
+		}
+		if roomParam.Joke != 0 && roomParam.Joke != 1 {
+			mderr.Detail = fmt.Sprintf(mderr.Detail, "大小王格式错误！")
+			return mderr
+		}
+		if roomParam.Times < 1 || roomParam.Times > 3 {
+			mderr.Detail = fmt.Sprintf(mderr.Detail, "比赛模式格式错误！")
+			return mderr
+		}
+		break
+	case enumroom.NiuniuGameType:
+		if maxNumber != 4 && maxNumber != 6 && maxNumber != 8 && maxNumber != 10 {
+			return errclub.ErrRoomMaxNumber
+		}
+		var roomParam *mdroom.NiuniuRoomParam
+		mderr := errors.Parse(errclub.ErrGameParam.Error())
+		if err := json.Unmarshal([]byte(gameParam), &roomParam); err != nil {
+			log.Err("niuniu unmarshal room param failed, %v", err)
+			mderr.Detail = fmt.Sprintf(mderr.Detail, "json解析错误！")
+			return mderr
+		}
+		if roomParam.BankerType < 1 || roomParam.BankerType > 5 {
+			mderr.Detail = fmt.Sprintf(mderr.Detail, "玩法ID错误！")
+			return mderr
+		}
+		if roomParam.Times != 1 && roomParam.Times != 2 {
+			mderr.Detail = fmt.Sprintf(mderr.Detail, "倍数ID错误！")
+			return mderr
+		}
+		if roomParam.BetScore < 1 || roomParam.BetScore > 4 {
+			mderr.Detail = fmt.Sprintf(mderr.Detail, "底分ID错误！")
+			return mderr
+		}
+		if len(roomParam.SpecialCards) != 7 {
+			mderr.Detail = fmt.Sprintf(mderr.Detail, "特殊牌型长度错误！")
+			return mderr
+		}
+		if len(roomParam.AdvanceOptions) != 2 {
+			mderr.Detail = fmt.Sprintf(mderr.Detail, "高级选项长度错误！")
+			return mderr
+		}
+
+		for _, value := range roomParam.SpecialCards {
+			if value != "1" && value != "0" {
+				mderr.Detail = fmt.Sprintf(mderr.Detail, "特殊牌型格式错误！")
+				return mderr
+			}
+		}
+
+		if roomParam.AdvanceOptions[0] != "0" && roomParam.BankerType == 5 {
+			mderr.Detail = fmt.Sprintf(mderr.Detail, "不能同时选择推注和通比！")
+			return mderr
+		}
+
+		if roomParam.AdvanceOptions[0] != "0" && roomParam.AdvanceOptions[0] != "1" && roomParam.AdvanceOptions[0] != "2" && roomParam.AdvanceOptions[0] != "3" {
+			mderr.Detail = fmt.Sprintf(mderr.Detail, "推注最高倍数格式错误！")
+			return mderr
+		}
+
+		if roomParam.SpecialCards[0] == "1" && roomParam.AdvanceOptions[1] == "1" {
+			mderr.Detail = fmt.Sprintf(mderr.Detail, "不能同时选择五花牛和不发花牌！")
+			return mderr
+		}
+
+		if maxNumber == 10 && roomParam.AdvanceOptions[1] == "1" { //|| (roomParam.SpecialCards[0] == "1" && roomParam.AdvanceOptions[1] == "1")
+			mderr.Detail = fmt.Sprintf(mderr.Detail, "不能同时选择五花牛和10人模式！")
+			return mderr
+		}
+
+		break
+	case enumroom.DoudizhuGameType:
+		if maxNumber != 4 {
+			return errclub.ErrRoomMaxNumber
+		}
+		var roomParam *mdroom.DoudizhuRoomParam
+		mderr := errors.Parse(errclub.ErrGameParam.Error())
+		if err := json.Unmarshal([]byte(gameParam), &roomParam); err != nil {
+			log.Err("doudizhu unmarshal room param failed, %v", err)
+			mderr.Detail = fmt.Sprintf(mderr.Detail, "json解析错误！")
+			return mderr
+		}
+		if roomParam.BaseScore != 0 && roomParam.BaseScore != 5 && roomParam.BaseScore != 10 {
+			mderr.Detail = fmt.Sprintf(mderr.Detail, "基本分格式错误！")
+			return mderr
+		}
+		break
+	case enumroom.FourCardGameType:
+		if maxNumber < 2 && maxNumber > 8 {
+			return errclub.ErrRoomMaxNumber
+		}
+		mderr := errors.Parse(errclub.ErrGameParam.Error())
+		var roomParam *mdroom.FourCardRoomParam
+		if err := json.Unmarshal([]byte(gameParam), &roomParam); err != nil {
+			log.Err("fourcard unmarshal room param failed, %v", err)
+			mderr.Detail = fmt.Sprintf(mderr.Detail, "json解析错误！")
+			return errclub.ErrGameParam
+		}
+		if roomParam.ScoreType < 1 || roomParam.ScoreType > 2 {
+			mderr.Detail = fmt.Sprintf(mderr.Detail, "计分模式格式错误！")
+			return mderr
+		}
+		if roomParam.BetType < 1 || roomParam.BetType > 2 {
+			mderr.Detail = fmt.Sprintf(mderr.Detail, "下注类型格式错误！")
+			return mderr
+		}
+		break
+	case enumroom.TwoCardGameType:
+		if maxNumber < 2 && maxNumber > 10 {
+			return errclub.ErrRoomMaxNumber
+		}
+		var roomParam *mdroom.TwoCardRoomParam
+		mderr := errors.Parse(errclub.ErrGameParam.Error())
+		if err := json.Unmarshal([]byte(gameParam), &roomParam); err != nil {
+			log.Err("towcard unmarshal room param failed, %v", err)
+			mderr.Detail = fmt.Sprintf(mderr.Detail, "json解析错误！")
+			return mderr
+		}
+		if roomParam.ScoreType < 1 || roomParam.ScoreType > 2 {
+			mderr.Detail = fmt.Sprintf(mderr.Detail, "计分模式格式错误！")
+			return errclub.ErrGameParam
+		}
+		if roomParam.BetType < 1 || roomParam.BetType > 2 {
+			mderr.Detail = fmt.Sprintf(mderr.Detail, "下注类型格式错误！")
+			return mderr
+		}
+		break
+	default:
+		return errclub.ErrGameParam
+	}
+	return nil
+}
+
+func UpdateVipRoomSetting(mvrs *mdclub.VipRoomSetting) error {
+	mdClub, err := cacheclub.GetClub(mvrs.ClubID)
+	if err != nil {
+		return err
+	}
+
+	if mdClub.Status != enumclub.ClubStatusNormal {
+		return errclub.ErrStatusNoINNormal
+	}
+	if mvrs.Status == enumclub.VipRoomSettingNon {
+		err = chekcGameParam(mvrs.MaxNumber, mvrs.RoundNumber, mvrs.GameType, mvrs.GameParam)
+		if err != nil {
+			return err
+		}
+		if mvrs.RoomType == enumroom.RoomTypeClub && (mvrs.SubRoomType != 0 && mvrs.SubRoomType != enumroom.SubTypeClubMatch) {
+			return errclub.ErrGameParam
+		}
+		if mvrs.SubRoomType == enumroom.SubTypeClubMatch {
+			var setttingParam *mdroom.SettingParam
+			if err := json.Unmarshal([]byte(mvrs.SettingParam), &setttingParam); err != nil {
+				log.Err("club vip room check setting param unmarshal failed, %v", err)
+				return errclub.ErrGameParam
+			}
+			if setttingParam.ClubCoinRate != 1 && setttingParam.ClubCoinRate != 2 && setttingParam.ClubCoinRate != 5 && setttingParam.ClubCoinRate != 10 {
+				return errclub.ErrGameParam
+			}
+		}
+	}
+	err = db.Transaction(func(tx *gorm.DB) error {
+		mvrcs, err := dbclub.UpdateVipRoomSetting(tx, mvrs)
+		if err != nil {
+			return err
+		}
+
+		if mvrcs.Status == enumclub.VipRoomSettingDel {
+			err = cacheclub.DeleteVipRoomSetting(mvrcs.ClubID, mvrcs.ID)
+			if err != nil {
+				return nil
+			}
+		} else {
+			err = cacheclub.SetVipRoomSetting(mvrcs)
+			if err != nil {
+				return nil
+			}
+		}
+
+		return nil
+	})
+	if err != nil {
+		return nil
+	}
+
+	return nil
+}
+
+func UpdateVipRoomSettingStatus(mvrs *mdclub.VipRoomSetting) error {
+	mdClub, err := cacheclub.GetClub(mvrs.ClubID)
+	if err != nil {
+		return err
+	}
+
+	if mdClub.Status != enumclub.ClubStatusNormal {
+		return errclub.ErrStatusNoINNormal
+	}
+	mdvrs, err := cacheclub.GetVipRoomSetting(mvrs.ClubID, mvrs.ID)
+	if err != nil {
+		return err
+	}
+	if mvrs.Status > enumclub.VipRoomSettingDel || mvrs.Status < enumclub.VipRoomSettingNon {
+		return errclub.ErrStatus
+	}
+	if mvrs.Status == mdvrs.Status {
+		return nil
+	}
+	err = db.Transaction(func(tx *gorm.DB) error {
+		mvrcs, err := dbclub.UpdateVipRoomSetting(tx, mvrs)
+		if err != nil {
+			return err
+		}
+
+		if mvrcs.Status == enumclub.VipRoomSettingDel {
+			err = cacheclub.DeleteVipRoomSetting(mvrcs.ClubID, mvrcs.ID)
+			if err != nil {
+				return nil
+			}
+		} else {
+			err = cacheclub.SetVipRoomSetting(mvrcs)
+			if err != nil {
+				return nil
+			}
+		}
+
+		return nil
+	})
+	if err != nil {
+		return nil
+	}
+
+	return nil
+}
+
+func GetVipRoomSettingByID(clubid int32, sid int32) (*mdclub.VipRoomSetting, error) {
+	return cacheclub.GetVipRoomSetting(clubid, sid)
+}
+
+func GetVipRoomSettingList(clubid int32) ([]*mdclub.VipRoomSetting, error) {
+	return cacheclub.GetAllVipRoomSetting(clubid)
+}
+
+func GetClubRoomLog(clubid int32) ([]*mdroom.ClubRoomLog, error) {
+	out, err := dbroom.GetClubRoomLog(db.DB(), clubid)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
 }

@@ -2,9 +2,9 @@ package enum
 
 const (
 	LoopTime       = 500
-	GetBankerTime  = 17//32.0
-	SetBetTime     = 17//32.0
-	SubmitCardTime = 17//32.0
+	GetBankerTime  = 12 //32.0
+	SetBetTime     = 17 //32.0
+	SubmitCardTime = 7 //32.0
 	MinSetBet      = 1
 )
 
@@ -53,10 +53,11 @@ const (
 )
 
 const (
-	BankerNoNiu   = 1 //无牛下庄
-	BankerTurns   = 2 //轮流上庄
-	BankerSeeCard = 3 //看牌上庄
+	BankerSeeCard = 1 //看牌上庄
+	BankerNoNiu   = 2 //无牛下庄
+	BankerTurns   = 3 //轮流上庄
 	BankerDefault = 4 //固定庄家
+	BankerAll     = 5 //通比
 )
 
 // var (
@@ -64,7 +65,7 @@ const (
 // 	BetScoreMap    map[int32]int32
 
 // 	ToBankerScoreMap map[int32]int32
-// 	ToBetScoreMap    map[int32]int32
+// 	ToGameStatusMap    map[int32]int32
 
 // 	GameStatusMap map[int32]int32
 
@@ -80,4 +81,6 @@ var BetScoreMap = map[int32]int32{1: 5, 2: 10, 3: 15, 4: 20, 5: 25}
 
 var ToBankerScoreMap = map[int32]int32{0: 1, 1: 2, 2: 3, 3: 4, 4: 5}
 
-var ToBetScoreMap = map[int32]int32{110: 110, 120: 120, 130: 120, 140: 130, 150: 130, 160: 140, 170: 140, 180: 140}
+var ToGameStatusMap = map[int32]int32{110: 110, 120: 120, 130: 120, 140: 130, 150: 130, 160: 140, 170: 140, 180: 140}
+
+var PushOnScoreMap = map[string]int32{"1": 5, "2": 10, "3": 20}

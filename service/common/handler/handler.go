@@ -37,7 +37,7 @@ func (cs *CommonSrv) CreateBlackList(ctx context.Context,
 	return nil
 }
 
-func (cs *CommonSrv) CreateExamine(ctx context.Context,
+func (cs *CommonSrv) CreateClubExamine(ctx context.Context,
 	req *pbcommon.Examine, rsp *pbcommon.CommonReply) error {
 	u := gctx.GetUser(ctx)
 	me := mdcommon.ExamineFromProto(req)

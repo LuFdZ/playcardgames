@@ -37,6 +37,7 @@ message User {
     int32 ClubID = 30;
     int64 Gold = 31;
     string RegistChannel = 32;
+    int32 ProxyID = 33;
 }
 
 message RegisterReply {

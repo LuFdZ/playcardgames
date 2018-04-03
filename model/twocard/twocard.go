@@ -78,7 +78,7 @@ func CreateGame() []*mdgame.Twocard {
 		}
 		now := gorm.NowFunc()
 
-		var roomParam *mdroom.FourCardRoomParam
+		var roomParam *mdroom.TwoCardRoomParam
 		if err := json.Unmarshal([]byte(mdr.GameParam), &roomParam); err != nil {
 			log.Err("create two card unmarshal room param failed, %v", err)
 			continue
@@ -239,7 +239,7 @@ func UpdateGame(goLua *lua.LState) []*mdgame.Twocard {
 			}
 			game.GameResult = results
 			for _, result := range game.GameResult.List {
-				m := initFourCardTypeMap()
+				m := initTwoCardTypeMap()
 				for _, userResult := range mdr.UserResults {
 					if userResult.UserID == result.UserID {
 						if len(userResult.GameCardCount) > 0 {
@@ -342,9 +342,9 @@ func UpdateGame(goLua *lua.LState) []*mdgame.Twocard {
 	return outGames
 }
 
-func initFourCardTypeMap() map[int32]int32 {
+func initTwoCardTypeMap() map[int32]int32 {
 	m := make(map[int32]int32)
-	for _, value := range enumgame.FourCardCardType {
+	for _, value := range enumgame.TwoCardCardType {
 		m[value] = 0
 	}
 	return m
@@ -508,7 +508,7 @@ func SubmitCard(uid int32, room *mdroom.Room) (*mdgame.Twocard, error) {
 	if userResult == nil {
 		return nil, errgame.ErrUserNotInGame
 	}
-
+	fmt.Printf("SubmitCard:%d\n",userResult.Status)
 	if userResult.Status > enumgame.UserStatusSubmitCard {
 		return nil, errgame.ErrAlreadySubmitCard
 	}
@@ -641,7 +641,7 @@ func GameExist(uid int32, rid int32) (*pbtwo.RecoveryReply, error) {
 
 func CleanGame() error {
 	var gids []int32
-	rids, err := cacheroom.GetAllDeleteRoomKey(enumroom.FourCardGameType)
+	rids, err := cacheroom.GetAllDeleteRoomKey(enumroom.TwoCardGameType)
 	if err != nil {
 		log.Err("get two card clean room err:%v", err)
 		return err

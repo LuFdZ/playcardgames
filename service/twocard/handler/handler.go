@@ -191,6 +191,7 @@ func (tcs *TwoCardSrv) SubmitCard(ctx context.Context, req *pbtwo.SubmitCardRequ
 		Context: msg,
 		Ids:     mdr.Ids,
 	}
+	fmt.Printf("SubmitCardBroAAA")
 	topic.Publish(tcs.broker, bro, TopicTwoCardGameSubmitCard)
 	return nil
 }

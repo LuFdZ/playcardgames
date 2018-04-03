@@ -22,7 +22,9 @@ func CreateBlackList(tx *gorm.DB, mbl *mdCommon.BlackList) error {
 func UpdateBlackList(tx *gorm.DB, mbl *mdCommon.BlackList) (*mdCommon.BlackList, error) {
 	now := gorm.NowFunc()
 	mbl.UpdatedAt = &now
-	if err := tx.Model(mbl).Updates(mbl).Error; err != nil {
+	if err := tx.Model(mbl).Where("`type` = ? and origin_id = ? and target_id = ? and status = ?",
+		mbl.Type, mbl.OriginID, mbl.TargetID, enumcommon.ExamineStatusNew).UpdateColumn("status",
+		enumcommon.BlackListStatusNoAvailable).Error; err != nil {
 		return nil, errors.Internal("update black list failed", err)
 	}
 	return mbl, nil
@@ -48,7 +50,7 @@ func UpdateBlackList(tx *gorm.DB, mbl *mdCommon.BlackList) (*mdCommon.BlackList,
 func PageBlackList(tx *gorm.DB, page *mdpage.PageOption,
 	mbl *mdCommon.BlackList) ([]*mdCommon.BlackList, int64, error) {
 	var out []*mdCommon.BlackList
-	rows, rtx := page.Find(tx.Model(mbl).Order("created_at desc").
+	rows, rtx := page.Find(tx.Model(mbl).Where("status = ?", enumcommon.ExamineStatusNew).Order("created_at desc").
 		Where(mbl), &out)
 	if rtx.Error != nil {
 		return nil, 0, errors.Internal("page black list failed", rtx.Error)
@@ -95,7 +97,7 @@ func UpdateExamine(tx *gorm.DB, mde *mdCommon.Examine) (*mdCommon.Examine, error
 func PageExamine(tx *gorm.DB, page *mdpage.PageOption,
 	mde *mdCommon.Examine) ([]*mdCommon.Examine, int64, error) {
 	var out []*mdCommon.Examine
-	rows, rtx := page.Find(tx.Model(mde).Order("created_at desc").
+	rows, rtx := page.Find(tx.Model(mde).Where(" status = ? ", enumcommon.ExamineStatusNew).Order("created_at desc").
 		Where(mde), &out)
 	if rtx.Error != nil {
 		return nil, 0, errors.Internal("page examine failed", rtx.Error)
@@ -107,7 +109,7 @@ func GetAllAlineBlackList(tx *gorm.DB, typeid int32) ([]*mdCommon.BlackList, err
 	var (
 		out []*mdCommon.BlackList
 	)
-	if err := tx.Where("type = ? and status = ?", typeid, enumcommon.BlackListStatusAvailable).Order("created_at").
+	if err := tx.Where("type = ? and status = ?", typeid, enumcommon.ExamineStatusNew).Order("created_at").
 		Find(&out).Error; err != nil {
 		return nil, errors.Internal("select black list failed", err)
 	}

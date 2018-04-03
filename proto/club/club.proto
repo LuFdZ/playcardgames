@@ -23,6 +23,9 @@ message Club {
     int64 ClubCoin = 14;
     string Notice = 15;
     SettingParam SettingParam = 16;
+    string CreatorName = 17;
+    int32 MemberCount = 18;
+    int32 MemberOnline = 19;
 }
 
 //成员结构体
@@ -35,9 +38,13 @@ message ClubMember {
     string Nickname = 6;
     string Icon = 7;
     int32 Online = 8;
-    int64 ClubCoin = 14;
-    int64 CreatedAt = 9;
-    int64 UpdatedAt = 10;
+    int64 ClubCoin = 9;
+    int64 CreatedAt = 10;
+    int64 UpdatedAt = 11;
+    int32 MemberCount = 12;
+    int32 MemberOnline = 13;
+    string ClubName = 14; //俱乐部名称
+    string CreatorName = 15;
 }
 
 //俱乐部流水结构体
@@ -62,7 +69,25 @@ message SettingParam {
     int32 CostType = 1; //管理费扣费类型 1 百分百 2固定值
     int32 CostValue = 2; //管理费数值
     int64 ClubCoinBaseScore = 3; //游戏最低战绩分值
+    int32 CostRange = 4; //收费范围 1大赢家扣费 2所有赢家扣费
 }
+
+//俱乐部包间配置结构体
+message VipRoomSetting {
+    int32 VipRoomSettingID = 1;
+    string Name = 2;
+    int32 ClubID = 3;
+    int32 UserID = 4;
+    int32 RoomType = 5;
+    int32 MaxNumber = 6;
+    int32 RoundNumber = 7;
+    int32 SubRoomType = 8;
+    string GameParam = 9;
+    int32 Status = 10;
+    int32 GameType = 11;
+    string SettingParam = 12;
+}
+
 //***********************************************请求***********************************************
 
 message ClubInfoRequest {
@@ -134,6 +159,7 @@ message PageClubJournalRequest {
 
 message PageClubMemberJournalRequest {
     page.PageOption Page = 1;
+    int32 ClubID = 2;
 }
 
 message UpdateClubJournalRequest {
@@ -143,6 +169,32 @@ message UpdateClubJournalRequest {
 
 message GetClubMemberCoinRankRequest {
     page.PageOption Page = 1;
+    int32 ClubID = 2;
+}
+
+message GetVipRoomSettingListRequest {
+    int32 ClubID = 1;
+}
+
+message VipRoomSettingCloseAndOpenRequest {
+    int32 ClubID = 1;
+    int32 VipRoomSettingID = 2;
+    int32 Status = 3; //1开放 2打烊
+}
+
+message ClubRoomLogRequest {
+    int32 ClubID = 1;
+}
+
+message PageClubRoomResultListRequest {
+    page.PageOption Page = 1;
+    int32 ClubID = 2;
+}
+
+message PageClubMemberRoomResultListRequest {
+    page.PageOption Page = 1;
+    int32 ClubID = 2;
+    int32 UserID = 3;
 }
 
 //***********************************************回应***********************************************
@@ -175,6 +227,8 @@ message PageClubRoomReply {
 message GainClubCoinReply {
     int32 Result = 1;
     int64 ClubCoin = 2;
+    int32 UserID = 3;
+    int32 ClubID = 4;
 }
 
 message PageClubJournalReply {
@@ -183,18 +237,56 @@ message PageClubJournalReply {
     repeated ClubJournal List = 3;
     int64 Count = 4;
 }
+
+message GetClubsByMemberIDReply {
+    repeated Club List = 1;
+}
+
+message GetVipRoomSettingListReply {
+    repeated VipRoomSetting List = 1;
+}
+
+message ClubRoomLogReply {
+    int32 ClubID = 1;
+    repeated room.ClubRoomLog List = 2;
+}
+
+message ClubRechargeReply {
+    int32 ClubID = 1;
+    int64 Amount = 2;
+    int32 AmountType = 3;
+    int32 Result = 4;
+}
+
+message RoomResultListReply {
+    repeated room.RoomResults List = 1;
+    int64 Count = 2;
+}
+
+message SetClubRoomFlagReply {
+    int32 ClubID = 1;
+    int32 RoomID = 2;
+}
+
+message ClubDeleteReply {
+    Club Club = 1;
+    repeated int32 Ids = 2;
+    repeated int32 OnlineIds = 3;
+}
+
 //***********************************************广播***********************************************
 
 //俱乐部成员变动通知
 //message ClubMemberChange {
 //    ClubMember ClubMember = 1;
-//    int32 Status = 2;//1 新成员加入 2成员退出
+//    int32 Status = 2;//1新成员加入 2成员退出
 //}
 
 message ClubMemberOnline {
     int32 ClubID = 1;
     int32 UserID = 2;
     int32 Status = 3; //1 上线 2离线
+    Club Club = 4;
 }
 
 //俱乐部房间变动通知
@@ -226,6 +318,8 @@ message ClubInfo {
     //可用房间列表
     //下发字段[RoomID，Password，UserList，MaxNumber，RoundNumber，GameType，GameParam]
     repeated room.Room RoomList = 4;
+
+    repeated Club ClubList = 5;
 }
 
 service ClubSrv {
@@ -234,7 +328,7 @@ service ClubSrv {
     rpc CreateClub (Club) returns (ClubReply) {
     }
     //俱乐部充值
-    rpc ClubRecharge (ClubRechargeRequest) returns (ClubReply) {
+    rpc ClubRecharge (ClubRechargeRequest) returns (ClubRechargeReply) {
     }
     //管理员更新俱乐部
     rpc UpdateClub (Club) returns (ClubReply) {
@@ -251,7 +345,7 @@ service ClubSrv {
     }
     //客户端请求退出俱乐部
     //必要参数 [ClubID]
-    rpc LeaveClub (Club) returns (ClubReply) {
+    rpc LeaveClub (Club) returns (Club) {
     }
     //请求俱乐部当前可加入的房间列表
     //必要参数 [ClubID]
@@ -268,18 +362,34 @@ service ClubSrv {
     //tcp下发俱乐部信息
     rpc GetClub (Club) returns (ClubReply) {
     }
+
+    rpc GetClubByClubID (Club) returns (ClubInfo) {
+    }
     //设置黑名单
     //必要参数 [ClubID,UserID]
-    rpc SetBlackList (ClubMember) returns (ClubReply) {
+    rpc SetBlackList (ClubMember) returns (ClubMember) {
     }
+
+    //俱乐部黑名单成员分页请求
+    rpc PageBlackListMember (PageClubMemberRequest) returns (PageClubMemberReply) {
+    }
+
+    //俱乐部黑名单成员移除请求
+    rpc CancelBlackList (ClubMember) returns (ClubMember) {
+    }
+
     //处理俱乐部审批
     //必要参数 [ClubID,UserID,Status]
-    rpc UpdateClubExamine (ClubMember) returns (ClubReply) {
-
+    rpc UpdateClubExamine (ClubMember) returns (ClubMember) {
     }
+
+    //俱乐部审批成员分页请求
+    rpc PageClubExamineMember (PageClubMemberRequest) returns (PageClubMemberReply) {
+    }
+
     //标记俱乐部房间
     //必要参数 [ClubID,RoomID]
-    rpc SetClubRoomFlag (SetClubRoomFlagRequest) returns (ClubReply) {
+    rpc SetClubRoomFlag (SetClubRoomFlagRequest) returns (SetClubRoomFlagReply) {
 
     }
     //创建俱乐部房间
@@ -315,5 +425,43 @@ service ClubSrv {
 
     //俱乐部成员状态更新 只能更新 1普通 2禁赛 状态下的成员
     rpc UpdateClubMemberStatus (ClubMember) returns (ClubReply) {
+    }
+
+    //更新俱乐部代理id 会刷新用户id下所有俱乐部的代理id
+    rpc UpdateClubProxyID (Club) returns (ClubReply) {
+    }
+
+    //更新俱乐部代理id 会刷新用户id下所有俱乐部的代理id
+    rpc GetClubsByMemberID (Club) returns (GetClubsByMemberIDReply) {
+    }
+
+    //创建包厢配置
+    rpc CreateVipRoomSetting (VipRoomSetting) returns (VipRoomSetting) {
+    }
+
+    //更新包厢玩法
+    rpc UpdateVipRoomSetting (VipRoomSetting) returns (VipRoomSetting) {
+    }
+
+    //获取包厢配置列表
+    rpc GetVipRoomSettingList (GetVipRoomSettingListRequest) returns (GetVipRoomSettingListReply) {
+    }
+
+    //获取包厢配置列表
+    rpc GetClubRoomLog (ClubRoomLogRequest) returns (ClubRoomLogReply) {
+    }
+
+    //俱乐部改名
+    rpc ClubRename (Club) returns (Club) {
+    }
+
+    //俱乐部删除
+    rpc ClubDelete (Club) returns (ClubDeleteReply) {
+    }
+
+    rpc PageClubRoomResultList (PageClubRoomResultListRequest) returns (RoomResultListReply) {
+    }
+
+    rpc PageClubMemberRoomResultList (PageClubMemberRoomResultListRequest) returns (RoomResultListReply) {
     }
 }

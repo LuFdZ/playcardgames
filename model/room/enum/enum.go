@@ -16,6 +16,8 @@ const (
 	RoomCodeMin            = 100000
 	RoomGiveupCleanMinutes = 5.0
 	ShuffleDelaySeconds    = 3
+	VipRoomLimit           = 8
+	WatchLimit             = 4
 )
 
 //db config
@@ -152,6 +154,26 @@ const (
 const (
 	RoomNoFull int32 = 1
 	RoomFull   int32 = 2
+)
+
+const (
+	BigWinerCost = 1
+	AllWinerCost = 2
+)
+
+const (
+	PushOnBet   = 1
+	NoPushOnBet = 2
+)
+
+const (
+	BetKeyNon    = 1
+	BetKeyPushOn = 5
+)
+
+const (
+	UserRolePlayer = 1
+	UserRoleWatch  = 2
 )
 
 //金币场配置表

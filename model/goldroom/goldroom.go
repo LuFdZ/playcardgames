@@ -9,7 +9,7 @@ import (
 	dbroom "playcards/model/room/db"
 	enumroom "playcards/model/room/enum"
 	enumgroom "playcards/model/goldroom/enum"
-	enumuser "playcards/model/user/enum"
+	//enumuser "playcards/model/user/enum"
 	errroom "playcards/model/room/errors"
 	mdroom "playcards/model/room/mod"
 	mduser "playcards/model/user/mod"
@@ -34,7 +34,6 @@ func RoomLockKey(pwd string) string {
 func UpdateGoldRoom() map[*pbroom.RoomUser]int32 { //
 	rooms := cachegroom.GetAllGRoom(0, []int32{enumroom.RoomStatusInit,
 		enumroom.RoomStatusReInit})
-	//fmt.Printf("UpdateGoldRoom GetAllGRoom:%d\n",len(rooms))
 	if rooms == nil && len(rooms) == 0 {
 		return nil
 	}
@@ -46,19 +45,21 @@ func UpdateGoldRoom() map[*pbroom.RoomUser]int32 { //
 			if count > 0 {
 				numberNow := int32(len(mdr.Users))
 				subTime := time.Now().Sub(*mdr.ReadyAt)
-				addTime := float64(tools.GenerateRangeNum(20, 30))
-				//fmt.Printf("UpdateGoldRoomJoinRobot:%d|%d|%f|%f\n",count,numberNow,subTime.Seconds(),addTime)
+
 				if numberNow < enumgroom.GoldRoomInfoMap[mdr.GameType].MinNumber &&
-					count == 1 &&
-					subTime.Seconds() > addTime {
+					count == 1 {
+					addTime := float64(tools.GenerateRangeNum(10, 30))
+					if subTime.Seconds() < addTime {
+						continue
+					}
 					robot, mdr, err := joinRobot(mdr.Password)
 					if err != nil || robot == nil {
 						log.Err("join robot err room:%v,err", mdr, err)
 						continue
 					}
-					//mdr.RobotIds = append(mdr.RobotIds, robot.UserID)
+					mdr.RobotIds = append(mdr.RobotIds, robot.UserID)
 					msg := robot.ToProto()
-					//msg.Ids = mdr.PlayerIds
+					msg.Ids = mdr.PlayerIds
 					m[msg] = enumgroom.UserOpJoin
 					err = cacheroom.UpdateRoom(mdr)
 					if err != nil {
@@ -94,7 +95,7 @@ func UpdateGoldRoom() map[*pbroom.RoomUser]int32 { //
 				if (u.Type == 0 || u.Type == enumgroom.Player) && u.Ready == enumroom.UserUnready {
 					stayTime := time.Now().Sub(*u.UpdatedAt)
 					if stayTime.Seconds() > 60 {
-						removePlayer(mdr.Password, u.UserID)
+						mdr, _ := removePlayer(mdr.Password, u.UserID)
 						msg := u.ToProto()
 						msg.Ids = mdr.PlayerIds
 						m[msg] = enumgroom.UserOpRemove
@@ -108,7 +109,6 @@ func UpdateGoldRoom() map[*pbroom.RoomUser]int32 { //
 						if err != nil {
 							log.Err("gold room set robot ready fail robot:%+v,err:%+v\n", robot, err)
 							continue
-
 						}
 						msg := robot.ToProto()
 						msg.Ids = mdr.PlayerIds
@@ -125,8 +125,9 @@ func UpdateGoldRoom() map[*pbroom.RoomUser]int32 { //
 					log.Err("update gold room play times db err, %v|%v\n", err)
 					return err
 				}
+				t := time.Now()
 				for _, u := range mdr.Users {
-					fmt.Printf("UpdateGoldRoom Player:%d|%d\n", u.UserID, u.Type)
+
 					if u.Type == enumgroom.Player {
 						err := bill.GainGameBalance(u.UserID, mdr.RoomID, mdr.GameType*100+1,
 							&mbill.Balance{Amount: int64(u.ResultAmount), CoinType: enumbill.TypeGold})
@@ -134,21 +135,26 @@ func UpdateGoldRoom() map[*pbroom.RoomUser]int32 { //
 							return err
 						}
 					} else {
+						mdr, _ = removePlayer(mdr.Password, u.UserID)
 						msg := u.ToProto()
 						msg.Ids = mdr.PlayerIds
 						m[msg] = enumgroom.UserOpRemove
-						removePlayer(mdr.Password, u.UserID)
 					}
 					if _, ok := mdr.ReadyUserMap[u.UserID]; ok {
 						u.Ready = enumroom.UserUnready
 					}
+
+					u.UpdatedAt = &t
 				}
+
 				mdr.Status = enumroom.RoomStatusInit
+				//mdr.UpdatedAt = &t
 				_, err = dbroom.UpdateRoom(tx, mdr)
 				if err != nil {
 					log.Err("update gold room db err, %v|%v\n", err, mdr)
 					return err
 				}
+				fmt.Printf("AAAAAAAAAAAAAAARoomStatusReInit:%+v\n", mdr)
 				err = cacheroom.UpdateRoom(mdr)
 				if err != nil {
 					log.Err("room status init update room err:%v", err)
@@ -196,7 +202,7 @@ func JoinRoom(gtype int32, level int32, mdu *mduser.User) (*mdroom.RoomUser, *md
 			return nil, nil, err
 		}
 	}
-
+	mdr.WatchIds = append(mdr.WatchIds, mdu.UserID)
 	//mdru, mdr, err := roomAddUserAndSeating(mdu, mdr.Password)
 	//if err != nil {
 	//	return nil, nil, err
@@ -223,6 +229,8 @@ func SetReady(uid int32, pwd string) ([]int32, error) {
 		allReady := true
 		t := time.Now()
 		var num int32
+		//mdr.WatchIds = append(mdr.WatchIds,mdu.UserID)
+		var watchIds []int32
 		for _, user := range mdr.Users {
 			num++
 			if user.UserID == uid {
@@ -235,6 +243,8 @@ func SetReady(uid int32, pwd string) ([]int32, error) {
 				if mdr.Status > enumroom.RoomStatusInit {
 					user.Join = enumgroom.UnJoinGame
 				}
+			} else if user.Ready == enumroom.UserUnready {
+				watchIds = append(watchIds, user.UserID)
 			}
 			if allReady && user.Ready != enumroom.UserReady {
 				allReady = false
@@ -248,6 +258,7 @@ func SetReady(uid int32, pwd string) ([]int32, error) {
 			mdr.ReadyAt = &t
 		}
 		ids = mdr.Ids
+		mdr.WatchIds = watchIds
 		err = cacheroom.UpdateRoom(mdr)
 		if err != nil {
 			log.Err("update set sit failed, roomid:%d,uid:%d,err:%v\n", mdr.RoomID, uid, err)
@@ -386,12 +397,17 @@ func roomAddUserAndSeating(mdu *mduser.User, pwd string) (*mdroom.RoomUser, *mdr
 			log.Err("room join set session failed, %v|%v\n", err, mdr)
 			return err
 		}
-		if mdu.Type == enumuser.Player {
-			err = cacheroom.SetRoomUser(mdr.RoomID, mdr.Password, mdu.UserID)
-			if err != nil {
-				log.Err("room user join set session failed, %v|%v\n", err, mdr)
-				return err
-			}
+		//if mdu.Type == enumuser.Player {
+		//	err = cacheroom.SetRoomUser(mdr.RoomID, mdr.Password, mdu.UserID)
+		//	if err != nil {
+		//		log.Err("room user join set session failed, %v|%v\n", err, mdr)
+		//		return err
+		//	}
+		//}
+		err = cacheroom.SetRoomUser(mdr.RoomID, mdr.Password, mdu.UserID)
+		if err != nil {
+			log.Err("room user join set session failed, %v|%v\n", err, mdr)
+			return err
 		}
 		//UpdateRoom(mdr)
 		mdrReturn = mdr
@@ -421,16 +437,18 @@ func LeaveRoom(mduser *mduser.User) (*mdroom.RoomUser, *mdroom.Room, error) {
 
 	f := func() error {
 		newUsers := []*mdroom.RoomUser{}
+		ids := []int32{}
 		mdr, _ := cacheroom.GetRoom(mdrReturn.Password)
 		for _, u := range mdr.Users {
 			if u.UserID != mduser.UserID {
 				newUsers = append(newUsers, u)
+				ids = append(ids, u.UserID)
 			} else {
 				roomUser = u
 			}
 		}
 		mdr.Users = newUsers
-
+		mdr.Ids = ids
 		for _, user := range mdr.Users {
 			mdr.Ids = append(mdr.Ids, user.UserID)
 			if user.Type == enumgroom.Player {
@@ -484,10 +502,10 @@ func LeaveRoom(mduser *mduser.User) (*mdroom.RoomUser, *mdroom.Room, error) {
 	return roomUser, mdrReturn, nil
 }
 
-func removePlayer(pwd string, uid int32) error {
+func removePlayer(pwd string, uid int32) (*mdroom.Room, error) {
 	mdrReturn, err := cacheroom.GetRoom(pwd)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	//roomUser := &mdroom.RoomUser{}
 	f := func() error {
@@ -505,14 +523,22 @@ func removePlayer(pwd string, uid int32) error {
 		mdr.PlayerIds = []int32{}
 		mdr.RobotIds = []int32{}
 		for _, mdu := range mdr.Users {
-			mdr.Ids = append(mdr.Ids, mdu.UserID)
-			if mdu.Type == enumgroom.Player {
-				mdr.PlayerIds = append(mdr.PlayerIds, mdu.UserID)
-			} else if mdu.Type == enumgroom.Robot {
-				mdr.RobotIds = append(mdr.RobotIds, mdu.UserID)
+			if mdu.UserID != uid {
+				mdr.Ids = append(mdr.Ids, mdu.UserID)
+				if mdu.Type == enumgroom.Player {
+					mdr.PlayerIds = append(mdr.PlayerIds, mdu.UserID)
+				} else if mdu.Type == enumgroom.Robot {
+					mdr.RobotIds = append(mdr.RobotIds, mdu.UserID)
+				}
 			}
 		}
-
+		newUserResult := []*mdroom.GameUserResult{}
+		for _, ur := range mdr.UserResults {
+			if ur.UserID != uid {
+				newUserResult = append(newUserResult, ur)
+			}
+		}
+		mdr.UserResults = newUserResult
 		if len(mdr.PlayerIds) == 0 {
 			mdr.Users = nil
 			mdr.Status = enumroom.RoomStatusDestroy
@@ -553,9 +579,9 @@ func removePlayer(pwd string, uid int32) error {
 	err = gsync.GlobalTransaction(lock, f)
 	if err != nil {
 		log.Err("%s enter room failed: %v", lock, err)
-		return err
+		return nil, err
 	}
-	return nil
+	return mdrReturn, err
 }
 
 func checkRoomParam(gtype int32, level int32) bool {

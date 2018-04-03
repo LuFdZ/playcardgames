@@ -92,8 +92,9 @@ func (w *Web) Subscribe(ws *websocket.Conn) {
 
 		return request.OnEmit(c, req)
 	}
-	webclub.ClubOnlineNotice(c)
 	webroom.RoomOnlineNotice(c)
+	webclub.ClubOnlineNotice(c)
+
 	go c.ReadLoop(f, request.OnClose)
 	c.Loop(request.OnHeartbeat)
 

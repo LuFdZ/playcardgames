@@ -10,7 +10,6 @@ import (
 	errorr "playcards/model/room/errors"
 	mdroom "playcards/model/room/mod"
 	pbr "playcards/proto/room"
-	mdu "playcards/model/user/mod"
 	"playcards/utils/auth"
 	"playcards/utils/log"
 	utilpb "playcards/utils/proto"
@@ -18,6 +17,7 @@ import (
 	pbmail "playcards/proto/mail"
 	srvmail "playcards/service/mail/handler"
 	enummail "playcards/model/mail/enum"
+	enumclub "playcards/model/club/enum"
 	"playcards/utils/topic"
 	"time"
 	"strings"
@@ -36,10 +36,6 @@ func UserLockKey(uid int32) string {
 }
 
 func ClubRoomLockKey(clubid int32) string {
-	return fmt.Sprintf("playcards.club.op.lock:%d", clubid)
-}
-
-func ClubJoinRoomLockKey(clubid int32) string {
 	return fmt.Sprintf("playcards.club.op.lock:%d", clubid)
 }
 
@@ -80,6 +76,8 @@ func (rs *RoomSrv) update(gt *gsync.GlobalTimer) {
 				Status:      room.Status,
 				Password:    room.Password,
 				List:        room.UserResults,
+				RoomType:    room.RoomType,
+				SubRoomType: room.SubRoomType,
 				CreatedAt:   room.CreatedAt,
 			}
 			//if room.Shuffle > 0 {
@@ -104,9 +102,20 @@ func (rs *RoomSrv) update(gt *gsync.GlobalTimer) {
 					topic.Publish(rs.broker, msg, TopicClubRoomFinish)
 				}
 			}
+			if room.RoomType == enumr.RoomTypeClub && room.SubRoomType == enumr.SubTypeClubMatch {
+				for _, ru := range roomResults.List {
+					mcm, err := club.GetClubMember(room.ClubID, ru.UserID)
+					if err != nil {
+						log.Err("reinit get clubmember err:%v", err)
+						continue
+					}
+					ru.ClubCoin = mcm.ClubCoin
+				}
+			}
 			msg := roomResults.ToProto()
 			msg.Ids = room.Ids
 			msg.OwnerID = room.Users[0].UserID
+
 			topic.Publish(rs.broker, msg, TopicRoomResult)
 		}
 
@@ -175,7 +184,7 @@ func (rs *RoomSrv) CreateRoom(ctx context.Context, req *pbr.Room,
 	var r *mdroom.Room
 	f := func() error {
 		r, err = room.CreateRoom(req.RoomType, req.SubRoomType, req.GameType, req.MaxNumber,
-			req.RoundNumber, req.GameParam, req.SettingParam, u, "")
+			req.RoundNumber, req.GameParam, req.SettingParam, u, "", 0, 0)
 		if err != nil {
 			return err
 		}
@@ -207,13 +216,38 @@ func (rs *RoomSrv) CreateClubRoom(ctx context.Context, req *pbr.Room,
 	if err != nil {
 		return err
 	}
-	if u.ClubID == 0 && u.ClubID != req.ClubID {
+	err = room.CheckUserInClub(u.UserID, req.ClubID)
+	if req.ClubID == 0 && err != nil {
 		return errorr.ErrNotClubMember
 	}
+	if req.VipRoomSettingID > 0 {
+		mvrs, err := club.GetVipRoomSettingByID(req.ClubID, req.VipRoomSettingID)
+		if err != nil {
+			return err
+		}
+		if mvrs.Status == enumclub.VipRoomSettingStop {
+			return errorr.ErrVipRoomStatus
+		}
+		mdvrs, err := room.GetVipRoomList(req.ClubID, req.VipRoomSettingID)
+		if err != nil {
+			return err
+		}
+		if len(mdvrs) > enumr.VipRoomLimit {
+			return errorr.ErrVipRoomLimit
+		}
+		req.RoomType = mvrs.RoomType
+		req.SubRoomType = mvrs.SubRoomType
+		req.GameType = mvrs.GameType
+		req.MaxNumber = mvrs.MaxNumber
+		req.RoundNumber = mvrs.RoundNumber
+		req.GameParam = mvrs.GameParam
+		req.SettingParam = mvrs.SettingParam
+	}
+
 	var mr *mdroom.Room
 	f := func() error {
 		mr, err = room.CreateRoom(req.RoomType, req.SubRoomType, req.GameType, req.MaxNumber,
-			req.RoundNumber, req.GameParam, req.SettingParam, u, "")
+			req.RoundNumber, req.GameParam, req.SettingParam, u, "", req.VipRoomSettingID, req.ClubID)
 		if err != nil {
 			return err
 		}
@@ -240,7 +274,7 @@ func (rs *RoomSrv) CreateClubRoom(ctx context.Context, req *pbr.Room,
 	}
 	topic.Publish(rs.broker, msg, TopicRoomCreate)
 	if mr.ClubID > 0 {
-		mClub, _ := club.GetClubInfo(u)
+		mClub, _ := club.GetClubInfo(mr.ClubID)
 		msg.Diamond = mClub.Diamond
 		topic.Publish(rs.broker, msg, TopicClubRoomCreate)
 	}
@@ -289,6 +323,108 @@ func (rs *RoomSrv) Renewal(ctx context.Context, req *pbr.RenewalRequest,
 	msgBack.OwnerID = r.Users[0].UserID
 	msgBack.CreateOrEnter = enumr.CreateRoom
 	topic.Publish(rs.broker, msgBack, TopicRoomCreate)
+	return nil
+}
+
+func (rs *RoomSrv) WatchRoom(ctx context.Context, req *pbr.Room,
+	rsp *pbr.RoomReply) error {
+	u, err := auth.GetUser(ctx)
+	if err != nil {
+		return err
+	}
+	var r *mdroom.Room
+	f := func() error {
+		r, err = room.WatchRoom(req.Password, u)
+		if err != nil {
+			return err
+		}
+		return nil
+	}
+	lock := RoomLockKey(req.Password)
+	//if mr.RoomType == enumr.RoomTypeClub {
+	//	lock = ClubJoinRoomLockKey(mr.ClubID)
+	//}
+	err = gsync.GlobalTransaction(lock, f)
+	if err != nil {
+		log.Err("%s enter room failed: %v", lock, err)
+		return err
+	}
+	*rsp = pbr.RoomReply{
+		Result: 1,
+	}
+	msgBack := r.ToProto()
+	msgBack.UserRole = enumr.UserRoleWatch
+	topic.Publish(rs.broker, msgBack, TopicRoomCreate)
+	return nil
+}
+
+func (rs *RoomSrv) SitDown(ctx context.Context, req *pbr.Room,
+	rsp *pbr.RoomUser) error {
+	u, err := auth.GetUser(ctx)
+	if err != nil {
+		return err
+	}
+	var (
+		ru       *mdroom.RoomUser
+		mdr      *mdroom.Room
+		allReady bool
+	)
+	f := func() error {
+		allReady, ru, mdr, err = room.SitDown(req.Password, u)
+		if err != nil {
+			return err
+		}
+		return nil
+	}
+	lock := RoomLockKey(req.Password)
+	err = gsync.GlobalTransaction(lock, f)
+	if err != nil {
+		log.Err("%s enter room failed: %v", lock, err)
+		return err
+	}
+	rsp = &pbr.RoomUser{UserID: u.UserID}
+	msgBack := mdr.ToProto()
+	msgBack.UserID = u.UserID
+	msgBack.CreateOrEnter = enumr.EnterRoom
+	msgBack.UserRole = enumr.UserRolePlayer
+	if len(mdr.Users) > 0 {
+		msgBack.OwnerID = mdr.Users[0].UserID
+	} else {
+		msgBack.OwnerID = u.UserID
+	}
+	topic.Publish(rs.broker, msgBack, TopicRoomCreate)
+	msgAll := ru.ToProto()
+	msgAll.OwnerID = msgBack.OwnerID
+	msgAll.Ids = mdr.Ids
+	for _, ru := range mdr.Users {
+		if ru.Role == enumr.UserRoleMaster {
+			msgAll.BankerID = ru.UserID
+		}
+	}
+
+	topic.Publish(rs.broker, msgAll, TopicRoomJoin)
+	if mdr.ClubID > 0 {
+		msgEnter := &pbr.ClubRoomUser{
+			RoomID:           mdr.RoomID,
+			UserID:           u.UserID,
+			ClubID:           mdr.ClubID,
+			Nickname:         u.Nickname,
+			Icon:             u.Icon,
+			VipRoomSettingID: mdr.VipRoomSettingID,
+		}
+		topic.Publish(rs.broker, msgEnter, TopicClubRoomJoin)
+	}
+
+	msg := rsp
+	msg.Ids = mdr.Ids
+	topic.Publish(rs.broker, msg, TopicRoomReady)
+	if allReady && mdr.Shuffle > 0 {
+		msg := &pbr.ShuffleCardBro{
+			UserID: mdr.Shuffle,
+			Ids:    mdr.Ids,
+		}
+		topic.Publish(rs.broker, msg, TopicRoomShuffleCardBro)
+	}
 	return nil
 }
 
@@ -346,11 +482,12 @@ func (rs *RoomSrv) EnterRoom(ctx context.Context, req *pbr.Room,
 	topic.Publish(rs.broker, msgAll, TopicRoomJoin)
 	if r.ClubID > 0 {
 		msgEnter := &pbr.ClubRoomUser{
-			RoomID:   r.RoomID,
-			UserID:   u.UserID,
-			ClubID:   r.ClubID,
-			Nickname: u.Nickname,
-			Icon:     u.Icon,
+			RoomID:           r.RoomID,
+			UserID:           u.UserID,
+			ClubID:           r.ClubID,
+			Nickname:         u.Nickname,
+			Icon:             u.Icon,
+			VipRoomSettingID: r.VipRoomSettingID,
 		}
 		topic.Publish(rs.broker, msgEnter, TopicClubRoomJoin)
 	}
@@ -400,15 +537,16 @@ func (rs *RoomSrv) LeaveRoom(ctx context.Context, req *pbr.Room,
 	topic.Publish(rs.broker, msg, TopicRoomUnJoin)
 	if r.ClubID > 0 {
 		msgLeave := &pbr.Room{
-			RoomID: r.RoomID,
-			UserID: u.UserID,
-			ClubID: r.ClubID,
+			RoomID:           r.RoomID,
+			UserID:           u.UserID,
+			ClubID:           r.ClubID,
+			VipRoomSettingID: r.VipRoomSettingID,
 		}
 
 		topic.Publish(rs.broker, msgLeave, TopicClubRoomUnJoin)
 		if r.Status == enumr.RoomStatusDestroy {
 			msgLeave.UserID = 0
-			mClub, _ := club.GetClubInfo(u)
+			mClub, _ := club.GetClubInfo(r.ClubID)
 			msgLeave.Diamond = mClub.Diamond //+ r.Cost
 			topic.Publish(rs.broker, msgLeave, TopicClubRoomFinish)
 		}
@@ -495,7 +633,7 @@ func (rs *RoomSrv) GiveUpGame(ctx context.Context, req *pbr.GiveUpGameRequest,
 	}
 	msg.Ids = ids
 	topic.Publish(rs.broker, msg, TopicRoomGiveup)
-	clubDiamondTopic(rs.broker, u, mr)
+	clubDiamondTopic(rs.broker, mr)
 	return nil
 }
 
@@ -536,19 +674,20 @@ func (rs *RoomSrv) GiveUpVote(ctx context.Context, req *pbr.GiveUpVoteRequest,
 			userstate.State = enumr.UserStateWaiting
 		}
 	}
-	clubDiamondTopic(rs.broker, u, mdr)
+	clubDiamondTopic(rs.broker, mdr)
 	return nil
 }
 
-func clubDiamondTopic(brok broker.Broker, user *mdu.User, mr *mdroom.Room) {
+func clubDiamondTopic(brok broker.Broker, mr *mdroom.Room) {
 	if mr.Status == enumr.RoomStatusGiveUp && mr.ClubID > 0 {
 		if mr.ClubID > 0 {
 			msg := &pbr.Room{
-				RoomID: mr.RoomID,
-				ClubID: mr.ClubID,
+				RoomID:           mr.RoomID,
+				ClubID:           mr.ClubID,
+				VipRoomSettingID: mr.VipRoomSettingID,
 			}
 			msg.UserID = 0
-			mClub, _ := club.GetClubInfo(user)
+			mClub, _ := club.GetClubInfo(mr.ClubID)
 			msg.Diamond = mClub.Diamond
 			topic.Publish(brok, msg, TopicClubRoomFinish)
 		}
@@ -1002,5 +1141,34 @@ func (rs *RoomSrv) OutBankerList(ctx context.Context, req *pbr.OutBankerListRequ
 		Ids:       mdr.Ids,
 	}
 	topic.Publish(rs.broker, msg, TopicBankerList)
+	return nil
+}
+
+func (rs *RoomSrv) GetVipRoomList(ctx context.Context, req *pbr.Room,
+	rsp *pbr.GetVipRoomListReply) error {
+	rsp.Result = 2
+	if req.ClubID == 0 || req.VipRoomSettingID == 0 {
+		return errorr.ErrIDZero
+	}
+	list, err := room.GetVipRoomList(req.ClubID, req.VipRoomSettingID)
+	if err != nil {
+		return err
+	}
+	utilpb.ProtoSlice(list, &rsp.List)
+	rsp.Result = 1
+	return nil
+}
+
+func (rs *RoomSrv) GetRoomRoundNow(ctx context.Context, req *pbr.Room,
+	rsp *pbr.ClubRoomLogReply) error {
+	_, err := auth.GetUser(ctx)
+	if err != nil {
+		return err
+	}
+	list, err := room.GetRoomRoundNow(req.GameType)
+	if err != nil {
+		return err
+	}
+	utilpb.ProtoSlice(list, &rsp.List)
 	return nil
 }

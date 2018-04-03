@@ -85,7 +85,8 @@ func Register(u *mdu.User) (int32, error) {
 	u.Password = fmt.Sprintf("%x", hash)
 
 	// TODO: delete this before release
-	u.Rights = auth.RightsAdmin
+	//u.Rights = auth.RightsAdmin
+	u.Rights = auth.RightsPlayer
 	u.OpenID = u.Username
 	u.Type = enum.Player
 	f := func(tx *gorm.DB) error {
@@ -311,7 +312,6 @@ func GetAndCheckWXToken(openid string) (*mdu.AccessTokenResponse, error) {
 }
 
 func WXLogin(u *mdu.User, code string, address string) (*mdu.User, error) {
-
 	if u.OpenID == "" && code == "" {
 		return nil, erru.ErrWXLoginParam
 	}
@@ -386,8 +386,18 @@ func CreateUserByWX(u *mdu.User, atr *mdu.AccessTokenResponse) (*mdu.User, error
 	if err != nil {
 		return nil, err
 	}
+	//if len(u.UnionID) == 0 {
+	//	return nil, erru.ErrUnionIDNoFind
+	//}
 	u.Rights = auth.RightsPlayer
 	u.Username = u.OpenID
+	if len(u.UnionID) > 0{
+		rchannel := cacheuser.GetRegisterChannel(u.UnionID)
+		u.RegisterChannel = rchannel
+		cacheuser.DeleteRegisterChannel(u.UnionID)
+	}
+
+
 	f := func(tx *gorm.DB) error {
 		uid, err := dbu.AddUser(tx, u)
 		if err != nil {

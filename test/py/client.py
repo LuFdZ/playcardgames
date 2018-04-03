@@ -323,7 +323,11 @@ class Client(object):
         })
         return ul
 
-
+    def GetRoomRoundNow(self, rtype):
+        ul = self.Request("/room/roomSrv/GetRoomRoundNow", {
+            "RoomType": rtype,
+        })
+        return ul
 
     """
     充值相关操作
@@ -467,7 +471,7 @@ class Client(object):
             "RoundNumber": roundNumber,
             "MaxNumber": maxNumber,
             "GameType": 1002,
-            "GameParam": "{\"Times\":3,\"BankerType\":%d}" % (bType)
+            "GameParam": "{\"Times\":1,\"BankerType\":%d}" % (bType)
         })
         return ul
 
@@ -483,13 +487,13 @@ class Client(object):
         })
         return ul
 
-    def GetBanker(self, value):
+    def GetBankerN(self, value):
         ul = self.Request("/niuniu/niuniuSrv/GetBanker", {
             "Key": value,
         })
         return ul
 
-    def SetBet(self, value):
+    def SetBetN(self, value):
         ul = self.Request("/niuniu/niuniuSrv/SetBet", {
             "Key": value,
         })
@@ -612,8 +616,8 @@ class Client(object):
         ul = self.Request("/club/clubSrv/UpdateClub", {
             "ClubID": clubid,
             "SettingParam": {
-                "CostType": 1,
-                "CostValue": 5,
+                "CostType": 2,
+                "CostValue": 500,
                 "ClubCoinBaseScore": 1000,
             },
             "Notice": "测试测试123",
@@ -628,8 +632,8 @@ class Client(object):
         })
         return ul
 
-    def RemoveClubMember(self, clubid, uid, status):
-        ul = self.Request("/club/clubSrv/UpdateClubMember", {
+    def RemoveClubMember(self, clubid, uid):
+        ul = self.Request("/club/clubSrv/RemoveClubMember", {
             "ClubID": clubid,
             "UserID": uid,
         })
@@ -672,6 +676,12 @@ class Client(object):
 
     def GetClub(self):
         ul = self.Request("/club/clubSrv/GetClub", {
+        })
+        return ul
+
+    def GetClubByClubID(self,cid):
+        ul = self.Request("/club/clubSrv/GetClubByClubID", {
+            "ClubID": cid,
         })
         return ul
 
@@ -758,6 +768,63 @@ class Client(object):
 
     def UpdateClubMemberStatus(self, clubid, uid, status):
         ul = self.Request("/club/clubSrv/UpdateClubMemberStatus", {
+            "ClubID": clubid,
+            "UserID": uid,
+            "Status": status,
+        })
+        return ul
+
+    def UpdateClubProxyID(self, proxyid, uid):
+        ul = self.Request("/club/clubSrv/UpdateClubProxyID", {
+            "CreatorID": uid,
+            "CreatorProxy": proxyid,
+        })
+        return ul
+
+    def GetClubsByMemberID(self):
+        ul = self.Request("/club/clubSrv/GetClubsByMemberID", {
+        })
+        return ul
+
+    def GetClubRoomLog(self, clubid):
+        ul = self.Request("/club/clubSrv/GetClubRoomLog", {
+            "ClubID": clubid,
+        })
+        return ul
+
+    def PageBlackListMember(self, page, pagesize, clubid):
+        ul = self.Request("/club/clubSrv/PageBlackListMember", {
+            "Page": {
+                "Page": page,
+                "PageSize": pagesize,
+                "Time": {
+                    "Start": 0,
+                    "End": 0,
+                },
+                "Sum": False,
+            },
+            "ClubMember": {
+                "ClubID": clubid,
+            },
+        })
+        return ul
+
+    def CancelBlackList(self, clubid, uid):
+        ul = self.Request("/club/clubSrv/CancelBlackList", {
+            "ClubID": clubid,
+            "UserID": uid,
+        })
+        return ul
+
+    def CreateClubExamine(self, clubid, uid):
+        ul = self.Request("/club/clubSrv/CreateClubExamine", {
+            "ClubID": clubid,
+            "UserID": uid,
+        })
+        return ul
+
+    def UpdateClubExamine(self, clubid, uid, status):
+        ul = self.Request("/club/clubSrv/UpdateClubExamine", {
             "ClubID": clubid,
             "UserID": uid,
             "Status": status,

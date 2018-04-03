@@ -58,6 +58,7 @@ func UpdateUser(tx *gorm.DB, u *mdu.User) (*mdu.User, error) {
 		LastLoginIP:  u.LastLoginIP,
 		LastLoginAt:  u.LastLoginAt,
 		ClubID:       u.ClubID,
+		ProxyID:      u.ProxyID,
 	}
 	if err := tx.Model(u).Updates(user).Error; err != nil {
 		return nil, errors.Internal("update user failed", err)

@@ -9,6 +9,7 @@ import (
 	"playcards/utils/db"
 	sq "github.com/Masterminds/squirrel"
 	"github.com/jinzhu/gorm"
+	//"playcards/utils/log"
 )
 
 func CreateClub(tx *gorm.DB, mclub *mdclub.Club) error {
@@ -23,9 +24,13 @@ func CreateClub(tx *gorm.DB, mclub *mdclub.Club) error {
 
 func UpdateClub(tx *gorm.DB, mclub *mdclub.Club) (*mdclub.Club, error) {
 	now := gorm.NowFunc()
+	if mclub.ClubID == 0 {
+		return nil, errorclub.ErrClubIDZero
+	}
 	//mclub.UpdatedAt = &now
 	mClub := &mdclub.Club{
 		Icon:       mclub.Icon,
+		ClubName:   mclub.ClubName,
 		ClubRemark: mclub.ClubRemark,
 		Status:     mclub.Status,
 		ClubParam:  mclub.ClubParam,
@@ -50,9 +55,9 @@ func GetLockClub(tx *gorm.DB, cid int32) (*mdclub.Club, error) {
 	return out, nil
 }
 
-func GetLockClubMember(tx *gorm.DB, uid int32) (*mdclub.ClubMember, error) {
+func GetLockClubMember(tx *gorm.DB, clubid int32, uid int32) (*mdclub.ClubMember, error) {
 	out := &mdclub.ClubMember{}
-	if err := db.ForUpdate(tx).Where("user_id = ? and status < ?", uid, enumclub.ClubMemberStatusBan).Find(out).
+	if err := db.ForUpdate(tx).Where("club_id = ? and user_id = ? and status < ?", clubid, uid, enumclub.ClubMemberStatusBan).Find(out).
 		Error; err != nil {
 		return nil, errors.Internal("get lock club member failed", err)
 	}
@@ -105,6 +110,9 @@ func CreateClubMember(tx *gorm.DB, mcm *mdclub.ClubMember) error {
 
 func UpdateClubMember(tx *gorm.DB, mcm *mdclub.ClubMember) (*mdclub.ClubMember, error) {
 	now := gorm.NowFunc()
+	if mcm.ClubID == 0 || mcm.UserID == 0 {
+		return nil, errorclub.ErrIDZero
+	}
 	mMember := &mdclub.ClubMember{
 		Status:    mcm.Status,
 		UpdatedAt: &now,
@@ -129,7 +137,7 @@ func PageClub(tx *gorm.DB, page *mdpage.PageOption,
 func PageClubMember(tx *gorm.DB, page *mdpage.PageOption,
 	mcm *mdclub.ClubMember) ([]*mdclub.ClubMember, int64, error) {
 	var out []*mdclub.ClubMember
-	rows, rtx := page.Find(tx.Model(mcm).Order("created_at desc").
+	rows, rtx := page.Find(tx.Model(mcm).Where("status < ?", enumclub.ClubMemberStatusLeave).Order("created_at desc").
 		Where(mcm), &out)
 	if rtx.Error != nil {
 		return nil, 0, errors.Internal("page club member failed", rtx.Error)
@@ -162,7 +170,7 @@ func GetAllAlineClubMemberList(tx *gorm.DB) ([]*mdclub.ClubMember, error) {
 	var (
 		out []*mdclub.ClubMember
 	)
-	if err := tx.Where("status = ?", enumclub.ClubMemberStatusNon).Order("club_id").
+	if err := tx.Where("status = ? or status = ?", enumclub.ClubMemberStatusNon, enumclub.ClubMemberStatusBan).Order("club_id").
 		Find(&out).Error; err != nil {
 		return nil, errors.Internal("select club member list failed", err)
 	}
@@ -291,7 +299,7 @@ func GainClubMemberAndClubBalance(tx *gorm.DB, clubid int32, uid int32, amount i
 	if err != nil {
 		return nil, nil, err
 	}
-	mclubMember, err := GetLockClubMember(tx, uid)
+	mclubMember, err := GetLockClubMember(tx, clubid, uid)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -335,11 +343,12 @@ func GainClubMemberAndClubBalance(tx *gorm.DB, clubid int32, uid int32, amount i
 	return mclub, mclubMember, nil
 }
 
-func GainClubMemberGameBalance(tx *gorm.DB, uid int32, amount int64, fid int64, opid int64, gameCost bool) (*mdclub.ClubMember, error) {
-	mclubMember, err := GetLockClubMember(tx, uid)
+func GainClubMemberGameBalance(tx *gorm.DB, clubid int32, uid int32, amount int64, fid int64, opid int64, gameCost bool) (*mdclub.ClubMember, error) {
+	mclubMember, err := GetLockClubMember(tx, clubid, uid)
 	if err != nil {
 		return nil, err
 	}
+
 	amountBefore := mclubMember.ClubCoin
 	mclubMember.ClubCoin += amount
 	amountAfter := mclubMember.ClubCoin
@@ -358,15 +367,20 @@ func GainClubMemberGameBalance(tx *gorm.DB, uid int32, amount int64, fid int64, 
 		if gameCost {
 			jtype = enumclub.JournalTypeClubGameCostBack
 		}
+		//log.Debug("AAAAAAGainClubMemberGameBalance:%d|%d|%d\n", amount, amountBefore, amountAfter)
 		err = InsertJournal(tx, mclubMember.ClubID, enumclub.TypeClubCoin, amount, amountBefore, amountAfter, jtype, fid, opid)
 		if err != nil {
 			return nil, err
 		}
 	} else {
-		out.AmountBefore = amountBefore
+		//out.AmountBefore = amountBefore
 		out.AmountAfter = amountAfter
 		out.Amount += amount
-		if err := tx.Model(out).Updates(out).Find(&out).Error; err != nil {
+		m := make(map[string]interface{})
+		m["amount_after"] = out.AmountAfter
+		m["amount"] = out.Amount
+		//log.Debug("AAAAAAGainClubMemberGameBalance:%d|%+v\n", amount, out)
+		if err := tx.Model(out).Updates(m).Find(&out).Error; err != nil {
 			return nil, errors.Internal("update club journal failed", err)
 		}
 	}
@@ -378,7 +392,7 @@ func GainClubMemberGameBalance(tx *gorm.DB, uid int32, amount int64, fid int64, 
 		clubAmountBefore := mclub.ClubCoin
 		mclub.ClubCoin = mclub.ClubCoin - amount
 		clubAmountAfter := mclub.ClubCoin
-		err = InsertJournal(tx, mclubMember.ClubID, enumclub.TypeClubCoin, amount, clubAmountBefore, clubAmountAfter, enumclub.JournalTypeClubGameCostBack, fid, mclub.ClubCoin)
+		err = InsertJournal(tx, mclubMember.ClubID, enumclub.TypeClubCoin, amount, clubAmountBefore, clubAmountAfter, enumclub.JournalTypeClubGameCostBack, fid, int64(mclub.ClubID))
 		if err != nil {
 			return nil, err
 		}
@@ -393,4 +407,73 @@ func GainClubMemberGameBalance(tx *gorm.DB, uid int32, amount int64, fid int64, 
 		return nil, errors.Internal("update club member coin failed", err)
 	}
 	return mclubMember, nil
+}
+
+func UpdateClubProxyID(tx *gorm.DB, uid int32, proxyID int32) ([]*mdclub.Club, error) {
+	var out []*mdclub.Club
+	mMember := &mdclub.Club{}
+	if err := tx.Model(mMember).Where("creator_id = ?", uid).UpdateColumn("creator_proxy", proxyID).Find(&out).Error; err != nil {
+		return nil, errors.Internal("update club proxyID failed", err)
+	}
+	return out, nil
+}
+
+func CreateVipRoomSetting(tx *gorm.DB, mvrs *mdclub.VipRoomSetting) error {
+	now := gorm.NowFunc()
+	mvrs.CreatedAt = &now
+	mvrs.UpdatedAt = &now
+	if err := tx.Create(mvrs).Find(mvrs).Error; err != nil {
+		return errors.Internal("create vip room setting failed", err)
+	}
+	return nil
+}
+
+func UpdateVipRoomSetting(tx *gorm.DB, mvrs *mdclub.VipRoomSetting) (*mdclub.VipRoomSetting, error) {
+	mVrs := &mdclub.VipRoomSetting{
+		RoomType:     mvrs.RoomType,
+		MaxNumber:    mvrs.MaxNumber,
+		RoundNumber:  mvrs.RoundNumber,
+		SubRoomType:  mvrs.SubRoomType,
+		GameParam:    mvrs.GameParam,
+		Status:       mvrs.Status,
+		SettingParam: mvrs.SettingParam,
+		GameType:     mvrs.GameType,
+	}
+
+	if err := tx.Model(mvrs).Updates(mVrs).Find(&mvrs).Error; err != nil { //.Find(&mclub)
+		return nil, errors.Internal("update vip room setting failed", err)
+	}
+	return mvrs, nil
+}
+
+func GetAllAlineVipRoomSetting(tx *gorm.DB) ([]*mdclub.VipRoomSetting, error) {
+	var (
+		out []*mdclub.VipRoomSetting
+	)
+	if err := tx.Where("status = ?", enumclub.VipRoomSettingNon).Order("created_at").
+		Find(&out).Error; err != nil {
+		return nil, errors.Internal("select vip room setting list failed", err)
+	}
+	return out, nil
+}
+
+func GetClubByCreatorID(tx *gorm.DB, uid int32) (int32, error) {
+	var out []*mdclub.Club
+
+	//var out []*interface{}
+	sql, ps, err := sq.
+	Select(" club_id ").
+		From(enumclub.ClubTableName).
+		Where(" (status = ? or status = ?) and  creator_id = ? ", enumclub.ClubStatusNormal, enumclub.ClubMemberStatusBan, uid).
+		ToSql()
+
+	if err != nil {
+		return 0, errors.Internal("club room log failed", err)
+	}
+
+	err = tx.Raw(sql, ps...).Scan(&out).Error
+	if err != nil {
+		return 0, errors.Internal("club room log failed", err)
+	}
+	return int32(len(out)), nil
 }

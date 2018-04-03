@@ -24,7 +24,7 @@ func CreateBlackList(bltype int32, originid int32, targetid, uid int32) error {
 		Type:     bltype,
 		OriginID: originid,
 		TargetID: targetid,
-		Status:   enumcon.BlackListStatusAvailable,
+		Status:   enumcon.ExamineStatusNew,
 		OpID:     uid,
 	}
 	err = db.Transaction(func(tx *gorm.DB) error {
@@ -126,6 +126,7 @@ func PageBlackList(page *mdpage.PageOption, mbl *mdcon.BlackList) (
 	[]*mdcon.BlackList, int64, error) {
 	return dbcon.PageBlackList(db.DB(), page, mbl)
 }
+
 
 func PageExamine(page *mdpage.PageOption, me *mdcon.Examine) (
 	[]*mdcon.Examine, int64, error) {

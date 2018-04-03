@@ -21,6 +21,7 @@ message NiuniuUserResult {
     UserCard Cards = 3;
     string Score = 4;
     int32 Status = 5;
+    int32 PushOnBet = 6;
 }
 
 message NiuniuRoomResult {
@@ -85,7 +86,8 @@ message NiuniuGameStart {
     int32 UserID = 4;
     int32 RoomStatus = 5;
     int32 GameStatus = 6;
-    CountDown CountDown = 7;
+    int32 PushOnBet = 7;
+    CountDown CountDown = 8;
 }
 
 message BeBanker {
@@ -106,7 +108,8 @@ message AllBet {
 message SetBet {
     int32 UserID = 1;
     int32 Key = 2;
-    repeated int32 Ids = 3;
+    int32 PushOnBet = 3;
+    repeated int32 Ids = 4;
 }
 
 message GameReady {
