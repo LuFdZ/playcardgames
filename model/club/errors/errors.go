@@ -23,7 +23,7 @@ var (
 	ErrCreateClubLimit       = errors.NotFound(14018, "创建俱乐部已达上限！")
 	ErrCreateVipRoomLimit    = errors.NotFound(14019, "创建俱乐部包厢已达上限！")
 	ErrRoomMaxRound          = errors.Forbidden(14020, "房间轮数不正确！")
-	ErrGameParam             = errors.Forbidden(14021, "房间参数不正确！%s")
+	ErrGameParam             = errors.Forbidden(14021, "房间参数不正确！")
 	ErrRoomMaxNumber         = errors.Forbidden(14022, "房间人数不正确！")
 	ErrNameLen               = errors.Forbidden(14023, "名称不能为空！")
 	ErrVipRoomSettingNoFind  = errors.Conflict(14024, "未找到包厢配置！")

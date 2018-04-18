@@ -107,6 +107,7 @@ CREATE TABLE `rooms` (
   `setting_param`       VARCHAR(200)  NOT NULL DEFAULT '',
   `start_max_number`    INT           NOT NULL DEFAULT '',
   `vip_room_setting_id` INT           NOT NULL DEFAULT '',
+  `room_advance_options`          VARCHAR(200)  NOT NULL DEFAULT '',
   `pre_item_1`          VARCHAR(255)  NOT NULL DEFAULT '',
   `pre_item_2`          VARCHAR(255)  NOT NULL DEFAULT '',
   PRIMARY KEY (`room_id`),
@@ -282,7 +283,7 @@ CREATE TABLE `clubs` (
   UNIQUE KEY `name_unique` (`club_name`),
   KEY `idx_created`(`created_at`),
   KEY `idx_status`(`status`),
-#   KEY `idx_name`(`club_name`),
+  #   KEY `idx_name`(`club_name`),
   KEY `idx_creator`(`creator_id`),
   KEY `idx_proxy`(`creator_proxy`)
 )

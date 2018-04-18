@@ -34,11 +34,11 @@ func NewHandler(s server.Server, gt *gsync.GlobalTimer, gl *lua.LState) *Thirtee
 		server: s,
 		broker: s.Options().Broker,
 	}
-	t.update(gt,gl)
+	t.update(gt, gl)
 	return t
 }
 
-func (ts *ThirteenSrv) update(gt *gsync.GlobalTimer,gl *lua.LState) {
+func (ts *ThirteenSrv) update(gt *gsync.GlobalTimer, gl *lua.LState) {
 	lock := "playcards.thirteen.update.lock"
 	f := func() error {
 		ts.count ++
@@ -50,15 +50,28 @@ func (ts *ThirteenSrv) update(gt *gsync.GlobalTimer,gl *lua.LState) {
 					msg.BankerID = game.BankerID
 					topic.Publish(ts.broker, msg, TopicThirteenGameStart)
 				}
+				for _, uid := range game.WatchIds {
+					msg := &pbt.GroupCard{
+						UserID:     uid,
+						RoomStatus: game.Status,
+						BankerID:   game.BankerID,
+					}
+					msg.BankerID = game.BankerID
+					topic.Publish(ts.broker, msg, TopicThirteenGameStart)
+				}
 			}
+
 		}
 		games := thirteen.UpdateGame(gl)
 		if games != nil {
 			for _, game := range games {
+				mdr, _ := cacheroom.GetRoom(game.PassWord)
 				msg := game.Result.ToProto()
 				msg.Ids = game.Ids
+				msg.Ids = append(msg.Ids, mdr.GetIdsNotInGame()...)
 				topic.Publish(ts.broker, msg, TopicThirteenGameResult)
 			}
+
 		}
 		if ts.count == 30 {
 			err := thirteen.CleanGame()
@@ -80,7 +93,7 @@ func (ts *ThirteenSrv) SubmitCard(ctx context.Context, req *pbt.SubmitCard,
 		return err
 	}
 	mdr, err := cacheroom.GetRoomUserID(u.UserID)
-	if err != nil{
+	if err != nil {
 		return err
 	}
 	f := func() error {
@@ -105,6 +118,7 @@ func (ts *ThirteenSrv) SubmitCard(ctx context.Context, req *pbt.SubmitCard,
 		Ids:    mdr.Ids,
 		UserID: u.UserID,
 	}
+	msg.Ids = append(msg.Ids, mdr.GetIdsNotInGame()...)
 	topic.Publish(ts.broker, msg, TopicThirteenGameReady)
 	//if len(pwd) == 0{
 	//	return
@@ -134,7 +148,7 @@ func (rs *ThirteenSrv) ThirteenRecovery(ctx context.Context, req *pbt.ThirteenRe
 	if err != nil {
 		return err
 	}
-	recovery, err := thirteen.ThirteenExist(req.UserID,req.RoomID)
+	recovery, err := thirteen.ThirteenExist(req.UserID, req.RoomID)
 
 	if err != nil {
 		return err

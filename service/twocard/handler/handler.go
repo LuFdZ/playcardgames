@@ -9,6 +9,7 @@ import (
 	"playcards/model/room"
 	enumroom "playcards/model/room/enum"
 	pbtwo "playcards/proto/twocard"
+	cacheroom "playcards/model/room/cache"
 	"playcards/utils/auth"
 	"playcards/utils/log"
 	gsync "playcards/utils/sync"
@@ -60,6 +61,21 @@ func (tcs *TwoCardSrv) update(gt *gsync.GlobalTimer, gl *lua.LState) {
 					}
 					topic.Publish(tcs.broker, msg, TopicTwoCardGameStart)
 				}
+				for _,uid := range game.WatchIds{
+					msg := &pbtwo.GameStart{
+						GameID:     game.GameID,
+						UserID:     uid,
+						BankerID:   game.BankerID,
+						RoomStatus: enumroom.RoomStatusStarted,
+						CardList:   nil,
+						GameStatus: game.Status,
+						CountDown: &pbtwo.CountDown{
+							ServerTime: game.OpDateAt.Unix(),
+							Count:      enumgame.SetBetTime,
+						},
+					}
+					topic.Publish(tcs.broker, msg, TopicTwoCardGameStart)
+				}
 			}
 		}
 		updateGames := twocard.UpdateGame(gl)
@@ -89,12 +105,20 @@ func (tcs *TwoCardSrv) update(gt *gsync.GlobalTimer, gl *lua.LState) {
 						}
 						topic.Publish(tcs.broker, msg, TopicTwoCardGameReady)
 					}
+					msgWatch := game.ToProto()
+					mdr, _ := cacheroom.GetRoom(game.PassWord)
+					for _, uid := range mdr.GetIdsNotInGame() {
+						msgWatch.UserID = uid
+						topic.Publish(tcs.broker, msgWatch, TopicTwoCardGameReady)
+					}
 				} else if game.Status == enumgame.GameStatusDone {
 					msg := game.ToProto()
 					bro := &pbtwo.GameResultBro{
 						Context: msg,
 						Ids:     game.Ids,
 					}
+					mdr, _ := cacheroom.GetRoom(game.PassWord)
+					bro.Ids = append(bro.Ids, mdr.GetIdsNotInGame()...)
 					topic.Publish(tcs.broker, bro, TopicTwoCardGameResult)
 				}
 			}
@@ -148,6 +172,8 @@ func (tcs *TwoCardSrv) SetBet(ctx context.Context, req *pbtwo.SetBetRequest,
 		Context: msg,
 		Ids:     mdr.Ids,
 	}
+
+	bro.Ids = append(bro.Ids, mdr.GetIdsNotInGame()...)
 	topic.Publish(tcs.broker, bro, TopicTwoCardSetBet)
 	return nil
 }
@@ -191,7 +217,8 @@ func (tcs *TwoCardSrv) SubmitCard(ctx context.Context, req *pbtwo.SubmitCardRequ
 		Context: msg,
 		Ids:     mdr.Ids,
 	}
-	fmt.Printf("SubmitCardBroAAA")
+
+	bro.Ids = append(bro.Ids, mdr.GetIdsNotInGame()...)
 	topic.Publish(tcs.broker, bro, TopicTwoCardGameSubmitCard)
 	return nil
 }

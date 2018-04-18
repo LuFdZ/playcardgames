@@ -59,13 +59,34 @@ func CreateGame() []*mdgame.Fourcard {
 					Score:  0,
 				}
 				userResults = append(userResults, userResult)
+			}else if len(mdr.Users) != len(mdr.UserResults) {
+				hasIn := false
+				for _, mru := range mdr.UserResults {
+					if user.UserID == mru.UserID {
+						hasIn = true
+						break
+					}
+				}
+				if !hasIn {
+					if user.UserRole == enumroom.UserRolePlayerBro {
+						userResult := &mdroom.GameUserResult{
+							UserID: user.UserID,
+							Role:   user.Role,
+							Win:    0,
+							Lost:   0,
+							Tie:    0,
+							Score:  0,
+						}
+						userResults = append(userResults, userResult)
+					}
+				}
 			}
 			//if user.Role == enumroom.UserRoleMaster {
 			//	bankerID = user.UserID
 			//}
 			if user.UserID == bankerID {
 				user.Role = enumroom.UserRoleMaster
-			}else{
+			} else {
 				user.Role = enumroom.UserRoleSlave
 			}
 			ui := &mdgame.UserInfo{
@@ -81,6 +102,8 @@ func CreateGame() []*mdgame.Fourcard {
 		newGameResult.List = userInfo
 		if mdr.RoundNow == 1 {
 			mdr.UserResults = userResults
+		}else if len(userResults) > 0 {
+			mdr.UserResults = append(mdr.UserResults, userResults...)
 		}
 		now := gorm.NowFunc()
 
@@ -99,6 +122,7 @@ func CreateGame() []*mdgame.Fourcard {
 			BetType:    roomParam.BetType,
 			OpDateAt:   &now,
 			Ids:        mdr.Ids,
+			WatchIds:   mdr.WatchIds,
 		}
 		mdr.Status = enumroom.RoomStatusStarted
 		f := func(tx *gorm.DB) error {
@@ -262,7 +286,7 @@ func UpdateGame(goLua *lua.LState) []*mdgame.Fourcard {
 							userResult.Lost += 1
 						}
 						//特殊记录 至尊 天对
-						if result.HeadCards.CardType == 100 || result.TailCards.CardType == 110{
+						if result.HeadCards.CardType == 100 || result.TailCards.CardType == 110 {
 							specialCardUids = append(specialCardUids, userResult.UserID)
 						}
 						userResult.RoundScore = ts
@@ -273,13 +297,13 @@ func UpdateGame(goLua *lua.LState) []*mdgame.Fourcard {
 			mdr.Status = enumroom.RoomStatusReInit
 			if mdr.RoomType == enumroom.RoomTypeClub && mdr.SubRoomType == enumroom.SubTypeClubMatch {
 				err := room.GetRoomClubCoin(mdr)
-				if err != nil{
+				if err != nil {
 					log.Err("room club member game balance failed,rid:%d,uid:%d, err:%v", mdr.RoomID, err)
 					continue
 				}
-				for _,ur := range mdr.UserResults{
-					for _,ugr := range game.GameResult.List{
-						if ugr.UserID == ugr.UserID{
+				for _, ur := range mdr.UserResults {
+					for _, ugr := range game.GameResult.List {
+						if ugr.UserID == ugr.UserID {
 							ugr.ClubCoinScore = ur.RoundClubCoinScore
 							break
 						}
@@ -405,7 +429,7 @@ func autoSetBankerScore(game *mdgame.Fourcard) {
 
 func SetBet(uid int32, key int32, mdr *mdroom.Room) error {
 	var value int32
-	if key<1 || key >5{
+	if key < 1 || key > 5 {
 		return errgame.ErrParam
 	}
 	value = key

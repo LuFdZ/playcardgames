@@ -128,7 +128,7 @@ func SelectGRoom(gtype int32, level int32) (*mdroom.Room, error) {
 	var count int64
 	count = 999
 	key := RoomSearcKey()
-	match := fmt.Sprintf("gtype:%d-*rType:%d-level:%d-*",gtype,enumroom.RoomTypeGold,level)
+	match := fmt.Sprintf("gtype:%d-rtype:%d-level:%d-*", gtype, enumroom.RoomTypeGold, level)
 	for {
 		scan := cache.KV().HScan(key, curson, match, count)
 		keysValues, cur, err := scan.Result()
@@ -137,8 +137,9 @@ func SelectGRoom(gtype int32, level int32) (*mdroom.Room, error) {
 		}
 		for i, roomStatus := range keysValues {
 			if i%2 == 1 {
+
 				str := strings.Split(roomStatus, "-")
-				if str[1] == string(enumroom.RoomStatusInit) && str[2] == "1" {
+				if str[1] == tools.IntToString(enumroom.RoomStatusInit) && str[2] == "1" {
 					mdr, err := cacheroom.GetRoom(str[0])
 					if err != nil {
 						log.Err("select groom err str:%s,err:%v", roomStatus, err)
@@ -182,7 +183,7 @@ func GetAllGRoom(gtype int32, statusList []int32) []*mdroom.Room {
 	key := RoomSearcKey()
 	match := "*"
 	if gtype > 0 {
-		match = fmt.Sprintf("gtype:%d-*-rType:%d", gtype,enumroom.RoomTypeGold)
+		match = fmt.Sprintf("gtype:%d-*-rType:%d", gtype, enumroom.RoomTypeGold)
 	}
 	for {
 		scan := cache.KV().HScan(key, curson, match, count)

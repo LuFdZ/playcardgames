@@ -24,6 +24,7 @@ var ClubEvent = []string{
 	srvclub.TopicUpdateVipRoomSetting,
 	srvclub.TopicUpdateClub,
 	srvclub.TopicAddClubCoin,
+	srvroom.TopicClubBalanceUpdate,
 }
 
 var ClubActiveEvent = []string{

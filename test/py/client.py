@@ -151,6 +151,23 @@ class Client(object):
     """
     房间相关操作
     """
+    def GameStart(self, Password):
+        ul = self.Request("/room/roomSrv/GameStart", {
+            "Password": Password
+        })
+        return ul
+
+    def WatchRoom(self, Password):
+        ul = self.Request("/room/roomSrv/WatchRoom", {
+            "Password": Password
+        })
+        return ul
+
+    def SitDown(self, Password):
+        ul = self.Request("/room/roomSrv/SitDown", {
+            "Password": Password
+        })
+        return ul
 
     def CreateTRoom(self, roomType, maxNumber, roundNumber):
         ul = self.Request("/room/roomSrv/CreateRoom", {
@@ -612,13 +629,14 @@ class Client(object):
         })
         return ul
 
-    def UpdateClub(self, clubid):
+    def UpdateClub(self, clubid,costtype,costvalue,ccbs,ucr):
         ul = self.Request("/club/clubSrv/UpdateClub", {
             "ClubID": clubid,
             "SettingParam": {
-                "CostType": 2,
-                "CostValue": 500,
-                "ClubCoinBaseScore": 1000,
+                "CostType": costtype,
+                "CostValue": costvalue,
+                "ClubCoinBaseScore": ccbs,
+                "UserCreateRoom": ucr,
             },
             "Notice": "测试测试123",
         })
@@ -679,7 +697,7 @@ class Client(object):
         })
         return ul
 
-    def GetClubByClubID(self,cid):
+    def GetClubByClubID(self, cid):
         ul = self.Request("/club/clubSrv/GetClubByClubID", {
             "ClubID": cid,
         })

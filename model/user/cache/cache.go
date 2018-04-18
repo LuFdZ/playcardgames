@@ -530,8 +530,8 @@ func SetRobots(us []*mdu.User) error {
 func SetRobotUsing(uid int32) error {
 	key := RobotUsingMap()
 	f := func(tx *redis.Tx) error {
-		key = RobotMap()
 		tx.Pipelined(func(p *redis.Pipeline) error {
+			fmt.Printf("AAAAAAAAAASetRobotUsing:%d\n",uid)
 			tx.HSet(key, tools.IntToString(uid), time.Now().Unix())
 			return nil
 		})
@@ -547,6 +547,7 @@ func DeleteUsingRobot(uid int32) error {
 	key := RobotUsingMap()
 	f := func(tx *redis.Tx) error {
 		tx.Pipelined(func(p *redis.Pipeline) error {
+			fmt.Printf("BBBBBBBBSetRobotUsing:%d\n",uid)
 			tx.HDel(key, tools.IntToString(uid))
 			return nil
 		})
@@ -595,8 +596,9 @@ func GetRobot() (*mdu.User, error) {
 		if err != nil {
 			return nil, errors.Internal("list users failed", err)
 		}
+		startIndex := tools.GenerateRangeNum(0,len(keys)/2)
 		for i, ustr := range keys {
-			if i%2 == 1 {
+			if int32(i) > startIndex && i%2 == 1 {
 				u := &mdu.User{}
 				//room, err := GetRoom(k)
 

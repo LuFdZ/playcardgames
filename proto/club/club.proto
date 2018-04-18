@@ -70,6 +70,8 @@ message SettingParam {
     int32 CostValue = 2; //管理费数值
     int64 ClubCoinBaseScore = 3; //游戏最低战绩分值
     int32 CostRange = 4; //收费范围 1大赢家扣费 2所有赢家扣费
+    int32 UserCreateRoom = 5; // 1 允许玩家大厅开房 2不允许
+    int64 CostBase = 6; //最低报名费下限
 }
 
 //俱乐部包间配置结构体
@@ -86,6 +88,8 @@ message VipRoomSetting {
     int32 Status = 10;
     int32 GameType = 11;
     string SettingParam = 12;
+    repeated string RoomAdvanceOptions = 13;
+    int32 StartMaxNumber = 14;
 }
 
 //***********************************************请求***********************************************

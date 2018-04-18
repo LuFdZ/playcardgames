@@ -15,4 +15,5 @@ var (
 	ErrParamTooLong             = errors.BadRequest(10010, "参数过长！")
 	ErrNameOrPasswordNotExisted = errors.NotFound(10011, "账号名或密码错误！")
 	ErrUnionIDNoFind            = errors.BadRequest(10012, "UnionID获取失败！")
+	ErrWXLoginResponse          = errors.BadRequest(10014, "微信请求返回错误！%s")
 )

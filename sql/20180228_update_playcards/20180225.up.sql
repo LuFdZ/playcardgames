@@ -13,7 +13,8 @@ CREATE TABLE `vip_room_settings` (
   `sub_room_type`    INT           NOT NULL DEFAULT '0',
   `game_param`       VARCHAR(255)  NOT NULL DEFAULT '',
   `setting_param`    VARCHAR(255)  NOT NULL DEFAULT '',
-  `status`           INT           NOT NULL DEFAULT '0',
+  `status`              INT           NOT NULL DEFAULT '0',
+  `room_advance_options` VARCHAR(200)  NOT NULL DEFAULT '',
   `created_at`       DATETIME      NOT NULL,
   `updated_at`       DATETIME      NOT NULL,
   PRIMARY KEY (`id`),
@@ -40,6 +41,12 @@ alter table rooms add sub_room_type INT default 0 not null after cost_type;
 alter table rooms add setting_param VARCHAR(200) NOT NULL DEFAULT '' after sub_room_type;
 alter table rooms add start_max_number INT default 0 not null after sub_room_type;
 alter table rooms add vip_room_setting_id INT default 0 not null after sub_room_type;
+
+-- alter table rooms add join_type INT default 0 not null after sub_room_type;
+-- alter table vip_room_settings add join_type INT default 0 not null after status;
+
+alter table rooms add room_param VARCHAR(255)  NOT NULL DEFAULT '' after sub_room_type;
+alter table vip_room_settings add room_param VARCHAR(255)  NOT NULL DEFAULT '' after status;
 
 alter table users add register_channel VARCHAR(200) NOT NULL DEFAULT '' after last_login_ip;
 alter table users add proxy_id INT default 0 not null after last_login_ip;

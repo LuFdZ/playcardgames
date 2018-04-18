@@ -352,9 +352,9 @@ func GetClubRoomLog(tx *gorm.DB, clubid int32) ([]*mdr.ClubRoomLog, error) {
 	var out []*mdr.ClubRoomLog
 	//var out []*interface{}
 	sql, ps, err := sq.
-	Select(" DATE_FORMAT(created_at,'%Y-%m-%d') date ,sum(round_now) as total_room_count " +
-		",sum(IF((vip_room_setting_id =0), round_now,0)) as club_room_count" +
-		",sum(IF((vip_room_setting_id >0), round_now,0)) as vip_room_count").
+	Select(" DATE_FORMAT(created_at,'%Y-%m-%d') date ,count(room_id) as total_room_count " +//round_now
+		",sum(IF((vip_room_setting_id =0), 1,0)) as club_room_count" +
+		",sum(IF((vip_room_setting_id >0), 1,0)) as vip_room_count").
 		From(enum.RoomTableName).
 		Where(" round_now > 1 and room_type = ? and club_id = ?", enumr.RoomTypeClub, clubid).
 		GroupBy(" date ").

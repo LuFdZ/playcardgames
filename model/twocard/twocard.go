@@ -53,13 +53,34 @@ func CreateGame() []*mdgame.Twocard {
 					Score:  0,
 				}
 				userResults = append(userResults, userResult)
+			} else if len(mdr.Users) != len(mdr.UserResults) {
+				hasIn := false
+				for _, mru := range mdr.UserResults {
+					if user.UserID == mru.UserID {
+						hasIn = true
+						break
+					}
+				}
+				if !hasIn {
+					if user.UserRole == enumroom.UserRolePlayerBro {
+						userResult := &mdroom.GameUserResult{
+							UserID: user.UserID,
+							Role:   user.Role,
+							Win:    0,
+							Lost:   0,
+							Tie:    0,
+							Score:  0,
+						}
+						userResults = append(userResults, userResult)
+					}
+				}
 			}
 			//if user.Role == enumroom.UserRoleMaster {
 			//	bankerID = user.UserID
 			//}
 			if user.UserID == bankerID {
 				user.Role = enumroom.UserRoleMaster
-			}else{
+			} else {
 				user.Role = enumroom.UserRoleSlave
 			}
 			ui := &mdgame.UserInfo{
@@ -75,6 +96,8 @@ func CreateGame() []*mdgame.Twocard {
 		newGameResult.List = userInfo
 		if mdr.RoundNow == 1 {
 			mdr.UserResults = userResults
+		}else if len(userResults) >0{
+			mdr.UserResults = append(mdr.UserResults,userResults...)
 		}
 		now := gorm.NowFunc()
 
@@ -93,6 +116,7 @@ func CreateGame() []*mdgame.Twocard {
 			BetType:    roomParam.BetType,
 			OpDateAt:   &now,
 			Ids:        mdr.Ids,
+			WatchIds:   mdr.WatchIds,
 		}
 		mdr.Status = enumroom.RoomStatusStarted
 		f := func(tx *gorm.DB) error {
@@ -203,9 +227,9 @@ func UpdateGame(goLua *lua.LState) []*mdgame.Twocard {
 			}
 		} else if game.Status == enumgame.GameStatusSubmitCard {
 			sub := time.Now().Sub(*game.OpDateAt)
-			if sub.Seconds() > enumgame.SubmitCardTime{
+			if sub.Seconds() > enumgame.SubmitCardTime {
 				err := autoSubmitCard(game)
-				if err != nil{
+				if err != nil {
 					log.Err("two card user all submit card set session failed, %v", err)
 					continue
 				}
@@ -277,13 +301,13 @@ func UpdateGame(goLua *lua.LState) []*mdgame.Twocard {
 
 			if mdr.RoomType == enumroom.RoomTypeClub && mdr.SubRoomType == enumroom.SubTypeClubMatch {
 				err := room.GetRoomClubCoin(mdr)
-				if err != nil{
+				if err != nil {
 					log.Err("room club member game balance failed,rid:%d,uid:%d, err:%v", mdr.RoomID, err)
 					continue
 				}
-				for _,ur := range mdr.UserResults{
-					for _,ugr := range game.GameResult.List{
-						if ugr.UserID == ugr.UserID{
+				for _, ur := range mdr.UserResults {
+					for _, ugr := range game.GameResult.List {
+						if ugr.UserID == ugr.UserID {
 							ugr.ClubCoinScore = ur.RoundClubCoinScore
 							break
 						}
@@ -508,7 +532,7 @@ func SubmitCard(uid int32, room *mdroom.Room) (*mdgame.Twocard, error) {
 	if userResult == nil {
 		return nil, errgame.ErrUserNotInGame
 	}
-	fmt.Printf("SubmitCard:%d\n",userResult.Status)
+	//fmt.Printf("SubmitCard:%d\n", userResult.Status)
 	if userResult.Status > enumgame.UserStatusSubmitCard {
 		return nil, errgame.ErrAlreadySubmitCard
 	}

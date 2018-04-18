@@ -67,7 +67,7 @@ func CreateClub(name string, creatorid int32, creatorproxy int32) error {
 		Status:       enumclub.ClubStatusNormal,
 		CreatorID:    creatorid,
 		CreatorProxy: creatorproxy,
-		Setting:      &mdclub.SettingParam{1, 0, 0, 1},
+		Setting:      &mdclub.SettingParam{1, 0, 0, 1, 0, 1},
 		ClubCoin:     enumclub.ClubCoinInit,
 	}
 	err = db.Transaction(func(tx *gorm.DB) error {
@@ -1018,11 +1018,12 @@ func CreateVipRoomSetting(mdu *mduser.User, mvrs *mdclub.VipRoomSetting) error {
 		count >= enumclub.PlayerCreateVipRoomSettingLimit) {
 		return errclub.ErrCreateVipRoomLimit
 	}
-	err = chekcGameParam(mvrs.MaxNumber, mvrs.RoundNumber, mvrs.GameType, mvrs.GameParam)
+	mvrs.MaxNumber, mvrs.RoundNumber, mvrs.GameType, mvrs.GameParam, mvrs.RoomAdvanceOptions, err =
+		checkGameParam(mvrs.MaxNumber, mvrs.RoundNumber, mvrs.GameType, mvrs.GameParam, mvrs.RoomAdvanceOptions)
 	if err != nil {
 		return err
 	}
-	if mvrs.RoomType == enumroom.RoomTypeClub && (mvrs.SubRoomType != 0 && mvrs.SubRoomType != enumroom.SubTypeClubMatch) {
+	if mvrs.RoomType == enumroom.RoomTypeClub && (mvrs.SubRoomType != -1 && mvrs.SubRoomType != enumroom.SubTypeClubMatch) {
 		return errclub.ErrGameParam
 	}
 	if mvrs.SubRoomType == enumroom.SubTypeClubMatch {
@@ -1054,166 +1055,416 @@ func CreateVipRoomSetting(mdu *mduser.User, mvrs *mdclub.VipRoomSetting) error {
 	return nil
 }
 
-func chekcGameParam(maxNumber int32, maxRound int32, gtype int32, gameParam string) error {
+//func chekcGameParam(maxNumber int32, maxRound int32, gtype int32, gameParam string, RoomAdvanceOptions []string) error {
+//	if len(gameParam) == 0 {
+//		return errclub.ErrGameParam
+//	}
+//	if maxNumber < 2 {
+//		return errclub.ErrRoomMaxNumber
+//	}
+//	//TODO 更新正式服前放开限制
+//	if maxRound != 10 && maxRound != 20 && maxRound != 30 {
+//		return errclub.ErrRoomMaxRound
+//	}
+//	//fmt.Printf("ChekcGameParam:%d|%d|%d|%s\n",maxNumber,maxRound,gtype,gameParam)
+//	//if JoinType != enumroom.CanJoin && JoinType != enumroom.CanNotJoin {
+//	//	mderr := errors.Parse(errclub.ErrGameParam.Error())
+//	//	mderr.Detail = fmt.Sprintf(mderr.Detail, "加入类型格式错误！")
+//	//	return mderr
+//	//}
+//	if len(RoomAdvanceOptions) == 0 {
+//		mderr := errors.Parse(errclub.ErrGameParam.Error())
+//		mderr.Detail = fmt.Sprintf(mderr.Detail, "房间参数格式错误！")
+//		return mderr
+//	}
+//	if RoomAdvanceOptions[0] != "1" && RoomAdvanceOptions[0] != "0" {
+//		mderr := errors.Parse(errclub.ErrGameParam.Error())
+//		mderr.Detail = fmt.Sprintf(mderr.Detail, "房间允许加入参数格式错误！")
+//		return mderr
+//	}
+//
+//	switch gtype {
+//	case enumroom.ThirteenGameType:
+//		if maxNumber > 8 {
+//			return errclub.ErrRoomMaxNumber
+//		}
+//		var roomParam *mdroom.ThirteenRoomParam
+//		mderr := errors.Parse(errclub.ErrGameParam.Error())
+//		if err := json.Unmarshal([]byte(gameParam), &roomParam); err != nil {
+//			log.Err("room check thirteen clean unmarshal room param failed, %v", err)
+//			mderr.Detail = fmt.Sprintf(mderr.Detail, "json解析错误！")
+//			return mderr
+//		}
+//		//if roomParam.BankerType != 1 && roomParam.BankerType != 2 {
+//		//	return errors.ErrGameParam
+//		//}
+//		if roomParam.BankerAddScore < 0 || roomParam.BankerAddScore > 6 || roomParam.BankerAddScore%2 != 0 {
+//			mderr.Detail = fmt.Sprintf(mderr.Detail, "当庄加分格式错误！")
+//			return mderr
+//		}
+//		if roomParam.Joke != 0 && roomParam.Joke != 1 {
+//			mderr.Detail = fmt.Sprintf(mderr.Detail, "大小王格式错误！")
+//			return mderr
+//		}
+//		if roomParam.Times < 1 || roomParam.Times > 3 {
+//			mderr.Detail = fmt.Sprintf(mderr.Detail, "比赛模式格式错误！")
+//			return mderr
+//		}
+//		break
+//	case enumroom.NiuniuGameType:
+//		if maxNumber != 4 && maxNumber != 6 && maxNumber != 8 && maxNumber != 10 {
+//			return errclub.ErrRoomMaxNumber
+//		}
+//		var roomParam *mdroom.NiuniuRoomParam
+//		mderr := errors.Parse(errclub.ErrGameParam.Error())
+//		if err := json.Unmarshal([]byte(gameParam), &roomParam); err != nil {
+//			log.Err("niuniu unmarshal room param failed, %v", err)
+//			mderr.Detail = fmt.Sprintf(mderr.Detail, "json解析错误！")
+//			return mderr
+//		}
+//		if roomParam.BankerType < 1 || roomParam.BankerType > 5 {
+//			mderr.Detail = fmt.Sprintf(mderr.Detail, "玩法ID错误！")
+//			return mderr
+//		}
+//		if roomParam.Times != 1 && roomParam.Times != 2 {
+//			mderr.Detail = fmt.Sprintf(mderr.Detail, "倍数ID错误！")
+//			return mderr
+//		}
+//		if roomParam.BetScore < 1 || roomParam.BetScore > 4 {
+//			mderr.Detail = fmt.Sprintf(mderr.Detail, "底分ID错误！")
+//			return mderr
+//		}
+//		if len(roomParam.SpecialCards) != 7 {
+//			mderr.Detail = fmt.Sprintf(mderr.Detail, "特殊牌型长度错误！")
+//			return mderr
+//		}
+//		if len(roomParam.AdvanceOptions) != 3 {
+//			mderr.Detail = fmt.Sprintf(mderr.Detail, "高级选项长度错误！")
+//			return mderr
+//		}
+//
+//		for _, value := range roomParam.SpecialCards {
+//			if value != "1" && value != "0" {
+//				mderr.Detail = fmt.Sprintf(mderr.Detail, "特殊牌型格式错误！")
+//				return mderr
+//			}
+//		}
+//
+//		if roomParam.AdvanceOptions[0] != "0" && roomParam.BankerType == 5 {
+//			mderr.Detail = fmt.Sprintf(mderr.Detail, "不能同时选择推注和通比！")
+//			return mderr
+//		}
+//
+//		if roomParam.AdvanceOptions[0] != "0" && roomParam.AdvanceOptions[0] != "1" && roomParam.AdvanceOptions[0] != "2" && roomParam.AdvanceOptions[0] != "3" {
+//			mderr.Detail = fmt.Sprintf(mderr.Detail, "推注最高倍数格式错误！")
+//			return mderr
+//		}
+//
+//		if roomParam.SpecialCards[0] == "1" && roomParam.AdvanceOptions[1] == "1" {
+//			mderr.Detail = fmt.Sprintf(mderr.Detail, "不能同时选择五花牛和不发花牌！")
+//			return mderr
+//		}
+//
+//		if maxNumber == 10 && roomParam.AdvanceOptions[1] == "1" { //|| (roomParam.SpecialCards[0] == "1" && roomParam.AdvanceOptions[1] == "1")
+//			mderr.Detail = fmt.Sprintf(mderr.Detail, "不能同时选择五花牛和10人模式！")
+//			return mderr
+//		}
+//
+//		break
+//	case enumroom.DoudizhuGameType:
+//		if maxNumber != 4 {
+//			return errclub.ErrRoomMaxNumber
+//		}
+//		var roomParam *mdroom.DoudizhuRoomParam
+//		mderr := errors.Parse(errclub.ErrGameParam.Error())
+//		if err := json.Unmarshal([]byte(gameParam), &roomParam); err != nil {
+//			log.Err("doudizhu unmarshal room param failed, %v", err)
+//			mderr.Detail = fmt.Sprintf(mderr.Detail, "json解析错误！")
+//			return mderr
+//		}
+//		if roomParam.BaseScore != 0 && roomParam.BaseScore != 5 && roomParam.BaseScore != 10 {
+//			mderr.Detail = fmt.Sprintf(mderr.Detail, "基本分格式错误！")
+//			return mderr
+//		}
+//		break
+//	case enumroom.FourCardGameType:
+//		if maxNumber < 2 && maxNumber > 8 {
+//			return errclub.ErrRoomMaxNumber
+//		}
+//		mderr := errors.Parse(errclub.ErrGameParam.Error())
+//		var roomParam *mdroom.FourCardRoomParam
+//		if err := json.Unmarshal([]byte(gameParam), &roomParam); err != nil {
+//			log.Err("fourcard unmarshal room param failed, %v", err)
+//			mderr.Detail = fmt.Sprintf(mderr.Detail, "json解析错误！")
+//			return errclub.ErrGameParam
+//		}
+//		if roomParam.ScoreType < 1 || roomParam.ScoreType > 2 {
+//			mderr.Detail = fmt.Sprintf(mderr.Detail, "计分模式格式错误！")
+//			return mderr
+//		}
+//		if roomParam.BetType < 1 || roomParam.BetType > 2 {
+//			mderr.Detail = fmt.Sprintf(mderr.Detail, "下注类型格式错误！")
+//			return mderr
+//		}
+//		break
+//	case enumroom.TwoCardGameType:
+//		if maxNumber < 2 && maxNumber > 10 {
+//			return errclub.ErrRoomMaxNumber
+//		}
+//		var roomParam *mdroom.TwoCardRoomParam
+//		mderr := errors.Parse(errclub.ErrGameParam.Error())
+//		if err := json.Unmarshal([]byte(gameParam), &roomParam); err != nil {
+//			log.Err("towcard unmarshal room param failed, %v", err)
+//			mderr.Detail = fmt.Sprintf(mderr.Detail, "json解析错误！")
+//			return mderr
+//		}
+//		if roomParam.ScoreType < 1 || roomParam.ScoreType > 2 {
+//			mderr.Detail = fmt.Sprintf(mderr.Detail, "计分模式格式错误！")
+//			return errclub.ErrGameParam
+//		}
+//		if roomParam.BetType < 1 || roomParam.BetType > 2 {
+//			mderr.Detail = fmt.Sprintf(mderr.Detail, "下注类型格式错误！")
+//			return mderr
+//		}
+//		break
+//	default:
+//		return errclub.ErrGameParam
+//	}
+//	return nil
+//}
+
+func checkGameParam(maxNumber int32, maxRound int32, gtype int32, gameParam string, RoomAdvanceOptions []string) (
+	int32, int32, int32, string, []string, error) {
 	if len(gameParam) == 0 {
-		return errclub.ErrGameParam
+		return 0, 0, 0, "", nil, errclub.ErrGameParam
 	}
 	if maxNumber < 2 {
-		return errclub.ErrRoomMaxNumber
+		maxNumber = 2
+		//return errroom.ErrRoomMaxNumber
 	}
-	//TODO 更新正式服前放开限制
 	if maxRound != 10 && maxRound != 20 && maxRound != 30 {
-		return errclub.ErrRoomMaxRound
+		maxRound = 10
+		//return errroom.ErrRoomMaxRound
 	}
 	//fmt.Printf("ChekcGameParam:%d|%d|%d|%s\n",maxNumber,maxRound,gtype,gameParam)
+	//if JoinType != enumroom.CanJoin && JoinType != enumroom.CanNotJoin {
+	//	mderr := errors.Parse(errroom.ErrGameParam.Error())
+	//	mderr.Detail = fmt.Sprintf(mderr.Detail, "加入类型格式错误！")
+	//	return mderr
+	//}
+
+	if len(RoomAdvanceOptions) == 0 || (RoomAdvanceOptions[0] != "1" && RoomAdvanceOptions[0] != "0" ) {
+		//mderr := errors.Parse(errroom.ErrGameParam.Error())
+		//mderr.Detail = fmt.Sprintf(mderr.Detail, "房间参数格式错误！")
+		//return mderr
+		RoomAdvanceOptions = []string{"0"}
+	}
+	//if RoomAdvanceOptions[0] != "1" && RoomAdvanceOptions[0] != "0" {
+	//	mderr := errors.Parse(errroom.ErrGameParam.Error())
+	//	mderr.Detail = fmt.Sprintf(mderr.Detail, "房间允许加入参数格式错误！")
+	//	return mderr
+	//}
+
 	switch gtype {
 	case enumroom.ThirteenGameType:
 		if maxNumber > 8 {
-			return errclub.ErrRoomMaxNumber
+			maxNumber = 8
+			//return errroom.ErrRoomMaxNumber
 		}
 		var roomParam *mdroom.ThirteenRoomParam
 		mderr := errors.Parse(errclub.ErrGameParam.Error())
 		if err := json.Unmarshal([]byte(gameParam), &roomParam); err != nil {
 			log.Err("room check thirteen clean unmarshal room param failed, %v", err)
 			mderr.Detail = fmt.Sprintf(mderr.Detail, "json解析错误！")
-			return mderr
+			return 0, 0, 0, "", nil, mderr
 		}
 		//if roomParam.BankerType != 1 && roomParam.BankerType != 2 {
 		//	return errors.ErrGameParam
 		//}
 		if roomParam.BankerAddScore < 0 || roomParam.BankerAddScore > 6 || roomParam.BankerAddScore%2 != 0 {
 			mderr.Detail = fmt.Sprintf(mderr.Detail, "当庄加分格式错误！")
-			return mderr
+			return 0, 0, 0, "", nil, mderr
 		}
 		if roomParam.Joke != 0 && roomParam.Joke != 1 {
 			mderr.Detail = fmt.Sprintf(mderr.Detail, "大小王格式错误！")
-			return mderr
+			return 0, 0, 0, "", nil, mderr
 		}
 		if roomParam.Times < 1 || roomParam.Times > 3 {
 			mderr.Detail = fmt.Sprintf(mderr.Detail, "比赛模式格式错误！")
-			return mderr
+			return 0, 0, 0, "", nil, mderr
 		}
+		data, _ := json.Marshal(&roomParam)
+		gameParam = string(data)
 		break
 	case enumroom.NiuniuGameType:
 		if maxNumber != 4 && maxNumber != 6 && maxNumber != 8 && maxNumber != 10 {
-			return errclub.ErrRoomMaxNumber
+			return 0, 0, 0, "", nil, errclub.ErrRoomMaxNumber
 		}
 		var roomParam *mdroom.NiuniuRoomParam
 		mderr := errors.Parse(errclub.ErrGameParam.Error())
 		if err := json.Unmarshal([]byte(gameParam), &roomParam); err != nil {
 			log.Err("niuniu unmarshal room param failed, %v", err)
 			mderr.Detail = fmt.Sprintf(mderr.Detail, "json解析错误！")
-			return mderr
+			return 0, 0, 0, "", nil, mderr
 		}
 		if roomParam.BankerType < 1 || roomParam.BankerType > 5 {
 			mderr.Detail = fmt.Sprintf(mderr.Detail, "玩法ID错误！")
-			return mderr
+			return 0, 0, 0, "", nil, mderr
 		}
 		if roomParam.Times != 1 && roomParam.Times != 2 {
 			mderr.Detail = fmt.Sprintf(mderr.Detail, "倍数ID错误！")
-			return mderr
+			return 0, 0, 0, "", nil, mderr
 		}
 		if roomParam.BetScore < 1 || roomParam.BetScore > 4 {
 			mderr.Detail = fmt.Sprintf(mderr.Detail, "底分ID错误！")
-			return mderr
+			return 0, 0, 0, "", nil, mderr
 		}
-		if len(roomParam.SpecialCards) != 7 {
-			mderr.Detail = fmt.Sprintf(mderr.Detail, "特殊牌型长度错误！")
-			return mderr
+		//if len(roomParam.SpecialCards) == 0 {
+		//	//mderr.Detail = fmt.Sprintf(mderr.Detail, "特殊牌型长度错误！")
+		//	//return 0, 0, 0, "", nil, mderr
+		//	roomParam.SpecialCards = []string{"0", "0", "0", "0", "0", "0", "0"}
+		//}
+		lenSC := len(roomParam.SpecialCards)
+		if lenSC > 7 {
+			roomParam.SpecialCards = roomParam.SpecialCards[:7]
 		}
-		if len(roomParam.AdvanceOptions) != 2 {
-			mderr.Detail = fmt.Sprintf(mderr.Detail, "高级选项长度错误！")
-			return mderr
-		}
-
-		for _, value := range roomParam.SpecialCards {
-			if value != "1" && value != "0" {
-				mderr.Detail = fmt.Sprintf(mderr.Detail, "特殊牌型格式错误！")
-				return mderr
+		for i := 0; i < 7; i++ {
+			if lenSC < i+1 {
+				roomParam.SpecialCards = append(roomParam.SpecialCards, "0")
+			} else {
+				if roomParam.SpecialCards[i] != "0" && roomParam.SpecialCards[i] != "1" {
+					roomParam.SpecialCards[i] = "0"
+				}
 			}
 		}
 
-		if roomParam.AdvanceOptions[0] != "0" && roomParam.BankerType == 5 {
-			mderr.Detail = fmt.Sprintf(mderr.Detail, "不能同时选择推注和通比！")
-			return mderr
+		lenAo := len(roomParam.AdvanceOptions)
+		if lenAo > 3 {
+			roomParam.AdvanceOptions = roomParam.AdvanceOptions[:3]
+		}
+		for i := 0; i < 3; i++ {
+			if lenAo < i+1 {
+				roomParam.AdvanceOptions = append(roomParam.AdvanceOptions, "0")
+			} else {
+				if i == 0 && roomParam.AdvanceOptions[i] != "0" && roomParam.AdvanceOptions[i] != "1" &&
+					roomParam.AdvanceOptions[i] != "2" && roomParam.AdvanceOptions[i] != "3" {
+					roomParam.AdvanceOptions[i] = "0"
+				} else if roomParam.AdvanceOptions[i] != "0" && roomParam.AdvanceOptions[i] != "1" {
+					roomParam.AdvanceOptions[i] = "0"
+				}
+			}
 		}
 
-		if roomParam.AdvanceOptions[0] != "0" && roomParam.AdvanceOptions[0] != "1" && roomParam.AdvanceOptions[0] != "2" && roomParam.AdvanceOptions[0] != "3" {
-			mderr.Detail = fmt.Sprintf(mderr.Detail, "推注最高倍数格式错误！")
-			return mderr
+		//if len(roomParam.AdvanceOptions) != 3 {
+		//	mderr.Detail = fmt.Sprintf(mderr.Detail, "高级选项长度错误！")
+		//	return 0, 0, 0, "", nil, mderr
+		//}
+		//
+		//for _, value := range roomParam.SpecialCards {
+		//	if value != "1" && value != "0" {
+		//		mderr.Detail = fmt.Sprintf(mderr.Detail, "特殊牌型格式错误！")
+		//		return 0, 0, 0, "", nil, mderr
+		//	}
+		//}
+
+		if roomParam.AdvanceOptions[0] != "0" && roomParam.BankerType == 5 {
+			mderr.Detail = fmt.Sprintf(mderr.Detail, "不能同时选择推注和通比！")
+			return 0, 0, 0, "", nil, mderr
 		}
+
+		//if roomParam.AdvanceOptions[0] != "0" && roomParam.AdvanceOptions[0] != "1" && roomParam.AdvanceOptions[0] != "2" && roomParam.AdvanceOptions[0] != "3" {
+		//	mderr.Detail = fmt.Sprintf(mderr.Detail, "推注最高倍数格式错误！")
+		//	return 0, 0, 0, "", nil, mderr
+		//}
 
 		if roomParam.SpecialCards[0] == "1" && roomParam.AdvanceOptions[1] == "1" {
 			mderr.Detail = fmt.Sprintf(mderr.Detail, "不能同时选择五花牛和不发花牌！")
-			return mderr
+			return 0, 0, 0, "", nil, mderr
 		}
 
 		if maxNumber == 10 && roomParam.AdvanceOptions[1] == "1" { //|| (roomParam.SpecialCards[0] == "1" && roomParam.AdvanceOptions[1] == "1")
 			mderr.Detail = fmt.Sprintf(mderr.Detail, "不能同时选择五花牛和10人模式！")
-			return mderr
+			return 0, 0, 0, "", nil, mderr
 		}
+		data, _ := json.Marshal(&roomParam)
+		gameParam = string(data)
 
 		break
 	case enumroom.DoudizhuGameType:
 		if maxNumber != 4 {
-			return errclub.ErrRoomMaxNumber
+			maxNumber = 4
+			//return errroom.ErrRoomMaxNumber
 		}
 		var roomParam *mdroom.DoudizhuRoomParam
 		mderr := errors.Parse(errclub.ErrGameParam.Error())
 		if err := json.Unmarshal([]byte(gameParam), &roomParam); err != nil {
 			log.Err("doudizhu unmarshal room param failed, %v", err)
 			mderr.Detail = fmt.Sprintf(mderr.Detail, "json解析错误！")
-			return mderr
+			return 0, 0, 0, "", nil, mderr
 		}
 		if roomParam.BaseScore != 0 && roomParam.BaseScore != 5 && roomParam.BaseScore != 10 {
-			mderr.Detail = fmt.Sprintf(mderr.Detail, "基本分格式错误！")
-			return mderr
+			//mderr.Detail = fmt.Sprintf(mderr.Detail, "基本分格式错误！")
+			//return mderr
+			roomParam.BaseScore = 0
 		}
+		data, _ := json.Marshal(&roomParam)
+		gameParam = string(data)
 		break
 	case enumroom.FourCardGameType:
-		if maxNumber < 2 && maxNumber > 8 {
-			return errclub.ErrRoomMaxNumber
+		if maxNumber > 8 {
+			maxNumber = 8
+			//return errroom.ErrRoomMaxNumber
 		}
 		mderr := errors.Parse(errclub.ErrGameParam.Error())
 		var roomParam *mdroom.FourCardRoomParam
 		if err := json.Unmarshal([]byte(gameParam), &roomParam); err != nil {
 			log.Err("fourcard unmarshal room param failed, %v", err)
 			mderr.Detail = fmt.Sprintf(mderr.Detail, "json解析错误！")
-			return errclub.ErrGameParam
+			return 0, 0, 0, "", nil, errclub.ErrGameParam
 		}
 		if roomParam.ScoreType < 1 || roomParam.ScoreType > 2 {
-			mderr.Detail = fmt.Sprintf(mderr.Detail, "计分模式格式错误！")
-			return mderr
+			roomParam.ScoreType = 1
+			//mderr.Detail = fmt.Sprintf(mderr.Detail, "计分模式格式错误！")
+			//return mderr
+
 		}
 		if roomParam.BetType < 1 || roomParam.BetType > 2 {
-			mderr.Detail = fmt.Sprintf(mderr.Detail, "下注类型格式错误！")
-			return mderr
+			roomParam.BetType = 1
+			//mderr.Detail = fmt.Sprintf(mderr.Detail, "下注类型格式错误！")
+			//return mderr
 		}
+		data, _ := json.Marshal(&roomParam)
+		gameParam = string(data)
 		break
 	case enumroom.TwoCardGameType:
-		if maxNumber < 2 && maxNumber > 10 {
-			return errclub.ErrRoomMaxNumber
+		if maxNumber > 10 {
+			maxNumber = 10
 		}
 		var roomParam *mdroom.TwoCardRoomParam
 		mderr := errors.Parse(errclub.ErrGameParam.Error())
 		if err := json.Unmarshal([]byte(gameParam), &roomParam); err != nil {
 			log.Err("towcard unmarshal room param failed, %v", err)
 			mderr.Detail = fmt.Sprintf(mderr.Detail, "json解析错误！")
-			return mderr
+			return 0, 0, 0, "", nil, mderr
 		}
 		if roomParam.ScoreType < 1 || roomParam.ScoreType > 2 {
-			mderr.Detail = fmt.Sprintf(mderr.Detail, "计分模式格式错误！")
-			return errclub.ErrGameParam
+			roomParam.ScoreType = 1
+			//mderr.Detail = fmt.Sprintf(mderr.Detail, "计分模式格式错误！")
+			//return errroom.ErrGameParam
 		}
 		if roomParam.BetType < 1 || roomParam.BetType > 2 {
-			mderr.Detail = fmt.Sprintf(mderr.Detail, "下注类型格式错误！")
-			return mderr
+			roomParam.BetType = 1
+			//mderr.Detail = fmt.Sprintf(mderr.Detail, "下注类型格式错误！")
+			//return mderr
 		}
+		data, _ := json.Marshal(&roomParam)
+		gameParam = string(data)
 		break
 	default:
-		return errclub.ErrGameParam
+		return 0, 0, 0, "", nil, errclub.ErrGameParam
 	}
-	return nil
+
+	return maxNumber, maxRound, gtype, gameParam, RoomAdvanceOptions, nil
 }
 
 func UpdateVipRoomSetting(mvrs *mdclub.VipRoomSetting) error {
@@ -1226,7 +1477,8 @@ func UpdateVipRoomSetting(mvrs *mdclub.VipRoomSetting) error {
 		return errclub.ErrStatusNoINNormal
 	}
 	if mvrs.Status == enumclub.VipRoomSettingNon {
-		err = chekcGameParam(mvrs.MaxNumber, mvrs.RoundNumber, mvrs.GameType, mvrs.GameParam)
+		mvrs.MaxNumber, mvrs.RoundNumber, mvrs.GameType, mvrs.GameParam, mvrs.RoomAdvanceOptions, err =
+			checkGameParam(mvrs.MaxNumber, mvrs.RoundNumber, mvrs.GameType, mvrs.GameParam, mvrs.RoomAdvanceOptions)
 		if err != nil {
 			return err
 		}
@@ -1234,12 +1486,12 @@ func UpdateVipRoomSetting(mvrs *mdclub.VipRoomSetting) error {
 			return errclub.ErrGameParam
 		}
 		if mvrs.SubRoomType == enumroom.SubTypeClubMatch {
-			var setttingParam *mdroom.SettingParam
-			if err := json.Unmarshal([]byte(mvrs.SettingParam), &setttingParam); err != nil {
+			var settingParam *mdroom.SettingParam
+			if err := json.Unmarshal([]byte(mvrs.SettingParam), &settingParam); err != nil {
 				log.Err("club vip room check setting param unmarshal failed, %v", err)
 				return errclub.ErrGameParam
 			}
-			if setttingParam.ClubCoinRate != 1 && setttingParam.ClubCoinRate != 2 && setttingParam.ClubCoinRate != 5 && setttingParam.ClubCoinRate != 10 {
+			if settingParam.ClubCoinRate != 1 && settingParam.ClubCoinRate != 2 && settingParam.ClubCoinRate != 5 && settingParam.ClubCoinRate != 10 {
 				return errclub.ErrGameParam
 			}
 		}

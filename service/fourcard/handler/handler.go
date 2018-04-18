@@ -12,6 +12,7 @@ import (
 	"playcards/utils/auth"
 	"playcards/utils/log"
 	gsync "playcards/utils/sync"
+	cacheroom "playcards/model/room/cache"
 	"playcards/utils/topic"
 	"time"
 	"github.com/micro/go-micro/broker"
@@ -60,6 +61,22 @@ func (fcs *FourCardSrv) update(gt *gsync.GlobalTimer, gl *lua.LState) {
 					}
 					topic.Publish(fcs.broker, msg, TopicFourCardGameStart)
 				}
+				mdr, _ := cacheroom.GetRoom(game.PassWord)
+				for _,uid := range mdr.GetIdsNotInGame(){
+					msg := &pbfour.GameStart{
+						GameID:     game.GameID,
+						UserID:     uid,
+						BankerID:   game.BankerID,
+						RoomStatus: enumroom.RoomStatusStarted,
+						CardList:   nil,
+						GameStatus: game.Status,
+						CountDown: &pbfour.CountDown{
+							ServerTime: game.OpDateAt.Unix(),
+							Count:      enumgame.SetBetTime,
+						},
+					}
+					topic.Publish(fcs.broker, msg, TopicFourCardGameStart)
+				}
 			}
 		}
 		updateGames := fourcard.UpdateGame(gl)
@@ -85,12 +102,20 @@ func (fcs *FourCardSrv) update(gt *gsync.GlobalTimer, gl *lua.LState) {
 						msg.List = uis
 						topic.Publish(fcs.broker, msg, TopicFourCardGameReady)
 					}
+					mdr, _ := cacheroom.GetRoom(game.PassWord)
+					msgWatch := game.ToProto()
+					for _, uid := range mdr.GetIdsNotInGame() {
+						msgWatch.UserID = uid
+						topic.Publish(fcs.broker, msgWatch, TopicFourCardGameReady)
+					}
 				} else if game.Status == enumgame.GameStatusDone {
 					msg := game.ToProto()
+					mdr, _ := cacheroom.GetRoom(game.PassWord)
 					bro := &pbfour.GameResultBro{
 						Context: msg,
 						Ids:     game.Ids,
 					}
+					bro.Ids = append(bro.Ids, mdr.GetIdsNotInGame()...)
 					topic.Publish(fcs.broker, bro, TopicFourCardGameResult)
 				}
 			}
@@ -144,6 +169,7 @@ func (fcs *FourCardSrv) SetBet(ctx context.Context, req *pbfour.SetBetRequest,
 		Context: msg,
 		Ids:     mdr.Ids,
 	}
+	bro.Ids = append(bro.Ids, mdr.GetIdsNotInGame()...)
 	topic.Publish(fcs.broker, bro, TopicFourCardSetBet)
 	return nil
 }
@@ -187,6 +213,7 @@ func (fcs *FourCardSrv) SubmitCard(ctx context.Context, req *pbfour.SubmitCardRe
 		Context: msg,
 		Ids:     mdr.Ids,
 	}
+	bro.Ids = append(bro.Ids, mdr.GetIdsNotInGame()...)
 	topic.Publish(fcs.broker, bro, TopicFourCardGameSubmitCard)
 	return nil
 }

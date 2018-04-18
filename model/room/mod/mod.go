@@ -15,46 +15,50 @@ import (
 )
 
 type Room struct {
-	RoomID           int32             `gorm:"primary_key"`
-	Password         string //`reg:"required,min=6,max=32,excludesall="`
-	Status           int32
-	Giveup           int32
-	MaxNumber        int32 //`reg:"required"`
-	RoundNumber      int32 //`reg:"required"`
-	RoundNow         int32
-	UserList         string
-	RoomType         int32 //`reg:"required"`
-	PayerID          int32
-	GameType         int32  //`reg:"required"`
-	GameParam        string //`reg:"required,min=1,excludesall="`
-	GameUserResult   string
-	CreatedAt        *time.Time
-	UpdatedAt        *time.Time
-	GiveupAt         *time.Time
-	Shuffle          int32
-	Flag             int32
-	ClubID           int32
-	Cost             int64
-	CostType         int32
-	Level            int32
-	SubRoomType      int32
-	SettingParam     string
-	StartMaxNumber   int32
-	VipRoomSettingID int32
-	GameIDNow        int32             `gorm:"-"`
-	ShuffleAt        *time.Time        `gorm:"-"`
-	ReadyAt          *time.Time        `gorm:"-"`
-	UserResults      []*GameUserResult `gorm:"-"`
-	Users            []*RoomUser       `gorm:"-"`
-	GiveupGame       GiveUpGameResult  `gorm:"-"`
-	HasNotice        bool              `gorm:"-"`
-	BankerList       []int32           `gorm:"-"`
-	ReadyUserMap     map[int32]int64   `gorm:"-"`
-	Ids              []int32           `gorm:"-"`
-	BigWiners        []int32           `gorm:"-"`
-	PlayerIds        []int32           `gorm:"-"`
-	RobotIds         []int32           `gorm:"-"`
-	WatchIds         []int32           `gorm:"-"`
+	RoomID             int32               `gorm:"primary_key"`
+	Password           string //`reg:"required,min=6,max=32,excludesall="`
+	Status             int32
+	Giveup             int32
+	MaxNumber          int32 //`reg:"required"`
+	RoundNumber        int32 //`reg:"required"`
+	RoundNow           int32
+	UserList           string
+	RoomType           int32 //`reg:"required"`
+	PayerID            int32
+	GameType           int32  //`reg:"required"`
+	GameParam          string //`reg:"required,min=1,excludesall="`
+	RoomParam          string
+	GameUserResult     string
+	CreatedAt          *time.Time
+	UpdatedAt          *time.Time
+	GiveupAt           *time.Time
+	Shuffle            int32
+	Flag               int32
+	ClubID             int32
+	Cost               int64
+	CostType           int32
+	Level              int32
+	SubRoomType        int32
+	SettingParam       string
+	StartMaxNumber     int32
+	VipRoomSettingID   int32
+	RoomAdvanceOptions []string            `gorm:"-"`
+	GameIDNow          int32               `gorm:"-"`
+	ShuffleAt          *time.Time          `gorm:"-"`
+	ReadyAt            *time.Time          `gorm:"-"`
+	UserResults        []*GameUserResult   `gorm:"-"`
+	Users              []*RoomUser         `gorm:"-"`
+	GiveupGame         GiveUpGameResult    `gorm:"-"`
+	HasNotice          bool                `gorm:"-"`
+	BankerList         []int32             `gorm:"-"`
+	ReadyUserMap       map[int32]*RoomUser `gorm:"-"`
+	Ids                []int32             `gorm:"-"`
+	BigWiners          []int32             `gorm:"-"`
+	PlayerIds          []int32             `gorm:"-"`
+	RobotIds           []int32             `gorm:"-"`
+	WatchIds           []int32             `gorm:"-"`
+	TempWatchIds       []int32             `gorm:"-"`
+	UserRole           int32               `gorm:"-"`
 	//SearchKey      string            `gorm:"-"`
 }
 
@@ -74,26 +78,29 @@ type SettingParam struct {
 	ClubCoinBaseScore int64
 	ClubCoinRate      int32
 	CostRange         int32
+	CostBase          int64
 }
 
 type RoomUser struct {
-	UserID       int32
-	Nickname     string
-	Ready        int32
-	Position     int32
-	Icon         string
-	Sex          int32
-	Role         int32
-	UpdatedAt    *time.Time
-	Location     string
-	Online       int32
-	Type         int32
-	CoinType     int32
-	Join         int32
-	Gold         int64
-	ResultAmount int32
-	ClubCoin     int64
-	RoomCost     int64
+	UserID           int32
+	Nickname         string
+	Ready            int32
+	Position         int32
+	Icon             string
+	Sex              int32
+	Role             int32
+	UpdatedAt        *time.Time
+	Location         string
+	Online           int32
+	Type             int32
+	CoinType         int32
+	Join             int32
+	Gold             int64
+	ResultAmount     int32
+	ClubCoin         int64
+	RoomCost         int64
+	UserRole         int32
+	UserSitDownRound int32
 }
 
 type GameUserResult struct {
@@ -159,6 +166,7 @@ type ThirteenRoomParam struct {
 	Time           int32
 	Joke           int32
 	Times          int32
+	AdvanceOptions []string
 }
 
 type NiuniuRoomParam struct {
@@ -174,16 +182,19 @@ type DoudizhuRoomParam struct {
 	BaseScore      int32
 	PreBankerID    int32
 	PreBankerIndex int32
+	AdvanceOptions []string
 }
 
 type FourCardRoomParam struct {
-	ScoreType int32
-	BetType   int32
+	ScoreType      int32
+	BetType        int32
+	AdvanceOptions []string
 }
 
 type TwoCardRoomParam struct {
-	ScoreType int32
-	BetType   int32
+	ScoreType      int32
+	BetType        int32
+	AdvanceOptions []string
 }
 
 type PlayerSpecialGameRecord struct {
@@ -234,26 +245,28 @@ func (gur *GiveUpGameResult) ToProto() *pbr.GiveUpGameResult {
 
 func (r *Room) ToProto() *pbr.Room {
 	out := &pbr.Room{
-		RoomID:           r.RoomID,
-		Password:         r.Password,
-		MaxNumber:        r.MaxNumber,
-		Status:           r.Status,
-		Giveup:           r.Giveup,
-		GameType:         r.GameType,
-		RoundNumber:      r.RoundNumber,
-		RoundNow:         r.RoundNow,
-		RoomType:         r.RoomType,
-		Flag:             r.Flag,
-		ClubID:           r.ClubID,
-		Shuffle:          r.Shuffle,
-		StartMaxNumber:   r.StartMaxNumber,
-		BankerList:       r.BankerList,
-		CreatedAt:        mdtime.TimeToProto(r.CreatedAt),
-		UpdatedAt:        mdtime.TimeToProto(r.UpdatedAt),
-		GameParam:        r.GameParam,
-		SubRoomType:      r.SubRoomType,
-		SettingParam:     r.SettingParam,
-		VipRoomSettingID: r.VipRoomSettingID,
+		RoomID:             r.RoomID,
+		Password:           r.Password,
+		MaxNumber:          r.MaxNumber,
+		Status:             r.Status,
+		Giveup:             r.Giveup,
+		GameType:           r.GameType,
+		RoundNumber:        r.RoundNumber,
+		RoundNow:           r.RoundNow,
+		RoomType:           r.RoomType,
+		Flag:               r.Flag,
+		ClubID:             r.ClubID,
+		Shuffle:            r.Shuffle,
+		StartMaxNumber:     r.StartMaxNumber,
+		BankerList:         r.BankerList,
+		CreatedAt:          mdtime.TimeToProto(r.CreatedAt),
+		UpdatedAt:          mdtime.TimeToProto(r.UpdatedAt),
+		GameParam:          r.GameParam,
+		SubRoomType:        r.SubRoomType,
+		SettingParam:       r.SettingParam,
+		VipRoomSettingID:   r.VipRoomSettingID,
+		UserRole:           r.UserRole,
+		RoomAdvanceOptions: r.RoomAdvanceOptions,
 		//GameUserResult:r.GameUserResult,
 	}
 	utilproto.ProtoSlice(r.Users, &out.UserList)
@@ -281,12 +294,14 @@ func RoomFromProto(r *pbr.Room) *Room {
 
 func (r *RoomUser) ToProto() *pbr.RoomUser {
 	mRu := &pbr.RoomUser{
-		UserID:   r.UserID,
-		Ready:    r.Ready,
-		Position: r.Position,
-		Role:     r.Role,
-		Gold:     r.Gold,
-		ClubCoin: r.ClubCoin,
+		UserID:           r.UserID,
+		Ready:            r.Ready,
+		Position:         r.Position,
+		Role:             r.Role,
+		Gold:             r.Gold,
+		ClubCoin:         r.ClubCoin,
+		UserRole:         r.UserRole,
+		UserSitDownRound: r.UserSitDownRound,
 	}
 	_, u := cacheuser.GetUserByID(r.UserID)
 	if u != nil {
@@ -310,6 +325,7 @@ func (r *RoomUser) SimplyToProto() *pbr.RoomUser {
 		Ready:    r.Ready,
 		Position: r.Position,
 		Role:     r.Role,
+		UserRole: r.UserRole,
 	}
 	return mRu
 }
@@ -376,6 +392,16 @@ func (cre *CheckRoomExist) ToProto() *pbr.CheckRoomExistReply {
 	} else {
 		out.GameResult = cre.GameResult.ToProto()
 	}
+	//游戏结算下一轮未开始阶段恢复游戏，若玩家上一轮是观察者，则现在保留观察者状态返回客户端
+	//fmt.Printf("AAAAACheckRoomExistToProto:%d\n", out.Room.Status)
+	//if out.Room.Status == enumr.RoomStatusInit {
+	//	for _, ru := range out.Room.UserList {
+	//		fmt.Printf("CheckRoomExistToProto:%+v\n", ru)
+	//		if ru.UserSitDownRound > 0 && ru.UserSitDownRound <= out.Room.RoundNow {
+	//			ru.UserRole = enumr.UserRoleWatchBro
+	//		}
+	//	}
+	//}
 	return out
 	//return &pbr.CheckRoomExistReply{
 	//	Result:       cre.Result,
@@ -423,9 +449,28 @@ func GameRecordFromProto(psgr *pbr.PlayerSpecialGameRecord) *PlayerSpecialGameRe
 	return out
 }
 
+func (r *Room) GetIdsNotInGame() []int32 {
+	var ids []int32
+	for uid, _ := range r.ReadyUserMap {
+		ids = append(ids, uid)
+	}
+	ids = append(ids, r.WatchIds...)
+	return ids
+}
+
+func (r *Room) GetRoomUser(uid int32) *RoomUser {
+	for _, ru := range r.Users {
+		if ru.UserID == uid {
+			return ru
+		}
+	}
+	return nil
+}
+
 func (r *Room) BeforeUpdate(scope *gorm.Scope) error {
 	r.MarshalUsers()
 	r.MarshalGameUserResult()
+	r.MarshalRoomParam()
 	scope.SetColumn("user_list", r.UserList)
 	scope.SetColumn("game_user_result", r.GameUserResult)
 	return nil
@@ -434,6 +479,7 @@ func (r *Room) BeforeUpdate(scope *gorm.Scope) error {
 func (r *Room) BeforeCreate(scope *gorm.Scope) error {
 	r.MarshalUsers()
 	r.MarshalGameUserResult()
+	r.MarshalRoomParam()
 	scope.SetColumn("user_list", r.UserList)
 	scope.SetColumn("game_user_result", r.GameUserResult)
 	return nil
@@ -445,6 +491,10 @@ func (r *Room) AfterFind() error {
 		return err
 	}
 	err = r.UnmarshalUsers()
+	if err != nil {
+		return err
+	}
+	err = r.UnmarshalRoomParam()
 	if err != nil {
 		return err
 	}
@@ -481,6 +531,27 @@ func (r *Room) UnmarshalGameUserResult() error {
 		return err
 	}
 	r.UserResults = out
+	return nil
+}
+
+func (r *Room) MarshalRoomParam() error {
+	if r.RoomAdvanceOptions == nil {
+		return nil
+	}
+	data, _ := json.Marshal(&r.RoomAdvanceOptions)
+	r.RoomParam = string(data)
+	return nil
+}
+
+func (r *Room) UnmarshalRoomParam() error {
+	if len(r.RoomParam) == 0 {
+		return nil
+	}
+	var out []string
+	if err := json.Unmarshal([]byte(r.RoomParam), &out); err != nil {
+		return err
+	}
+	r.RoomAdvanceOptions = out
 	return nil
 }
 

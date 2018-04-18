@@ -75,7 +75,7 @@ const (
 const (
 	UserRoleMaster = 1 //庄家
 	UserRoleSlave  = 2 //闲家
-	UserRoleAgent  = 3 //代开房主
+	//UserRoleWatch  = 3 //代开房主
 )
 
 // room user ready status
@@ -117,6 +117,7 @@ const (
 
 // game recovery room status
 const (
+	RecoveryWatch            = 100 //观察者恢复房间
 	RecoveryFristInitNoReady = 110 //房间初始化玩家未准备 没有上一局
 	RecoveryInitNoReady      = 120 //房间初始化玩家未准备 有上一局
 	RecoveryInitReady        = 130 //房间初始化玩家已准备
@@ -172,8 +173,20 @@ const (
 )
 
 const (
-	UserRolePlayer = 1
-	UserRoleWatch  = 2
+	UserRolePlayerBro  = 1 //正常参与游戏
+	UserRoleWatchBro   = 2 //坐下可观看但还未参与游戏
+	UserRoleSuspendBro = 3 //玩家挂起不参与游戏
+	UserRoleRestoreBro = 4 //玩家游戏中申请恢复 下一轮加入游戏
+)
+
+const (
+	CanJoin    = "0"
+	CanNotJoin = "1"
+)
+
+const (
+	UserCreateRoomOpen  = 1
+	UserCreateRoomClose = 2
 )
 
 //金币场配置表

@@ -36,6 +36,7 @@ type Niuniu struct {
 	RobotIds      []int32                 `gorm:"-"`
 	RobotOpMap    map[int32][]int32       `gorm:"-"`
 	RoomParam     *mdroom.NiuniuRoomParam `gorm:"-"`
+	WatchIds      []int32                 `gorm:"-"`
 }
 
 type GetBanker struct {

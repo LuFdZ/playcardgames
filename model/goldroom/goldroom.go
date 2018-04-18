@@ -42,10 +42,10 @@ func UpdateGoldRoom() map[*pbroom.RoomUser]int32 { //
 		switch mdr.Status {
 		case enumroom.RoomStatusInit:
 			count := int32(len(mdr.ReadyUserMap))
+			//fmt.Printf("JJJJJJJJJJUpdateGoldRoom:%d|%d\n", count, enumgroom.GoldRoomInfoMap[mdr.GameType].MinNumber)
 			if count > 0 {
 				numberNow := int32(len(mdr.Users))
 				subTime := time.Now().Sub(*mdr.ReadyAt)
-
 				if numberNow < enumgroom.GoldRoomInfoMap[mdr.GameType].MinNumber &&
 					count == 1 {
 					addTime := float64(tools.GenerateRangeNum(10, 30))
@@ -66,9 +66,12 @@ func UpdateGoldRoom() map[*pbroom.RoomUser]int32 { //
 						log.Err("room status init update room err:%v", err)
 						continue
 					}
-				} else if count >= enumgroom.GoldRoomInfoMap[mdr.GameType].MinNumber {
+				} else if count >= enumgroom.GoldRoomInfoMap[mdr.GameType].MinNumber && subTime.Seconds() > 10{//int32(len(mdr.Users))
+					//fmt.Printf("QQQQQQQQQQUpdateGoldRoom:%d\n", subTime.Seconds())
 					if subTime.Seconds() > 10 {
 						mdr.Status = enumroom.RoomStatusAllReady
+						mdr.ReadyUserMap = make(map[int32]*mdroom.RoomUser)
+						//fmt.Printf("GGGGGGGUpdateGoldRoom:%+v\n", mdr.ReadyUserMap)
 						f := func(tx *gorm.DB) error {
 							_, err := dbroom.UpdateRoom(tx, mdr)
 							if err != nil {
@@ -90,7 +93,41 @@ func UpdateGoldRoom() map[*pbroom.RoomUser]int32 { //
 					}
 				}
 			}
-
+			if len(mdr.Users) == 0{
+				subTime := time.Now().Sub(*mdr.UpdatedAt)
+				if subTime.Seconds() > 60{
+					mdr.Status = enumroom.RoomStatusDestroy
+					err := cacheroom.DeleteAllRoomUser(mdr.Password, "GoldRoomNoUserRoomDestroy")
+					if err != nil {
+						log.Err("gold room no user delete room users redis err, %v", err)
+						continue
+					}
+					err = cacheroom.DeleteRoom(mdr)
+					if err != nil {
+						log.Err("gold room no user delete room redis err, %v", err)
+						continue
+					}
+					err = cacheroom.SetRoomDelete(mdr.GameType, mdr.RoomID)
+					if err != nil {
+						log.Err("gold room no user set delete room redis err, %d|%v\n", mdr.RoomID, err)
+					}
+					f := func(tx *gorm.DB) error {
+						r, err := dbroom.UpdateRoom(tx, mdr)
+						if err != nil {
+							log.Err("gold room no user destroy db err, %v|%v\n", err, mdr)
+							return err
+						}
+						mdr = r
+						return nil
+					}
+					err = db.Transaction(f)
+					if err != nil {
+						log.Err("room give up destroy delete room users redis err, %v", err)
+						continue
+					}
+					continue
+				}
+			}
 			for _, u := range mdr.Users {
 				if (u.Type == 0 || u.Type == enumgroom.Player) && u.Ready == enumroom.UserUnready {
 					stayTime := time.Now().Sub(*u.UpdatedAt)
@@ -118,6 +155,43 @@ func UpdateGoldRoom() map[*pbroom.RoomUser]int32 { //
 			}
 			break
 		case enumroom.RoomStatusReInit:
+			mdr.RoundNow++
+			t := time.Now()
+			//fmt.Printf("CCCCCCCCCUpdateGoldRoom:%+v|%+v\n", mdr.ReadyUserMap, mdr.Users)
+			for _, u := range mdr.Users {
+				if u.Type == enumgroom.Robot {
+					r, _ := removePlayer(mdr.Password, u.UserID)
+					mdr = r
+					msg := u.ToProto()
+					msg.Ids = mdr.PlayerIds
+					m[msg] = enumgroom.UserOpRemove
+				}
+			}
+			for _, u := range mdr.Users {
+				if u.Type == enumgroom.Player {
+					//fmt.Printf("GGGGGGGGGGGGGainGameBalance:%f\n",u.ResultAmount)
+					if u.ResultAmount != 0{
+						err := bill.GainGameBalance(u.UserID, mdr.RoomID, mdr.GameType*100+1,
+							&mbill.Balance{Amount: int64(u.ResultAmount), CoinType: enumbill.TypeGold})
+						if err != nil {
+							log.Err("gold room status reinit fail uid:%d,roomid:%d,err:%v", u.UserID, mdr.RoomID, err)
+							continue
+						}
+					}
+				}
+
+				//_, ok := mdr.ReadyUserMap[u.UserID]
+				//fmt.Printf("DDDDDDDDDRoomStatusReInit:%v|%t\n", u.UserID, ok)
+				if _, ok := mdr.ReadyUserMap[u.UserID]; ok {
+					u.Ready = enumroom.UserReady
+				} else {
+					u.Ready = enumroom.UserUnready
+				}
+				u.UpdatedAt = &t
+			}
+
+			mdr.Status = enumroom.RoomStatusInit
+			mdr.ReadyUserMap = make(map[int32]*mdroom.RoomUser)
 			f := func(tx *gorm.DB) error {
 				//更新玩家游戏局数
 				err := dbroom.UpdateRoomPlayTimes(tx, mdr.RoomID, mdr.GameType)
@@ -125,36 +199,13 @@ func UpdateGoldRoom() map[*pbroom.RoomUser]int32 { //
 					log.Err("update gold room play times db err, %v|%v\n", err)
 					return err
 				}
-				t := time.Now()
-				for _, u := range mdr.Users {
-
-					if u.Type == enumgroom.Player {
-						err := bill.GainGameBalance(u.UserID, mdr.RoomID, mdr.GameType*100+1,
-							&mbill.Balance{Amount: int64(u.ResultAmount), CoinType: enumbill.TypeGold})
-						if err != nil {
-							return err
-						}
-					} else {
-						mdr, _ = removePlayer(mdr.Password, u.UserID)
-						msg := u.ToProto()
-						msg.Ids = mdr.PlayerIds
-						m[msg] = enumgroom.UserOpRemove
-					}
-					if _, ok := mdr.ReadyUserMap[u.UserID]; ok {
-						u.Ready = enumroom.UserUnready
-					}
-
-					u.UpdatedAt = &t
-				}
-
-				mdr.Status = enumroom.RoomStatusInit
-				//mdr.UpdatedAt = &t
+				mdr.UpdatedAt = &t
 				_, err = dbroom.UpdateRoom(tx, mdr)
 				if err != nil {
 					log.Err("update gold room db err, %v|%v\n", err, mdr)
 					return err
 				}
-				fmt.Printf("AAAAAAAAAAAAAAARoomStatusReInit:%+v\n", mdr)
+				//fmt.Printf("AAAAAAAAAAAAAAARoomStatusReInit:%+v\n", mdr)
 				err = cacheroom.UpdateRoom(mdr)
 				if err != nil {
 					log.Err("room status init update room err:%v", err)
@@ -192,6 +243,7 @@ func JoinRoom(gtype int32, level int32, mdu *mduser.User) (*mdroom.RoomUser, *md
 		return nil, nil, errroom.ErrNotEnoughGold
 	}
 	mdr, err := cachegroom.SelectGRoom(gtype, level)
+	fmt.Printf("JoinRoomSelectGRoom:%+v\n",mdr)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -243,6 +295,7 @@ func SetReady(uid int32, pwd string) ([]int32, error) {
 				if mdr.Status > enumroom.RoomStatusInit {
 					user.Join = enumgroom.UnJoinGame
 				}
+				mdr.ReadyUserMap[uid] = user
 			} else if user.Ready == enumroom.UserUnready {
 				watchIds = append(watchIds, user.UserID)
 			}
@@ -252,8 +305,10 @@ func SetReady(uid int32, pwd string) ([]int32, error) {
 		}
 		if allReady && num == mdr.MaxNumber {
 			mdr.Status = enumroom.RoomStatusAllReady
+			mdr.ReadyUserMap = make(map[int32]*mdroom.RoomUser)
 		}
-		mdr.ReadyUserMap[uid] = t.Unix()
+
+		//mdr.ReadyUserMap[uid].UpdatedAt = &t
 		if len(mdr.ReadyUserMap) <= 2 {
 			mdr.ReadyAt = &t
 		}
@@ -318,6 +373,7 @@ func robotSetSit(uid int32, pwd string, roomStatus int32) (*mdroom.RoomUser, err
 			}
 		}
 		mdrLock.Status = roomStatus
+		mdrLock.ReadyUserMap = make(map[int32]*mdroom.RoomUser)
 		err = cacheroom.UpdateRoom(mdrLock)
 		if err != nil {
 			log.Err("set robot room ready failed, roomid:%d,uid:%d,err:%v\n", mdr.RoomID, uid, err)
@@ -652,7 +708,7 @@ func CreateGoldRoom(gtype int32, level int32) (*mdroom.Room, error) {
 		StartMaxNumber: gameInfo.MaxNumber,
 		CostType:       enumroom.CostTypeGold,
 		Flag:           enumroom.RoomNoFlag,
-		ReadyUserMap:   make(map[int32]int64),
+		ReadyUserMap:   make(map[int32]*mdroom.RoomUser), //make(map[int32]int64),
 	}
 	f := func(tx *gorm.DB) error {
 		err := dbroom.CreateRoom(tx, mdr)

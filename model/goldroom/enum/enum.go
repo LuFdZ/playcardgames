@@ -58,6 +58,6 @@ var GoldRoomCostMap = map[int32]map[int32][]int64{
 
 var GoldRoomInfoMap = map[int32]mdgr.GoldRoomInfo{
 	1001: mdgr.GoldRoomInfo{GameType: 1001, MaxNumber: 4, MinNumber: 2, RoomParam: "{\"BankerAddScore\":0,\"Time\":30,\"Joke\":0,\"Times\":2}",},
-	1002: mdgr.GoldRoomInfo{GameType: 1002, MaxNumber: 5, MinNumber: 2, RoomParam: "{\"BankerType\":3,\"Times\":10}",},
-	1004: mdgr.GoldRoomInfo{GameType: 1002, MaxNumber: 4, MinNumber: 2, RoomParam: "{\"ScoreType\":2,\"BetType\":2}",},
+	1002: mdgr.GoldRoomInfo{GameType: 1002, MaxNumber: 6, MinNumber: 2, RoomParam: "{\"Times\":2,\"BankerType\":1,\"BetScore\":1,\"AdvanceOptions\":[\"0\",\"0\"],\"SpecialCards\":[\"1\",\"0\",\"0\",\"0\",\"1\",\"0\",\"1\"]}",},
+	1004: mdgr.GoldRoomInfo{GameType: 1003, MaxNumber: 4, MinNumber: 2, RoomParam: "{\"ScoreType\":2,\"BetType\":2}",},
 }

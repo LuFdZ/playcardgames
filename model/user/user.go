@@ -25,6 +25,7 @@ import (
 	"github.com/jinzhu/gorm"
 	"gopkg.in/go-playground/validator.v8"
 	"playcards/utils/tools"
+	"playcards/utils/errors"
 )
 
 var registerValid *validator.Validate
@@ -113,7 +114,7 @@ func Login(u *mdu.User, address string) (*mdu.User, error) {
 	//}
 	_, err = govalidator.ValidateStruct(u)
 	if err != nil {
-		return nil,erru.ErrInvalidUserInfo
+		return nil, erru.ErrInvalidUserInfo
 	}
 
 	hash := sha256.Sum256([]byte(u.Password + enum.Salt))
@@ -155,7 +156,7 @@ func Login(u *mdu.User, address string) (*mdu.User, error) {
 
 	err = db.Transaction(f)
 	if err != nil {
-		return nil,err
+		return nil, err
 	}
 	return nu, nil
 }
@@ -164,9 +165,9 @@ func GetUser(u *mdu.User) (*mdu.User, error) {
 	return dbu.GetUser(db.DB(), u)
 }
 
-func PageUserList(page *mdpage.PageOption, u *mdu.User,sort int32) ([]*mdu.User, int64,
+func PageUserList(page *mdpage.PageOption, u *mdu.User, sort int32) ([]*mdu.User, int64,
 	error) {
-	return dbu.PageUserList(db.DB(), page, u,sort)
+	return dbu.PageUserList(db.DB(), page, u, sort)
 }
 
 func UpdateUser(u *mdu.User) (*mdu.User, error) {
@@ -219,8 +220,14 @@ func GetWXToken(code string) (*mdu.AccessTokenResponse, error) {
 		if err != nil {
 			return nil, erru.ErrWXResponseJson
 		}
-		log.Err("access_token refresh WX token :%v \n", ater)
-		return nil, erru.ErrWXParam
+		//log.Err("access_token refresh WX token :%v \n", ater)
+		log.Err("GetWXToken info response fail! req:%s,code:%s,alter:%+v", requestLine, code, ater)
+		if err != nil {
+			return nil, erru.ErrWXResponseJson
+		}
+		mderr := errors.Parse(erru.ErrWXLoginResponse.Error())
+		mderr.Detail = fmt.Sprintf(mderr.Detail, "GetWXToken Response Err")
+		return nil, mderr
 	}
 	return atr, nil
 }
@@ -253,7 +260,13 @@ func RefreshWXToken(refreshtoken string) (*mdu.AccessTokenResponse, error) {
 		if err != nil {
 			return nil, erru.ErrWXResponseJson
 		}
-		log.Err("refresh_token refresh WX token :%v \n", ater)
+		//log.Err("refresh_token refresh WX token :%v \n", ater)
+		log.Err("GetWXToken info response fail! req:%s,refreshtoken:%s,alter:%+v", requestLine, refreshtoken, ater)
+		if err != nil {
+			return nil, erru.ErrWXResponseJson
+		}
+		mderr := errors.Parse(erru.ErrWXLoginResponse.Error())
+		mderr.Detail = fmt.Sprintf(mderr.Detail, "GetWXToken Response Err")
 		return nil, erru.ErrWXParam
 	}
 	return atr, nil
@@ -287,9 +300,15 @@ func GetWXUserInfo(token string, openID string) (*mdu.UserInfoResponse, error) {
 		if err != nil {
 			return nil, erru.ErrWXResponseJson
 		}
+		log.Err("GetWXUserInfo info response fail! req:%s,token:%s,opendID:%s,alter:%+v", requestLine, token, openID, ater)
+		if err != nil {
+			return nil, erru.ErrWXResponseJson
+		}
+		mderr := errors.Parse(erru.ErrWXLoginResponse.Error())
+		mderr.Detail = fmt.Sprintf(mderr.Detail, "GetUserUrl Response Err")
 		//msg := "微信查询用户提示：" + ater.Errmsg
 		//return nil, errors.BadRequest(1009, msg)
-		return nil, erru.ErrWXLoginParam
+		return nil, mderr
 	}
 	user.Nickname = mdu.EncodNickName(user.Nickname)
 	return user, nil
@@ -313,6 +332,7 @@ func GetAndCheckWXToken(openid string) (*mdu.AccessTokenResponse, error) {
 
 func WXLogin(u *mdu.User, code string, address string) (*mdu.User, error) {
 	if u.OpenID == "" && code == "" {
+		log.Err("WXLogin Param Err,user:%+v,openID:%s,code:%s", u, u.OpenID, code)
 		return nil, erru.ErrWXLoginParam
 	}
 	atr := &mdu.AccessTokenResponse{}
@@ -391,12 +411,11 @@ func CreateUserByWX(u *mdu.User, atr *mdu.AccessTokenResponse) (*mdu.User, error
 	//}
 	u.Rights = auth.RightsPlayer
 	u.Username = u.OpenID
-	if len(u.UnionID) > 0{
+	if len(u.UnionID) > 0 {
 		rchannel := cacheuser.GetRegisterChannel(u.UnionID)
 		u.RegisterChannel = rchannel
 		cacheuser.DeleteRegisterChannel(u.UnionID)
 	}
-
 
 	f := func(tx *gorm.DB) error {
 		uid, err := dbu.AddUser(tx, u)
@@ -545,9 +564,9 @@ func RefreshAllRobotsFromDB() error {
 	return cacheuser.SetRobots(rs)
 }
 
-func SetRegisterChannel(unionID string,channel string) error {
-	err := cacheuser.SetRegisterChannel(unionID,channel)
-	if err != nil{
+func SetRegisterChannel(unionID string, channel string) error {
+	err := cacheuser.SetRegisterChannel(unionID, channel)
+	if err != nil {
 		return nil
 	}
 	return nil

@@ -85,6 +85,7 @@ func GetLastNiuniuByRoomID(tx *gorm.DB, rid int32) (*mdniu.Niuniu, error) {
 	out := &mdniu.Niuniu{}
 	if err := tx.Where(" room_id = ? ", rid).
 		Order("game_id desc").Limit(1).Find(&out).Error; err != nil {
+			//log.Err("GetLastNiuniuByRoomID fail rid:%d,err:%+v,date:%+v\n",rid,err,time.Now())
 		return nil, errors.Internal("get last niuniu by room_id failed", err)
 	}
 	return out, nil

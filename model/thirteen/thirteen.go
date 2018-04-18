@@ -59,6 +59,27 @@ func CreateThirteen(goLua *lua.LState) []*mdt.Thirteen {
 					Score: 0,
 				}
 				userResults = append(userResults, userResult)
+			} else if len(mdroom.Users) != len(mdroom.UserResults) {
+				hasIn := false
+				for _, mru := range mdroom.UserResults {
+					if user.UserID == mru.UserID {
+						hasIn = true
+						break
+					}
+				}
+				if !hasIn {
+					if user.UserRole == enumr.UserRolePlayerBro {
+						userResult := &mdr.GameUserResult{
+							UserID: user.UserID,
+							Role:   user.Role,
+							Win:    0,
+							Lost:   0,
+							Tie:    0,
+							Score:  0,
+						}
+						userResults = append(userResults, userResult)
+					}
+				}
 			}
 			if err := goLua.DoString("return G_GetCards()"); err != nil {
 				log.Err("thirteen G_GetCards %+v", err)
@@ -101,6 +122,8 @@ func CreateThirteen(goLua *lua.LState) []*mdt.Thirteen {
 
 		if mdroom.RoundNow == 1 {
 			mdroom.UserResults = userResults
+		} else if len(userResults) > 0 {
+			mdroom.UserResults = append(mdroom.UserResults, userResults...)
 		}
 		thirteen := &mdt.Thirteen{
 			RoomID:      mdroom.RoomID,
@@ -109,9 +132,9 @@ func CreateThirteen(goLua *lua.LState) []*mdt.Thirteen {
 			Index:       mdroom.RoundNow,
 			PassWord:    mdroom.Password,
 			SubmitCards: []*mdt.SubmitCard{},
-			//GameLua: l,
-			Cards: groupCards,
-			Ids:   mdroom.Ids,
+			Cards:       groupCards,
+			Ids:         mdroom.Ids,
+			WatchIds:    mdroom.WatchIds,
 		}
 		mdroom.Status = enumr.RoomStatusStarted
 		f := func(tx *gorm.DB) error {

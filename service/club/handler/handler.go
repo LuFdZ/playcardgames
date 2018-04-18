@@ -262,8 +262,17 @@ func (cs *ClubSrv) JoinClub(ctx context.Context,
 	if err != nil {
 		return err
 	}
-	err = club.JoinClub(mdClub.ClubID, u)
+	f := func() error {
+		err = club.JoinClub(mdClub.ClubID, u)
+		if err != nil {
+			return err
+		}
+		return nil
+	}
+	lock := ClubLockKey(req.ClubID)
+	err = gsync.GlobalTransaction(lock, f)
 	if err != nil {
+		log.Err("%s club update failed: %v", lock, err)
 		return err
 	}
 	*rsp = pbclub.ClubReply{

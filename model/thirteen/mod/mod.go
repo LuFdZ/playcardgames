@@ -28,6 +28,7 @@ type Thirteen struct {
 	Result          *GameResultList `gorm:"-"`
 	SearchKey       string          `gorm:"-"`
 	Ids             []int32         `gorm:"-"`
+	WatchIds        []int32         `gorm:"-"`
 }
 
 type Card struct {

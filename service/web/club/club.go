@@ -68,6 +68,9 @@ func SubscribeAllClubMessage(brk broker.Broker) error {
 	subscribe.SrvSubscribe(brk, topic.Topic(srvclub.TopicAddClubCoin),
 		AddClubCoinHandler,
 	)
+	subscribe.SrvSubscribe(brk, topic.Topic(srvroom.TopicClubBalanceUpdate),
+		ClubBalanceUpdateHandler,
+	)
 
 	return nil
 }
@@ -312,7 +315,7 @@ func UpdateClubHandler(p broker.Publication) error {
 	if err != nil {
 		return err
 	}
-	err = clients.SendToUsers(uks, t, enum.MsgUpdateClub, rs, enum.MsgUpdateVipRoomSettingCode)
+	err = clients.SendToUsers(uks, t, enum.MsgUpdateClub, rs, enum.MsgUpdateClubCode)
 	if err != nil {
 		return err
 	}
@@ -348,6 +351,26 @@ func AddClubCoinHandler(p broker.Publication) error {
 	}
 
 	err = clients.SendTo(rs.UserID, t, enum.MsgAddClubCoin, rs, enum.MsgAddClubCoinCode)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func ClubBalanceUpdateHandler(p broker.Publication) error {
+	t := p.Topic()
+	msg := p.Message()
+	rs := &pbroom.Room{}
+	err := proto.Unmarshal(msg.Body, rs)
+	if err != nil {
+		return err
+	}
+	uks, err := cacheclub.ListClubMemberHKey(rs.ClubID, true)
+	if err != nil {
+		return err
+	}
+	//fmt.Printf("ClubBalanceUpdateHandler:%+v|%+v\n",uks,rs)
+	err = clients.SendToUsers(uks, t, enum.ClubBalanceUpdate, rs, enum.ClubBalanceUpdateCode)
 	if err != nil {
 		return err
 	}

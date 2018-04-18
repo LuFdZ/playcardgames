@@ -28,6 +28,7 @@ type Twocard struct {
 	SubDateAt     *time.Time  `gorm:"-"`
 	RefreshDateAt *time.Time  `gorm:"-"`
 	Ids           []int32     `gorm:"-"`
+	WatchIds        []int32         `gorm:"-"`
 }
 
 type UserCard struct {

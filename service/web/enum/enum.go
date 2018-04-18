@@ -175,6 +175,9 @@ const (
 
 	MsgAddClubCoin     = "AddClubCoin"
 	MsgAddClubCoinCode = 140115
+
+	ClubBalanceUpdate     = "ClubBalanceUpdate"
+	ClubBalanceUpdateCode = 140116
 )
 
 //俱乐部标签和编号

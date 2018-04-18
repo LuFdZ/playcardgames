@@ -264,20 +264,47 @@ func DeleteAllRoomUser(pwd string, callFrom string) error {
 			//fmt.Printf("delete room user room:%v \n", room)
 			str := ""
 			if err == nil && room != nil {
+				var ids []int32
 				for _, user := range room.Users {
-					value := tx.HGet(userkey, tools.IntToString(user.UserID)).Val()
+					ids = append(ids,user.UserID)
+				}
+				for _,uid := range room.WatchIds{
+					ids = append(ids,uid)
+				}
+				for uid,_ := range room.ReadyUserMap{
+					ids = append(ids,uid)
+				}
+
+				for _, uid := range ids {
+					value := tx.HGet(userkey, tools.IntToString(uid)).Val()
 					if len(value) == 0 {
 						continue
 					}
 					rid := strings.Split(value, ":")[1]
 					roomid, _ := strconv.Atoi(rid)
 					if int32(roomid) == room.RoomID {
-						tx.HDel(userkey, tools.IntToString(user.UserID))
-						str += fmt.Sprintf("|delthisroomuser:%s", user.UserID)
+						tx.HDel(userkey, tools.IntToString(uid))
+						str += fmt.Sprintf("|delthisroomuser:%s", uid)
 					} else {
-						str += fmt.Sprintf("|nothisroomuser:%s,roomid:%d|", user.UserID, roomid)
+						str += fmt.Sprintf("|nothisroomuser:%s,roomid:%d|", uid, roomid)
 					}
 				}
+
+				//for _, user := range room.Users {
+				//	value := tx.HGet(userkey, tools.IntToString(user.UserID)).Val()
+				//	if len(value) == 0 {
+				//		continue
+				//	}
+				//	rid := strings.Split(value, ":")[1]
+				//	roomid, _ := strconv.Atoi(rid)
+				//	if int32(roomid) == room.RoomID {
+				//		tx.HDel(userkey, tools.IntToString(user.UserID))
+				//		str += fmt.Sprintf("|delthisroomuser:%s", user.UserID)
+				//	} else {
+				//		str += fmt.Sprintf("|nothisroomuser:%s,roomid:%d|", user.UserID, roomid)
+				//	}
+				//}
+
 			}
 			log.Info("%s DeleteRoomAllUser RoomID:%s,RoomPWd:%s,user list:%s", callFrom, room.RoomID, lockKey, room.RoundNow, str)
 			return nil

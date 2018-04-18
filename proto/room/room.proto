@@ -32,7 +32,9 @@ message Room {
     int32 SubRoomType = 25;
     string SettingParam = 26;
     int32 VipRoomSettingID = 27; //包厢模式
-    int32 UserRole = 28;// 回复标签 1普通玩家 2观察者
+    int32 UserRole = 28; // 回复标签 1普通玩家 2观察者
+    int32 JoinType = 29;
+    repeated string RoomAdvanceOptions = 30;
 }
 
 message RoomUser {
@@ -53,6 +55,8 @@ message RoomUser {
     int32 BankerID = 17;
     int64 Gold = 18;
     int64 ClubCoin = 19;
+    int32 UserRole = 20;
+    int32 UserSitDownRound = 21;
 }
 
 message ClubRoomUser {
@@ -82,6 +86,7 @@ message GameUserResult {
     string Icon = 8;
     int64 TotalClubCoinScore = 9;
     int64 ClubCoin = 10;
+    int32 UserRole = 11; // 回复标签 1普通玩家 2观察者
 }
 
 message RoomResults {
@@ -100,6 +105,7 @@ message RoomResults {
     int32 OwnerID = 13;
     int32 RoomType = 14;
     int32 SubRoomType = 15;
+    repeated RoomUser UserList = 16;
 }
 
 message Feedback {

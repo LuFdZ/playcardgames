@@ -59,20 +59,22 @@ type ClubJournal struct {
 }
 
 type VipRoomSetting struct {
-	ID           int32 `gorm:"primary_key"`
-	Name         string
-	ClubID       int32
-	UserID       int32
-	RoomType     int32
-	MaxNumber    int32
-	RoundNumber  int32
-	SubRoomType  int32
-	GameParam    string
-	Status       int32
-	GameType     int32
-	SettingParam string
-	CreatedAt    *time.Time
-	UpdatedAt    *time.Time
+	ID                 int32    `gorm:"primary_key"`
+	Name               string
+	ClubID             int32
+	UserID             int32
+	RoomType           int32
+	MaxNumber          int32
+	RoundNumber        int32
+	SubRoomType        int32
+	GameParam          string
+	RoomParam          string
+	Status             int32
+	GameType           int32
+	SettingParam       string
+	RoomAdvanceOptions []string `gorm:"-"`
+	CreatedAt          *time.Time
+	UpdatedAt          *time.Time
 }
 
 type SettingParam struct {
@@ -80,6 +82,8 @@ type SettingParam struct {
 	CostValue         int32
 	ClubCoinBaseScore int64
 	CostRange         int32
+	CostBase          int64
+	UserCreateRoom    int32
 }
 
 func ClubFromProto(pclub *pbclub.Club) *Club {
@@ -109,6 +113,8 @@ func SettingParamFromProto(pbsp *pbclub.SettingParam) *SettingParam {
 		CostValue:         pbsp.CostValue,
 		ClubCoinBaseScore: pbsp.ClubCoinBaseScore,
 		CostRange:         pbsp.CostRange,
+		CostBase:          pbsp.CostBase,
+		UserCreateRoom:    pbsp.UserCreateRoom,
 	}
 }
 
@@ -190,41 +196,47 @@ func (mdsp *SettingParam) ToProto() *pbclub.SettingParam {
 		CostValue:         mdsp.CostValue,
 		ClubCoinBaseScore: mdsp.ClubCoinBaseScore,
 		CostRange:         mdsp.CostRange,
+		CostBase:          mdsp.CostBase,
+		UserCreateRoom:    mdsp.UserCreateRoom,
 	}
 }
 
 func (vrs *VipRoomSetting) ToProto() *pbclub.VipRoomSetting {
 	//clubMemberNumber, _ := cacheclub.CountClubMemberHKeys(club.ClubID)
 	return &pbclub.VipRoomSetting{
-		VipRoomSettingID: vrs.ID,
-		Name:             vrs.Name,
-		ClubID:           vrs.ClubID,
-		UserID:           vrs.UserID,
-		RoomType:         vrs.RoomType,
-		MaxNumber:        vrs.MaxNumber,
-		RoundNumber:      vrs.RoundNumber,
-		SubRoomType:      vrs.SubRoomType,
-		GameParam:        vrs.GameParam,
-		Status:           vrs.Status,
-		GameType:         vrs.GameType,
-		SettingParam:     vrs.SettingParam,
+		VipRoomSettingID:   vrs.ID,
+		Name:               vrs.Name,
+		ClubID:             vrs.ClubID,
+		UserID:             vrs.UserID,
+		RoomType:           vrs.RoomType,
+		MaxNumber:          vrs.MaxNumber,
+		RoundNumber:        vrs.RoundNumber,
+		SubRoomType:        vrs.SubRoomType,
+		GameParam:          vrs.GameParam,
+		Status:             vrs.Status,
+		GameType:           vrs.GameType,
+		SettingParam:       vrs.SettingParam,
+		RoomAdvanceOptions: vrs.RoomAdvanceOptions,
+		StartMaxNumber:     vrs.MaxNumber,
 	}
 }
 
 func VipRoomSettingFromProto(pbvrs *pbclub.VipRoomSetting) *VipRoomSetting {
 	out := &VipRoomSetting{
-		ID:           pbvrs.VipRoomSettingID,
-		Name:         pbvrs.Name,
-		ClubID:       pbvrs.ClubID,
-		UserID:       pbvrs.UserID,
-		RoomType:     pbvrs.RoomType,
-		MaxNumber:    pbvrs.MaxNumber,
-		RoundNumber:  pbvrs.RoundNumber,
-		SubRoomType:  pbvrs.SubRoomType,
-		GameParam:    pbvrs.GameParam,
-		Status:       pbvrs.Status,
-		GameType:     pbvrs.GameType,
-		SettingParam: pbvrs.SettingParam,
+		ID:                 pbvrs.VipRoomSettingID,
+		Name:               pbvrs.Name,
+		ClubID:             pbvrs.ClubID,
+		UserID:             pbvrs.UserID,
+		RoomType:           pbvrs.RoomType,
+		MaxNumber:          pbvrs.MaxNumber,
+		RoundNumber:        pbvrs.RoundNumber,
+		SubRoomType:        pbvrs.SubRoomType,
+		GameParam:          pbvrs.GameParam,
+		Status:             pbvrs.Status,
+		GameType:           pbvrs.GameType,
+		SettingParam:       pbvrs.SettingParam,
+		RoomAdvanceOptions: pbvrs.RoomAdvanceOptions,
+		//JoinType:     pbvrs.JoinType,
 	}
 	return out
 }
@@ -255,6 +267,26 @@ func (c *Club) AfterFind() error {
 	return nil
 }
 
+func (vrs *VipRoomSetting) BeforeUpdate(scope *gorm.Scope) error {
+	vrs.MarshalRoomParam()
+	scope.SetColumn("room_param", vrs.RoomParam)
+	return nil
+}
+
+func (vrs *VipRoomSetting) BeforeCreate(scope *gorm.Scope) error {
+	vrs.MarshalRoomParam()
+	scope.SetColumn("room_param", vrs.RoomParam)
+	return nil
+}
+
+func (vrs *VipRoomSetting) AfterFind() error {
+	err := vrs.UnmarshalRoomParam()
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 func (c *Club) MarshalSettingParam() error {
 	if c.Setting == nil {
 		return nil
@@ -272,5 +304,26 @@ func (c *Club) UnmarshalSettingParam() error {
 		}
 		c.Setting = out
 	}
+	return nil
+}
+
+func (vrs *VipRoomSetting) MarshalRoomParam() error {
+	if vrs.RoomAdvanceOptions == nil {
+		return nil
+	}
+	data, _ := json.Marshal(&vrs.RoomAdvanceOptions)
+	vrs.RoomParam = string(data)
+	return nil
+}
+
+func (vrs *VipRoomSetting) UnmarshalRoomParam() error {
+	if len(vrs.RoomParam) == 0 {
+		return nil
+	}
+	var out []string
+	if err := json.Unmarshal([]byte(vrs.RoomParam), &out); err != nil {
+		return err
+	}
+	vrs.RoomAdvanceOptions = out
 	return nil
 }

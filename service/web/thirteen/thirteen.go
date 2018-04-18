@@ -113,6 +113,11 @@ func ThirteenExistHandle(p broker.Publication) error {
 	if err != nil {
 		return err
 	}
+	mdu := clients.GetClientByUserID(rs.UserID)
+	if len(mdu) == 0{
+		log.Err("thirteen exist handle get user fail,uid:%d|%+v\n", rs.UserID, mdu)
+		return err
+	}
 	ctx := gctx.NewContext(clients.GetClientByUserID(rs.UserID)[0].Token())
 	dr := &pbthirteen.ThirteenRecoveryRequest{
 		UserID: rs.UserID,
