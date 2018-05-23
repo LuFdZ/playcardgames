@@ -24,3 +24,10 @@ func ClientErrorLogFromProto(l *pblog.ClientErrorLog) *ClientErrorLog {
 		SystemInfo: l.SystemInfo,
 	}
 }
+
+type ErrLog struct {
+	ServerCode int32
+	Date       *time.Time
+	Error      string
+	Times      int32
+}

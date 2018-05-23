@@ -44,7 +44,7 @@ func CreateConfig(co *mdconf.Config) error {
 	})
 }
 
-func GetConfigs(channel string, version string, mobileOs string) map[int32]*mdconf.Config {
+func GetConfigs(channel string, version string, mobileOs string) map[string]*mdconf.Config {
 	f := func(co *mdconf.Config) bool {
 		if co.Status == enumc.ConfigOpenStatusAble &&
 			(co.Channel == channel || len(co.Channel) == 0) &&
@@ -80,7 +80,7 @@ func PageConfigs(page *mdpage.PageOption, c *mdconf.Config) (
 	return dbconf.PageConfigs(db.DB(), page, c)
 }
 
-func CheckConfigCondition(openType int32, channel string, version string, mobileOs string) float64 {
+func CheckConfigCondition(openType string, channel string, version string, mobileOs string) float64 {
 	rate := 1.00
 	cm := GetConfigs(channel, version, mobileOs)
 	for itemID, co := range cm {
@@ -91,3 +91,4 @@ func CheckConfigCondition(openType int32, channel string, version string, mobile
 	}
 	return rate
 }
+

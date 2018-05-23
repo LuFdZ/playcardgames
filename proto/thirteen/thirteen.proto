@@ -9,6 +9,7 @@ message GroupCard {
     repeated string CardList = 2;
     int32 RoomStatus = 3;
     int32 BankerID = 4;
+    int32 Index = 5;
 }
 
 message GameResultList {

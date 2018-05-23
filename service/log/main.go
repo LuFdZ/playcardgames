@@ -7,7 +7,7 @@ import (
 	gcf "playcards/utils/config"
 	"playcards/utils/env"
 	"playcards/utils/log"
-
+	"playcards/utils/sync"
 	"playcards/utils/auth"
 
 	"github.com/micro/go-micro"
@@ -31,9 +31,9 @@ func main() {
 		micro.WrapHandler(auth.ServerAuthWrapper(FuncRights)),
 	)
 	service.Init()
-
+	gt := sync.NewGlobalTimer()
 	server := service.Server()
-	h := handler.NewHandler(service)
+	h := handler.NewHandler(service, gt)
 	server.Handle(server.NewHandler(h))
 
 	err := service.Run()

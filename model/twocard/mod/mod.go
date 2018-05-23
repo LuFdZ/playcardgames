@@ -139,7 +139,10 @@ func (tc *Twocard) AfterFind() error {
 }
 
 func (tc *Twocard) MarshalGameResult() error {
-	data, _ := json.Marshal(&tc.GameResult)
+	data, err := json.Marshal(&tc.GameResult)
+	if err != nil {
+		return err
+	}
 	tc.GameResultStr = string(data)
 	return nil
 }

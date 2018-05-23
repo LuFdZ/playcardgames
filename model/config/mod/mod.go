@@ -4,6 +4,7 @@ import (
 	mdtime "playcards/model/time"
 	pbconf "playcards/proto/config"
 	"time"
+	"strconv"
 )
 
 type Config struct {
@@ -11,7 +12,7 @@ type Config struct {
 	Channel     string
 	Version     string
 	MobileOs    string
-	ItemID      int32
+	ItemID      string
 	ItemValue   string
 	Status      int32
 	Description string
@@ -21,15 +22,22 @@ type Config struct {
 }
 
 func (co *Config) ToProto() *pbconf.Config {
-	return &pbconf.Config{
-		ItemID:      co.ItemID,
+	out := &pbconf.Config{
 		ItemValue:   co.ItemValue,
 	}
+	i, err := strconv.ParseInt(co.ItemID, 10, 32)
+	if err == nil{
+		out.ItemID = int32(i)
+		out.ItemName = co.ItemID
+	}else{
+		out.ItemName = co.ItemID
+	}
+	return out
 }
 
 
-func (co *Config) ToDetailProto() *pbconf.Config {
-	return &pbconf.Config{
+func (co *Config) ToDetailProto() *pbconf.ConfigNew {
+	return &pbconf.ConfigNew{
 		ConfigID:    co.ConfigID,
 		Channel:     co.Channel,
 		Version:     co.Version,
@@ -44,7 +52,7 @@ func (co *Config) ToDetailProto() *pbconf.Config {
 }
 
 
-func ConfigFromProto(co *pbconf.Config) *Config {
+func ConfigFromProto(co *pbconf.ConfigNew) *Config {
 	if co == nil {
 		return &Config{}
 	}

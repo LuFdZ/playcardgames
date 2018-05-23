@@ -157,7 +157,13 @@ func FourCardExistHandle(p broker.Publication) error {
 		log.Err("four card exist handle http err:%v|%v\n", rs, err)
 		return err
 	}
-	err = clients.SendTo(rs.UserID, t, enum.MsgFourCardExist, reply,enum.MsgFourCardExistCode)
+	topic := enum.MsgFourCardExist
+	topicCode := enum.MsgFourCardExistCode
+	if rs.RecoveryType == 1{
+		topic = enum.MsgRoomSitDown
+		topicCode = enum.MsgRoomSitDownCode
+	}
+	err = clients.SendTo(rs.UserID, t, topic, reply,topicCode)
 	if err != nil {
 		return err
 	}

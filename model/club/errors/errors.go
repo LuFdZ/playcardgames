@@ -32,4 +32,5 @@ var (
 	ErrIDZero                = errors.Conflict(14027, "ID不能为零！")
 	ErrMemberInRoom          = errors.Conflict(14028, "该成员在游戏中，不能踢出！")
 	ErrClubHasGame           = errors.Conflict(14029, "有未结束游戏，不能解散俱乐部！")
+	ErrUpdateClubNull           = errors.Conflict(14030, "修改内容不能为空！")
 )

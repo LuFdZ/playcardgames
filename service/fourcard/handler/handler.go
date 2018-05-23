@@ -58,11 +58,14 @@ func (fcs *FourCardSrv) update(gt *gsync.GlobalTimer, gl *lua.LState) {
 							ServerTime: game.OpDateAt.Unix(),
 							Count:      enumgame.SetBetTime,
 						},
+						Index: game.Index,
 					}
 					topic.Publish(fcs.broker, msg, TopicFourCardGameStart)
 				}
 				mdr, _ := cacheroom.GetRoom(game.PassWord)
-				for _,uid := range mdr.GetIdsNotInGame(){
+				ids := mdr.GetIdsNotInGame()
+				ids = append(ids, mdr.GetSuspendUser()...)
+				for _,uid := range ids{
 					msg := &pbfour.GameStart{
 						GameID:     game.GameID,
 						UserID:     uid,
@@ -74,6 +77,7 @@ func (fcs *FourCardSrv) update(gt *gsync.GlobalTimer, gl *lua.LState) {
 							ServerTime: game.OpDateAt.Unix(),
 							Count:      enumgame.SetBetTime,
 						},
+						Index: game.Index,
 					}
 					topic.Publish(fcs.broker, msg, TopicFourCardGameStart)
 				}
@@ -102,20 +106,36 @@ func (fcs *FourCardSrv) update(gt *gsync.GlobalTimer, gl *lua.LState) {
 						msg.List = uis
 						topic.Publish(fcs.broker, msg, TopicFourCardGameReady)
 					}
-					mdr, _ := cacheroom.GetRoom(game.PassWord)
+					mdr, err := cacheroom.GetRoom(game.PassWord)
+					if err != nil{
+						log.Err("update game get room by password fail game:%+v,err:%+v",game,err)
+						continue
+					}
 					msgWatch := game.ToProto()
-					for _, uid := range mdr.GetIdsNotInGame() {
+					ids := mdr.GetIdsNotInGame()
+					ids = append(ids, mdr.GetSuspendUser()...)
+					for _,gu := range msgWatch.List{
+						gu.CardList = nil
+						gu.HeadCards = nil
+						gu.TailCards = nil
+					}
+					for _, uid := range ids {
 						msgWatch.UserID = uid
 						topic.Publish(fcs.broker, msgWatch, TopicFourCardGameReady)
 					}
 				} else if game.Status == enumgame.GameStatusDone {
 					msg := game.ToProto()
-					mdr, _ := cacheroom.GetRoom(game.PassWord)
+					mdr, err := cacheroom.GetRoom(game.PassWord)
+					if err != nil{
+						log.Err("update game get room by password fail game:%+v,err:%+v",game,err)
+						continue
+					}
 					bro := &pbfour.GameResultBro{
 						Context: msg,
-						Ids:     game.Ids,
+						Ids:     mdr.Ids,
 					}
 					bro.Ids = append(bro.Ids, mdr.GetIdsNotInGame()...)
+					//bro.Ids = append(bro.Ids, mdr.GetSuspendUser()...)
 					topic.Publish(fcs.broker, bro, TopicFourCardGameResult)
 				}
 			}
@@ -148,7 +168,7 @@ func (fcs *FourCardSrv) SetBet(ctx context.Context, req *pbfour.SetBetRequest,
 		return err
 	}
 	f := func() error {
-		err = fourcard.SetBet(u.UserID, req.Key, mdr)
+		err = fourcard.SetBet(u.UserID, req.Key, mdr.Password)
 		if err != nil {
 			return err
 		}
@@ -190,7 +210,7 @@ func (fcs *FourCardSrv) SubmitCard(ctx context.Context, req *pbfour.SubmitCardRe
 	}
 	var game *mdgame.Fourcard
 	f := func() error {
-		game, err = fourcard.SubmitCard(u.UserID, mdr, req.Head, req.Tail)
+		game, err = fourcard.SubmitCard(u.UserID, mdr.Password, req.Head, req.Tail)
 		if err != nil {
 			return err
 		}

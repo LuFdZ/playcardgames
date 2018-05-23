@@ -14,6 +14,7 @@ import (
 	errgame "playcards/model/fourcard/errors"
 	mdgame "playcards/model/fourcard/mod"
 	pbfour "playcards/proto/fourcard"
+	cachelog "playcards/model/log/cache"
 	"playcards/model/room"
 	"math/rand"
 	"playcards/utils/db"
@@ -39,7 +40,6 @@ func CreateGame() []*mdgame.Fourcard {
 		return nil
 	}
 	var newGames []*mdgame.Fourcard
-
 	for _, mdr := range rooms {
 		var (
 			userResults []*mdroom.GameUserResult
@@ -48,6 +48,10 @@ func CreateGame() []*mdgame.Fourcard {
 		newGameResult := &mdgame.GameResult{}
 		var bankerID int32
 		bankerID = mdr.BankerList[0]
+		ruBanker := mdr.GetRoomUser(bankerID)
+		if ruBanker.UserRole != enumroom.UserRolePlayerBro {
+			continue
+		}
 		for _, user := range mdr.Users {
 			if mdr.RoundNow == 1 {
 				userResult := &mdroom.GameUserResult{
@@ -59,7 +63,7 @@ func CreateGame() []*mdgame.Fourcard {
 					Score:  0,
 				}
 				userResults = append(userResults, userResult)
-			}else if len(mdr.Users) != len(mdr.UserResults) {
+			} else if len(mdr.Users) != len(mdr.UserResults) {
 				hasIn := false
 				for _, mru := range mdr.UserResults {
 					if user.UserID == mru.UserID {
@@ -89,20 +93,21 @@ func CreateGame() []*mdgame.Fourcard {
 			} else {
 				user.Role = enumroom.UserRoleSlave
 			}
-			ui := &mdgame.UserInfo{
-				UserID:     user.UserID,
-				Status:     enumgame.UserStatusInit,
-				Bet:        0,
-				Role:       user.Role,
-				TotalScore: 0,
+			if user.UserRole == enumroom.UserRolePlayerBro {
+				ui := &mdgame.UserInfo{
+					UserID:     user.UserID,
+					Status:     enumgame.UserStatusInit,
+					Bet:        0,
+					Role:       user.Role,
+					TotalScore: 0,
+				}
+				userInfo = append(userInfo, ui)
 			}
-			userInfo = append(userInfo, ui)
-
 		}
 		newGameResult.List = userInfo
 		if mdr.RoundNow == 1 {
 			mdr.UserResults = userResults
-		}else if len(userResults) > 0 {
+		} else if len(userResults) > 0 {
 			mdr.UserResults = append(mdr.UserResults, userResults...)
 		}
 		now := gorm.NowFunc()
@@ -110,6 +115,7 @@ func CreateGame() []*mdgame.Fourcard {
 		var roomParam *mdroom.FourCardRoomParam
 		if err := json.Unmarshal([]byte(mdr.GameParam), &roomParam); err != nil {
 			log.Err("create fourcard unmarshal room param failed, %v", err)
+			cachelog.SetErrLog(enumgame.ServiceCode, err.Error())
 			continue
 		}
 		game := &mdgame.Fourcard{
@@ -175,6 +181,7 @@ func CreateGame() []*mdgame.Fourcard {
 
 		err := db.Transaction(f)
 		if err != nil {
+			cachelog.SetErrLog(enumgame.ServiceCode, err.Error())
 			log.Err("four card create failed,%v | %+v", game, err)
 			continue
 		}
@@ -204,6 +211,7 @@ func UpdateGame(goLua *lua.LState) []*mdgame.Fourcard {
 				game.Status = enumgame.GameStatusAllBet
 				err := cachegame.UpdateGame(game)
 				if err != nil {
+					cachelog.SetErrLog(enumgame.ServiceCode, err.Error())
 					log.Err("four card game status init set session failed, %v", err)
 					continue
 				}
@@ -239,12 +247,19 @@ func UpdateGame(goLua *lua.LState) []*mdgame.Fourcard {
 				log.Err("four card room status all submit get session nil, %v|%d", game.PassWord, game.RoomID)
 				continue
 			}
+			//TODO 写死牌型
+			//mapids := tools.GenerateRandomNumber(0,len(enumgame.TestCardListMap),len(game.GameResult.List))
+			//for i,ugr := range game.GameResult.List{
+			//	ugr.HeadCards.CardList = enumgame.TestCardListMap[mapids[i]][0]
+			//	ugr.TailCards.CardList = enumgame.TestCardListMap[mapids[i]][1]
+			//}
 			game.MarshalGameResult()
 			if err := goLua.DoString(fmt.
 			Sprintf("return G_CalculateRes('%s','%s')",
 				game.GameResultStr, mdr.GameParam)); err != nil {
 				log.Err("four card G_CalculateRes err %+v|\n%+v|\n%v\n",
 					game.GameResultStr, mdr.GameParam, err)
+				cachelog.SetErrLog(enumgame.ServiceCode, err.Error())
 				continue
 			}
 
@@ -302,6 +317,10 @@ func UpdateGame(goLua *lua.LState) []*mdgame.Fourcard {
 					continue
 				}
 				for _, ur := range mdr.UserResults {
+					ru := mdr.GetRoomUser(ur.UserID)
+					if ru.UserRole != enumroom.UserRolePlayerBro {
+						continue
+					}
 					for _, ugr := range game.GameResult.List {
 						if ugr.UserID == ugr.UserID {
 							ugr.ClubCoinScore = ur.RoundClubCoinScore
@@ -427,7 +446,7 @@ func autoSetBankerScore(game *mdgame.Fourcard) {
 	}
 }
 
-func SetBet(uid int32, key int32, mdr *mdroom.Room) error {
+func SetBet(uid int32, key int32, pwd string) error {
 	var value int32
 	if key < 1 || key > 5 {
 		return errgame.ErrParam
@@ -438,6 +457,10 @@ func SetBet(uid int32, key int32, mdr *mdroom.Room) error {
 	//} else {
 	//	value = v
 	//}
+	mdr, err := cacheroom.GetRoom(pwd)
+	if err != nil {
+		return err
+	}
 
 	if mdr.Status > enumroom.RoomStatusStarted {
 		return errroom.ErrGameIsDone
@@ -485,7 +508,11 @@ func SetBet(uid int32, key int32, mdr *mdroom.Room) error {
 	return nil //
 }
 
-func SubmitCard(uid int32, room *mdroom.Room, head []string, tail []string) (*mdgame.Fourcard, error) {
+func SubmitCard(uid int32, pwd string, head []string, tail []string) (*mdgame.Fourcard, error) {
+	room, err := cacheroom.GetRoom(pwd)
+	if err != nil {
+		return nil, err
+	}
 	if room.Status > enumroom.RoomStatusStarted {
 		if room.Giveup == enumroom.WaitGiveUp {
 			return nil, errroom.ErrInGiveUp
@@ -514,7 +541,6 @@ func SubmitCard(uid int32, room *mdroom.Room, head []string, tail []string) (*md
 			return nil, errgame.ErrCardNotExist
 		}
 	}
-
 	allReady, userResult := getUserAndAllOtherStatusReady(game, uid,
 		enumgame.GetSubmitCardStatus)
 
@@ -522,7 +548,7 @@ func SubmitCard(uid int32, room *mdroom.Room, head []string, tail []string) (*md
 		return nil, errgame.ErrUserNotInGame
 	}
 
-	if userResult.Status > enumgame.UserStatusSubmitCard {
+	if userResult.Status >= enumgame.UserStatusSubmitCard {
 		return nil, errgame.ErrAlreadySubmitCard
 	}
 	sort.Strings(head)
@@ -636,7 +662,7 @@ func GameRecovery(rid int32) (*mdgame.Fourcard, error) {
 		}
 	}
 	if game == nil {
-		return nil, errgame.ErrGameNotExist
+		return nil, nil
 	}
 	return game, nil
 }
@@ -649,13 +675,22 @@ func GameExist(uid int32, rid int32) (*pbfour.RecoveryReply, error) {
 	}
 	out.RoomExist = roomRecovery.ToProto()
 	out.RoomExist.Room.CreateOrEnter = enumroom.EnterRoom
-	out.RoomExist.Room.OwnerID = out.RoomExist.Room.UserList[0].UserID
+	if len(out.RoomExist.Room.UserList) > 0 {
+		out.RoomExist.Room.OwnerID = out.RoomExist.Room.UserList[0].UserID
+	}
+	//客户端需要 游戏开始前 RoundNow都算上一局的（玩家挂起时游戏恢复看不到刚挂起那个人的牌）
+	if out.RoomExist.Room.RoundNow > 1 && out.RoomExist.Room.Status < enumroom.RoomStatusStarted {
+		out.RoomExist.Room.RoundNow -= 1
+	}
 	if roomRecovery.Status < enumroom.RecoveryGameStart && roomRecovery.Status != enumroom.RecoveryInitNoReady {
 		return out, nil
 	}
 	game, err := GameRecovery(roomRecovery.Room.RoomID)
 	if err != nil {
 		return nil, err
+	}
+	if game == nil {
+		return out, nil
 	}
 	out.FourCardExist = game.ToProto()
 	for _, gr := range out.FourCardExist.List {

@@ -77,7 +77,6 @@ message NiuniuRecoveryRequest {
     int32 RoomID = 2;
 }
 
-
 //广播
 message NiuniuGameStart {
     int32 Role = 1;
@@ -88,6 +87,7 @@ message NiuniuGameStart {
     int32 GameStatus = 6;
     int32 PushOnBet = 7;
     CountDown CountDown = 8;
+    int32 Index = 9;
 }
 
 message BeBanker {
@@ -114,7 +114,9 @@ message SetBet {
 
 message GameReady {
     int32 UserID = 1;
-    repeated int32 Ids = 2;
+    string CardType = 2;
+    repeated string CardList = 3;
+    repeated int32 Ids = 4;
 }
 
 //倒计时结构体

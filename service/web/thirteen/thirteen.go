@@ -129,7 +129,13 @@ func ThirteenExistHandle(p broker.Publication) error {
 		log.Err("thirteen exist handle http err:%v|%v\n", rs, err)
 		return err
 	}
-	err = clients.SendTo(rs.UserID, t, enum.MsgThireteenExist, reply,enum.MsgThireteenExistCode)
+	topic := enum.MsgThireteenExist
+	topicCode := enum.MsgThireteenExistCode
+	if rs.RecoveryType == 1{
+		topic = enum.MsgRoomSitDown
+		topicCode = enum.MsgRoomSitDownCode
+	}
+	err = clients.SendTo(rs.UserID, t, topic, reply,topicCode)
 	if err != nil {
 		return err
 	}

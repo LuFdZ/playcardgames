@@ -58,10 +58,14 @@ func (tcs *TwoCardSrv) update(gt *gsync.GlobalTimer, gl *lua.LState) {
 							ServerTime: game.OpDateAt.Unix(),
 							Count:      enumgame.SetBetTime,
 						},
+						Index: game.Index,
 					}
 					topic.Publish(tcs.broker, msg, TopicTwoCardGameStart)
 				}
-				for _,uid := range game.WatchIds{
+				mdr, _ := cacheroom.GetRoom(game.PassWord)
+				ids := mdr.GetIdsNotInGame()
+				ids = append(ids, mdr.GetSuspendUser()...)
+				for _, uid := range ids {
 					msg := &pbtwo.GameStart{
 						GameID:     game.GameID,
 						UserID:     uid,
@@ -73,6 +77,7 @@ func (tcs *TwoCardSrv) update(gt *gsync.GlobalTimer, gl *lua.LState) {
 							ServerTime: game.OpDateAt.Unix(),
 							Count:      enumgame.SetBetTime,
 						},
+						Index: game.Index,
 					}
 					topic.Publish(tcs.broker, msg, TopicTwoCardGameStart)
 				}
@@ -106,19 +111,34 @@ func (tcs *TwoCardSrv) update(gt *gsync.GlobalTimer, gl *lua.LState) {
 						topic.Publish(tcs.broker, msg, TopicTwoCardGameReady)
 					}
 					msgWatch := game.ToProto()
-					mdr, _ := cacheroom.GetRoom(game.PassWord)
-					for _, uid := range mdr.GetIdsNotInGame() {
+					mdr, err := cacheroom.GetRoom(game.PassWord)
+					if err != nil{
+						log.Err("update game get room by password fail game:%+v,err:%+v",game,err)
+						continue
+					}
+					ids := mdr.GetIdsNotInGame()
+					ids = append(ids, mdr.GetSuspendUser()...)
+					for _, gu := range msgWatch.List {
+						gu.CardList = nil
+						gu.Cards = nil
+					}
+					for _, uid := range ids {
 						msgWatch.UserID = uid
 						topic.Publish(tcs.broker, msgWatch, TopicTwoCardGameReady)
 					}
 				} else if game.Status == enumgame.GameStatusDone {
+					mdr, err := cacheroom.GetRoom(game.PassWord)
+					if err != nil{
+						log.Err("update game get room by password fail game:%+v,err:%+v",game,err)
+						continue
+					}
 					msg := game.ToProto()
 					bro := &pbtwo.GameResultBro{
 						Context: msg,
-						Ids:     game.Ids,
+						Ids:     mdr.Ids,
 					}
-					mdr, _ := cacheroom.GetRoom(game.PassWord)
 					bro.Ids = append(bro.Ids, mdr.GetIdsNotInGame()...)
+					//bro.Ids = append(bro.Ids, mdr.GetSuspendUser()...)
 					topic.Publish(tcs.broker, bro, TopicTwoCardGameResult)
 				}
 			}
@@ -151,7 +171,7 @@ func (tcs *TwoCardSrv) SetBet(ctx context.Context, req *pbtwo.SetBetRequest,
 		return err
 	}
 	f := func() error {
-		err = twocard.SetBet(u.UserID, req.Key, mdr)
+		err = twocard.SetBet(u.UserID, req.Key, mdr.Password)
 		if err != nil {
 			return err
 		}
@@ -194,7 +214,7 @@ func (tcs *TwoCardSrv) SubmitCard(ctx context.Context, req *pbtwo.SubmitCardRequ
 	}
 	var game *mdgame.Twocard
 	f := func() error {
-		game, err = twocard.SubmitCard(u.UserID, mdr)
+		game, err = twocard.SubmitCard(u.UserID, mdr.Password)
 		if err != nil {
 			return err
 		}

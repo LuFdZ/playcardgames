@@ -8,6 +8,7 @@ import (
 	mdbill "playcards/model/bill/mod"
 	enumcom "playcards/model/common/enum"
 	cachebill "playcards/model/bill/cache"
+	mdpage "playcards/model/page"
 	"playcards/utils/db"
 
 	"github.com/jinzhu/gorm"
@@ -85,12 +86,12 @@ func GainGameBalance(uid int32, aid int32, balanceType int32, balance *mdbill.Ba
 
 func Recharge(uid int32, aid int32, diamond int64, orderid string,
 	rechangeType int32, channel string, coinType int32) (int32, *mdbill.Balance, error) {
-	exist := CheckDiamondBalanceIsDone(uid, orderid,coinType)
+	exist := CheckDiamondBalanceIsDone(uid, orderid, coinType)
 	if exist == enumbill.OrderExist {
 		return enumbill.OrderExist, nil, nil
 	}
 	f := func(tx *gorm.DB) error {
-		if coinType != enumbill.TypeGold{
+		if coinType != enumbill.TypeGold {
 			coinType = enumbill.TypeDiamond
 		}
 		balance := &mdbill.Balance{Amount: diamond, CoinType: coinType}
@@ -116,7 +117,7 @@ func Recharge(uid int32, aid int32, diamond int64, orderid string,
 	return enumbill.OrderSuccess, b, nil
 }
 
-func CheckDiamondBalanceIsDone(uid int32, orderid string,coinype int32) int32 {
+func CheckDiamondBalanceIsDone(uid int32, orderid string, coinype int32) int32 {
 	return dbbill.GetJournal(db.DB(), uid, orderid, coinype)
 }
 
@@ -139,6 +140,17 @@ func SetBalanceFreeze(uid int32, aid int64, balance *mdbill.Balance, balanceType
 	}
 	return b, nil
 }
+
+func PageJournal(mdj *mdbill.Journal, page *mdpage.PageOption) ([]*mdbill.Journal, int64, error) {
+	mdjs, rows, err := dbbill.PageJournal(db.DB(), mdj, page)
+	if err != nil {
+		return nil, 0, err
+	}
+	return mdjs, rows, err
+}
+
+
+
 
 //func SetBalanceUnFreeze(uid int32, aid int64, balance *mdbill.Balance, balanceType int32,
 //) (*mdbill.Balance, error) {

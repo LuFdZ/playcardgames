@@ -49,6 +49,7 @@ message GameStart {
     int32 BankerID = 5; //庄家id
     repeated string CardList = 6; //玩家总牌组
     CountDown CountDown = 7;
+    int32 Index = 8;
 }
 
 //玩家下注结构体

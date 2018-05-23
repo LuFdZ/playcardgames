@@ -57,7 +57,7 @@ func GetLockClub(tx *gorm.DB, cid int32) (*mdclub.Club, error) {
 
 func GetLockClubMember(tx *gorm.DB, clubid int32, uid int32) (*mdclub.ClubMember, error) {
 	out := &mdclub.ClubMember{}
-	if err := db.ForUpdate(tx).Where("club_id = ? and user_id = ? and status < ?", clubid, uid, enumclub.ClubMemberStatusBan).Find(out).
+	if err := db.ForUpdate(tx).Where("club_id = ? and user_id = ? and status <= ?", clubid, uid, enumclub.ClubMemberStatusBan).Find(out).
 		Error; err != nil {
 		return nil, errors.Internal("get lock club member failed", err)
 	}
@@ -264,9 +264,11 @@ func PageClubJournal(tx *gorm.DB, page *mdpage.PageOption, clubid int32, status 
 		mclub *mdclub.ClubJournal
 	)
 	// club_id = ?
-	sqltx := tx.Model(mclub).Where("club_id = ? and amount_type = ? and type != ?", clubid, enumclub.TypeClubCoin, enumclub.JournalTypeClubGame)
+	sqltx := tx.Model(mclub).Where("club_id = ? and amount_type = ? and type != ? and type != ?", clubid,
+		enumclub.TypeClubCoin, enumclub.JournalTypeClubGame, enumclub.JournalTypeClubGameCostBack)
 	if status > 0 {
-		sqltx = tx.Model(mclub).Where("club_id = ? and status = ? and amount_type = ? and type != ?", clubid, status, enumclub.TypeClubCoin, enumclub.JournalTypeClubGame)
+		sqltx = tx.Model(mclub).Where("club_id = ? and status = ? and amount_type = ? and type != ? and type != ?",
+			clubid, status, enumclub.TypeClubCoin, enumclub.JournalTypeClubGame, enumclub.JournalTypeClubGameCostBack)
 	}
 
 	rows, rtx := page.Find(sqltx.Order("created_at desc").Find(&out), &out)
@@ -284,8 +286,8 @@ func PageClubMemberJournal(tx *gorm.DB, page *mdpage.PageOption, uid int32, club
 	)
 	//mclub.OpUserID = uid
 	//SELECT count(0) as `size` FROM `club_journals`  WHERE amount_type = '3' and (op_user_id = '100001' or (`foreign` = '100001' and type =1 )) ORDER BY created_at desc;
-	rows, rtx := page.Find(tx.Where("club_id = ? and amount_type = ? and (op_user_id = ? or (`foreign` = ? and type = ?))",
-		clubid, enumclub.TypeClubCoin, uid, uid, enumclub.JournalTypeClubAddMemberClubCoin).
+	rows, rtx := page.Find(tx.Where("club_id = ? and amount_type = ? and type != ? and (op_user_id = ? or (`foreign` = ? and type = ?) )",
+		clubid, enumclub.TypeClubCoin, enumclub.JournalTypeClubGameCostGain, uid, uid, enumclub.JournalTypeClubAddMemberClubCoin).
 		Order("created_at desc").Find(&out), &out)
 	if rtx.Error != nil {
 		return nil, 0, errors.Internal("page club journal failed", rtx.Error)
@@ -343,7 +345,8 @@ func GainClubMemberAndClubBalance(tx *gorm.DB, clubid int32, uid int32, amount i
 	return mclub, mclubMember, nil
 }
 
-func GainClubMemberGameBalance(tx *gorm.DB, clubid int32, uid int32, amount int64, fid int64, opid int64, gameCost bool) (*mdclub.ClubMember, error) {
+func GainClubMemberGameBalance(tx *gorm.DB, clubid int32, uid int32, amount int64, fid int64, opid int64,
+	gameCost bool) (*mdclub.ClubMember, error) {
 	mclubMember, err := GetLockClubMember(tx, clubid, uid)
 	if err != nil {
 		return nil, err
@@ -368,7 +371,8 @@ func GainClubMemberGameBalance(tx *gorm.DB, clubid int32, uid int32, amount int6
 			jtype = enumclub.JournalTypeClubGameCostBack
 		}
 		//log.Debug("AAAAAAGainClubMemberGameBalance:%d|%d|%d\n", amount, amountBefore, amountAfter)
-		err = InsertJournal(tx, mclubMember.ClubID, enumclub.TypeClubCoin, amount, amountBefore, amountAfter, jtype, fid, opid)
+		err = InsertJournal(tx, mclubMember.ClubID, enumclub.TypeClubCoin, amount, amountBefore, amountAfter, jtype,
+			fid, opid)
 		if err != nil {
 			return nil, err
 		}
@@ -392,7 +396,8 @@ func GainClubMemberGameBalance(tx *gorm.DB, clubid int32, uid int32, amount int6
 		clubAmountBefore := mclub.ClubCoin
 		mclub.ClubCoin = mclub.ClubCoin - amount
 		clubAmountAfter := mclub.ClubCoin
-		err = InsertJournal(tx, mclubMember.ClubID, enumclub.TypeClubCoin, amount, clubAmountBefore, clubAmountAfter, enumclub.JournalTypeClubGameCostBack, fid, int64(mclub.ClubID))
+		err = InsertJournal(tx, mclubMember.ClubID, enumclub.TypeClubCoin, amount, clubAmountBefore, clubAmountAfter,
+			enumclub.JournalTypeClubGameCostGain, fid, int64(uid))
 		if err != nil {
 			return nil, err
 		}

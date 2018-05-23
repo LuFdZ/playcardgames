@@ -16,6 +16,7 @@ import (
 	webuser "playcards/service/web/user"
 	webmail "playcards/service/web/mail"
 	webtow "playcards/service/web/twocard"
+	webrun "playcards/service/web/runcard"
 	"playcards/utils/auth"
 	"playcards/utils/log"
 
@@ -49,6 +50,7 @@ func NewWebHandler(c client.Client) *Web {
 	webfour.Init(w.broker)
 	webmail.Init(w.broker)
 	webtow.Init(w.broker)
+	webrun.Init(w.broker)
 	return w
 }
 
@@ -63,10 +65,12 @@ func (w *Web) Subscribe(ws *websocket.Conn) {
 	token := string(msg)
 	u, err := auth.GetUserByToken(token)
 	if err != nil {
+		websocket.JSON.Send(ws, "-1")
 		log.Err("websocket login failed: %v token: %v", err, token)
 		return
 	}
 	if u == nil {
+		websocket.JSON.Send(ws, "-2")
 		log.Err("websocket get user null: %v", string(msg))
 		return
 	}
@@ -80,12 +84,14 @@ func (w *Web) Subscribe(ws *websocket.Conn) {
 	webfour.SubscribeFourCardMessage(c, nil)
 	webmail.SubscribeMailMessage(c, nil)
 	webtow.SubscribeTwoCardMessage(c, nil)
+	webrun.SubscribeRunCardMessage(c, nil)
 
 	log.Debug("new client: %v", c)
 	f := func(msg []byte) error {
 		req := &request.Request{}
 		err := json.Unmarshal(msg, &req)
 		if err != nil {
+			websocket.Message.Send(ws, err.Error())
 			log.Err("client %v request error: %v", c, req)
 			return err
 		}

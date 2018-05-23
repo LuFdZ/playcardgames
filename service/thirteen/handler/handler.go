@@ -48,13 +48,18 @@ func (ts *ThirteenSrv) update(gt *gsync.GlobalTimer, gl *lua.LState) {
 				for _, groupCard := range game.Cards {
 					msg := groupCard.ToProto()
 					msg.BankerID = game.BankerID
+					msg.Index = game.Index
 					topic.Publish(ts.broker, msg, TopicThirteenGameStart)
 				}
-				for _, uid := range game.WatchIds {
+				mdr, _ := cacheroom.GetRoom(game.PassWord)
+				ids := mdr.GetIdsNotInGame()
+				ids = append(ids, mdr.GetSuspendUser()...)
+				for _, uid := range ids {
 					msg := &pbt.GroupCard{
 						UserID:     uid,
 						RoomStatus: game.Status,
 						BankerID:   game.BankerID,
+						Index:      game.Index,
 					}
 					msg.BankerID = game.BankerID
 					topic.Publish(ts.broker, msg, TopicThirteenGameStart)
@@ -65,10 +70,17 @@ func (ts *ThirteenSrv) update(gt *gsync.GlobalTimer, gl *lua.LState) {
 		games := thirteen.UpdateGame(gl)
 		if games != nil {
 			for _, game := range games {
-				mdr, _ := cacheroom.GetRoom(game.PassWord)
+				mdr, err := cacheroom.GetRoom(game.PassWord)
+				if err != nil{
+					log.Err("update game get room by password fail game:%+v,err:%+v",game,err)
+					continue
+				}
 				msg := game.Result.ToProto()
-				msg.Ids = game.Ids
+
+				msg.Ids = mdr.Ids
 				msg.Ids = append(msg.Ids, mdr.GetIdsNotInGame()...)
+				//msg.Ids = append(msg.Ids, mdr.GetSuspendUser()...)
+				//fmt.Printf("AAAAAAA:%+v\n",mdr.GetSuspendUser())
 				topic.Publish(ts.broker, msg, TopicThirteenGameResult)
 			}
 

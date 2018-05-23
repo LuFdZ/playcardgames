@@ -1,0 +1,136 @@
+syntax = "proto3";
+import "playcards/proto/room/room.proto";
+
+package runcard;
+
+//***********************************************结构体***********************************************
+//玩家结构
+message UserInfo {
+    int32 UserID = 1;
+    repeated string CardList = 2; //玩家当前牌
+    SubmitCard LastCards = 3; //玩家上次出牌
+    string Score = 4; //总分
+    int32 BoomNum = 5; //炸弹次数
+    int32 Status = 6; //玩家状态
+    string ClubCoinScore = 7; //玩家战绩分成绩
+    int32 CardNum = 8; //剩余牌总数
+    int32 Index = 9;
+    string BoomScore = 10; //炸弹次数
+}
+
+//int32 NetUserID; //下一个出牌的玩家,如果没有下一个玩家，则字段为空
+//int32 CurUserID; //当前出牌的玩家 
+//int32 CurCardNum; //当前出牌玩家剩余牌数
+//string CardType; //打出的牌组类型
+//repeated string CardList; //打出的牌组列表 
+//repeated int32 PassUserList; //不打的玩家ID列表
+//int32 GameStatus; // 游戏状态 
+//CountDown CountDown; // 倒计时
+//牌组信息
+message SubmitCard {
+    int32 CurUserID = 1;
+    int32 NextUserID = 2;
+    string CardType = 3; //牌型
+    repeated string CardList = 4; //牌组列表
+    int32 GameStatus = 5; //游戏状态
+    CountDown CountDown = 6; //倒计时结构体
+    repeated int32 PassUserList = 7; //跳过列表
+    int32 CurCardNum = 8;//剩余牌数量
+}
+
+//倒计时结构体
+message CountDown {
+    int64 ServerTime = 1; //服务器时间
+    int32 Count = 2; //倒计时秒数
+}
+
+
+//int32 GameID; //游戏ID
+//int32 RoomStatus; //房间状态
+//string FirstStartGetCard; //首局抽到的牌，所有牌中最小的一张，抽到此牌的玩家先出
+//repeated UserInfo UserList;  //玩家信息列表
+//CountDown CountDown; //游戏倒计时
+//int32 Index; //当前游戏局数
+//int32 OpUserID; //当前出牌的玩家ID
+//游戏开始结构体
+message GameStart {
+    int32 GameID = 1;
+    int32 UserID = 2;
+    int32 RoomStatus = 3; //房间状态
+    int32 GameStatus = 4; //游戏状态
+    int32 FirstUserID = 5; //开始玩家id
+    string FirstStartGetCard = 6; //抽到的开始标志牌，第一局有效，3人场必定为黑桃3，2人场为抽到的最小牌
+    repeated UserInfo UserList = 7; //玩家总牌组
+    CountDown CountDown = 8;
+    int32 Index = 9;
+    int32 OpUserID = 10; //当前出牌玩家ID
+}
+
+//游戏内容结构体
+message GameResult {
+    int32 RoomID = 1;
+    int32 GameID = 2;
+    int32 GameStatus = 3; //游戏状态
+    int32 OpUserID = 4; //当前出牌玩家
+    repeated SubmitCard SubmitCardList = 5; //本轮出牌
+    repeated UserInfo List = 6; //用户信息
+    int32 UserID = 7;
+    int32 IsSpring = 8;
+    int32 SettleTimes = 9;
+}
+
+//***********************************************请求***********************************************
+message SubmitCardRequest {
+    repeated string CardList = 1; //牌型列表
+}
+
+message GameResultListRequest {
+    int32 RoomID = 1;
+}
+
+//游戏恢复
+message RecoveryRequest {
+    int32 UserID = 1;
+    int32 RoomID = 2;
+}
+
+//***********************************************回应***********************************************
+//通用回复
+message DefaultReply {
+    int32 GameID = 1;
+    int32 Result = 2; //1 成功 //失败返回通用报错结构
+    int32 Code = 3;
+}
+
+message GameResultListReply {
+    repeated GameResult List = 1;
+}
+
+//游戏恢复
+message RecoveryReply {
+    room.CheckRoomExistReply RoomExist = 1; //房间信息
+    GameResult RunCardExist = 2; //跑得快信息结构体
+    CountDown CountDown = 3;
+}
+
+//***********************************************广播***********************************************
+//玩家出牌广播
+message SubmitCardBro {
+    SubmitCard Context = 1;
+    repeated int32 Ids = 2;
+}
+
+//结算广播
+message GameResultBro {
+    GameResult Context = 1;
+    repeated int32 Ids = 2;
+}
+
+service RunCardSrv {
+    rpc SubmitCard (SubmitCardRequest) returns (DefaultReply) {
+    }
+    rpc GameResultList (GameResultListRequest) returns (GameResultListReply) {
+    }
+    rpc RunCardRecovery (RecoveryRequest) returns (RecoveryReply) {
+    }
+}

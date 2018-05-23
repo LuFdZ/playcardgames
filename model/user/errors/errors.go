@@ -16,4 +16,5 @@ var (
 	ErrNameOrPasswordNotExisted = errors.NotFound(10011, "账号名或密码错误！")
 	ErrUnionIDNoFind            = errors.BadRequest(10012, "UnionID获取失败！")
 	ErrWXLoginResponse          = errors.BadRequest(10014, "微信请求返回错误！%s")
+	ErrTest                     = errors.BadRequest(10015, "错误上报测试")
 )

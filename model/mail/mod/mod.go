@@ -9,6 +9,7 @@ import (
 	utilproto "playcards/utils/proto"
 	"time"
 	"github.com/jinzhu/gorm"
+	"fmt"
 )
 
 type MailInfo struct {
@@ -129,6 +130,13 @@ func MailInfoFromProto(mi *pbmail.MailInfo) *MailInfo {
 		MailType:    mi.MailType,
 		//ItemList:    mi.ItemList,
 	}
+	if mi.ItemList != nil {
+		for _, im := range mi.ItemList {
+			out.ItemModeList = append(out.ItemModeList, ItemModelFromProto(im))
+		}
+	}
+	fmt.Printf("AAAMailInfoFromProto:%+v\n",mi.ItemList)
+	fmt.Printf("BBBMailInfoFromProto:%+v\n",out)
 	return out
 }
 

@@ -423,11 +423,11 @@ func GetMemberCount(clubid int32) (int32, int32) {
 	mcms := GetAllClubMember(clubid, false)
 	var memberCount int32
 	var onlineCount int32
-	memberCount = int32(len(mcms))
+	//memberCount = int32(len(mcms))
 	for _, mcm := range mcms {
+		memberCount += 1
 		if mcm.Online == 1 {
 			//fmt.Printf("AAAA:%+v\n",mcm)
-			memberCount += 1
 			onlineCount++
 		}
 	}

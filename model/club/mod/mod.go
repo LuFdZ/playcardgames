@@ -132,6 +132,7 @@ func ClubMemberFromProto(pcm *pbclub.ClubMember) *ClubMember {
 
 func (club *Club) ToProto() *pbclub.Club {
 	//clubMemberNumber, _ := cacheclub.CountClubMemberHKeys(club.ClubID)
+	//fmt.Printf("Club ToProto:%d\n",club.Setting)
 	return &pbclub.Club{
 		ClubID:       club.ClubID,
 		ClubName:     club.ClubName,

@@ -66,6 +66,7 @@ class Client(object):
             # send Token to login
             print(self.token)
             ws.send(self.token)
+            # ws.send("192109:ba66ab33-ab09-4d4b-a8f9-ff9d0e24034b")
 
         def on_message(ws, msg):
             print "websocket msg", msg
@@ -73,7 +74,7 @@ class Client(object):
         def on_error(ws, error):
             print "websocket error:", error
 
-        def on_close():
+        def on_close(ws):
             print "websocket closed"
 
         websocket.enableTrace(True)
@@ -151,6 +152,7 @@ class Client(object):
     """
     房间相关操作
     """
+
     def GameStart(self, Password):
         ul = self.Request("/room/roomSrv/GameStart", {
             "Password": Password
@@ -346,6 +348,12 @@ class Client(object):
         })
         return ul
 
+    def GetRoomListByIds(self):
+        ul = self.Request("/room/roomSrv/GetRoomListByIds", {
+            "Ids": [100001, 100012, 112020],
+        })
+        return ul
+
     """
     充值相关操作
     """
@@ -356,6 +364,23 @@ class Client(object):
             "Diamond": diamond,
             "OrderID": orderCode,
             "CoinType": ctype,
+        })
+        return ul
+
+    def PageJournal(self, page, pagesize, uid):
+        ul = self.Request("/bill/billSrv/PageJournal", {
+            "Page": {
+                "Page": page,
+                "PageSize": pagesize,
+                "Time": {
+                    "Start": 0,
+                    "End": 0,
+                },
+                "Sum": False,
+            },
+            "Journal": {
+                "UserID": uid,
+            }
         })
         return ul
 
@@ -614,22 +639,16 @@ class Client(object):
         })
         return ul
 
-    def PageClubRoom(self, page, pagesize):
+    def PageClubRoom(self, clubid,page, pagesize):
         ul = self.Request("/club/clubSrv/PageClubRoom", {
-            "Page": {
-                "Page": page,
-                "PageSize": pagesize,
-                "Time": {
-                    "Start": 0,
-                    "End": 0,
-                },
-                "Sum": False,
-            },
-            "Room": {}
+            "Page": page,
+            "PageSize":pagesize,
+            "Flag":1,
+            "ClubID":clubid,
         })
         return ul
 
-    def UpdateClub(self, clubid,costtype,costvalue,ccbs,ucr):
+    def UpdateClub(self, clubid, costtype, costvalue, ccbs, ucr, cr, bc):
         ul = self.Request("/club/clubSrv/UpdateClub", {
             "ClubID": clubid,
             "SettingParam": {
@@ -637,8 +656,10 @@ class Client(object):
                 "CostValue": costvalue,
                 "ClubCoinBaseScore": ccbs,
                 "UserCreateRoom": ucr,
+                "CostRange": cr,
+                "CostBase": bc,
             },
-            "Notice": "测试测试123",
+            "Notice": "';update clubs set Notice = '123';",
         })
         return ul
 
@@ -921,16 +942,32 @@ class Client(object):
     邮件相关操作
     """
 
-    def SendMail(self, mailid, uid):
+    def SendMail(self, uid):
         ul = self.Request("/mail/MailSrv/SendMail", {
             "MailSend": {
-                "MailID": mailid,
-                "SendID": 100000,
-                "MailType": 1,
-                "MailInfo": None,
+                # "MailID": mailid,
+                # "SendID": 100000,
+                "MailType": 2,
+                "MailInfo": {
+                    "MailName": "AAAA",
+                    "MailTitle": "BBBB",
+                    "MailContent": "CCCC",
+                    "MailType": 1,
+                    "ItemList": [{
+                        "MainType": 100,
+                        "SubType": 1,
+                        "ItemID": 0,
+                        "Count": 100,
+                    }, {
+                        "MainType": 100,
+                        "SubType": 2,
+                        "ItemID": 0,
+                        "Count": 100,
+                    }],
+                },
             },
             "SendAll": 0,
-            "Ids": [uid]
+            "Ids": [192227, 192229, 192230]
         })
         return ul
 
@@ -1057,5 +1094,26 @@ class Client(object):
             "GameType": 1002,
             "RoomType": roomType,
             "GameParam": '{\"ScoreType\":2,\"BetType\":2}'  # % (scoreType) % (betType)
+        })
+        return ul
+
+    """
+    跑得快相关操作
+    """
+
+    def CRRun(self, roomType, maxNumber, roundNumber):  # , scoreType, betType
+        ul = self.Request("/room/roomSrv/CreateRoom", {
+            "RoundNumber": roundNumber,
+            "MaxNumber": maxNumber,
+            "GameType": 1006,
+            "RoomType": roomType,
+            "GameParam": '{\"Option\":[["13"],["1"],["1","1","0"],["1","1","1"]]}'  # % (scoreType) % (betType)
+        })
+        return ul
+
+    def RunSubmitCard(self,cardList):
+        array = cardList.split(',')
+        ul = self.Request("/runcard/RunCardSrv/SubmitCard", {
+            "CardList":array,
         })
         return ul

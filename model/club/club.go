@@ -724,8 +724,9 @@ func PageClubRoom(clubid int32, page int32, pagesize int32, flag int32) (
 		var rurs []*mdroom.GameUserResult
 		for _, rur := range r.UserResults {
 			simpleUserResult := &mdroom.GameUserResult{
-				UserID: rur.UserID,
-				Score:  rur.Score,
+				UserID:             rur.UserID,
+				Score:              rur.Score,
+				TotalClubCoinScore: rur.TotalClubCoinScore,
 			}
 			_, u := cacheuser.GetUserByID(rur.UserID)
 			if u != nil {
@@ -1349,7 +1350,7 @@ func checkGameParam(maxNumber int32, maxRound int32, gtype int32, gameParam stri
 				if i == 0 && roomParam.AdvanceOptions[i] != "0" && roomParam.AdvanceOptions[i] != "1" &&
 					roomParam.AdvanceOptions[i] != "2" && roomParam.AdvanceOptions[i] != "3" {
 					roomParam.AdvanceOptions[i] = "0"
-				} else if roomParam.AdvanceOptions[i] != "0" && roomParam.AdvanceOptions[i] != "1" {
+				} else if i > 0 && roomParam.AdvanceOptions[i] != "0" && roomParam.AdvanceOptions[i] != "1" {
 					roomParam.AdvanceOptions[i] = "0"
 				}
 			}

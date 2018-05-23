@@ -9,6 +9,7 @@ const (
 	MailEndLogOverTime   = 1440 * time.Hour //7200//邮件有效期 过期时间(小时)
 	PlayerMailMaxNumber  = 30               //30 用户邮件最大保存天数
 	MailSendLogMaxNumber = 60               //60 邮件发送记录最大保存天数
+	ServiceCode          = 21
 )
 
 const (

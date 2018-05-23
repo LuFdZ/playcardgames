@@ -22,6 +22,7 @@ import (
 	srvmail "playcards/service/mail/handler"
 	utilpb "playcards/utils/proto"
 	enumcon "playcards/model/common/enum"
+	cachelog "playcards/model/log/cache"
 	"time"
 	"playcards/model/room"
 	"github.com/micro/go-micro/broker"
@@ -95,6 +96,9 @@ func (cs *ClubSrv) CreateClub(ctx context.Context,
 func (cs *ClubSrv) UpdateClub(ctx context.Context,
 	req *pbclub.Club, rsp *pbclub.ClubReply) error {
 	mclub := mdclub.ClubFromProto(req)
+	if mclub == nil {
+		return errorclub.ErrUpdateClubNull
+	}
 	u, err := auth.GetUser(ctx)
 	if err != nil {
 		return err
@@ -108,6 +112,18 @@ func (cs *ClubSrv) UpdateClub(ctx context.Context,
 		return errorclub.ErrNotCreatorID
 	}
 	f := func() error {
+		//fmt.Printf("AAAAAUpdateClub:%+v|%+v\n", mclub,mclub.Setting)
+		if mclub.Setting != nil {
+			if mclub.Setting.UserCreateRoom == 100 || mclub.Setting.UserCreateRoom == 200 {
+				var userCreateRoom int32 = mclub.Setting.UserCreateRoom / 100
+				mclub.Setting = mdClub.Setting
+				mclub.Setting.UserCreateRoom = userCreateRoom
+			} else if mclub.Setting.CostType == 0 || mclub.Setting.CostRange == 0 ||
+				mclub.Setting.UserCreateRoom == 0 {
+				mclub.Setting = mdClub.Setting
+			}
+		}
+		//fmt.Printf("BBBBBBUpdateClub:%+v\n", mclub.Setting)
 		err := club.UpdateClub(mclub)
 		if err != nil {
 			return err
@@ -117,6 +133,7 @@ func (cs *ClubSrv) UpdateClub(ctx context.Context,
 	lock := ClubLockKey(req.ClubID)
 	err = gsync.GlobalTransaction(lock, f)
 	if err != nil {
+		cachelog.SetErrLog(enumclub.ServiceCode, err.Error())
 		log.Err("%s club update failed: %v", lock, err)
 		return err
 	}
@@ -182,15 +199,19 @@ func (cs *ClubSrv) RemoveClubMember(ctx context.Context,
 	lock := ClubLockKey(mdClub.ClubID)
 	err = gsync.GlobalTransaction(lock, f)
 	if err != nil {
+		cachelog.SetErrLog(enumclub.ServiceCode, err.Error())
 		log.Err("%s remove club member failed: %v", lock, err)
 		return err
 	}
 	*rsp = pbclub.ClubReply{
 		Result: 1,
 	}
+	memberCount, onlineCount := cacheclub.GetMemberCount(req.ClubID)
 	msgAll := &pbclub.ClubMember{
-		ClubID: req.ClubID,
-		UserID: req.UserID,
+		ClubID:       req.ClubID,
+		UserID:       req.UserID,
+		MemberCount:  memberCount,
+		MemberOnline: onlineCount,
 	}
 	topic.Publish(cs.broker, msgAll, TopicClubMemberLeave)
 
@@ -228,6 +249,7 @@ func (cs *ClubSrv) CreateClubMember(ctx context.Context,
 	lock := ClubLockKey(req.ClubID)
 	err = gsync.GlobalTransaction(lock, f)
 	if err != nil {
+		cachelog.SetErrLog(enumclub.ServiceCode, err.Error())
 		log.Err("%s create club member failed: %v", lock, err)
 		return err
 	}
@@ -235,12 +257,18 @@ func (cs *ClubSrv) CreateClubMember(ctx context.Context,
 		Result: 1,
 	}
 	msgAll := &pbclub.ClubMember{
-		ClubID:   req.ClubID,
-		UserID:   user.UserID,
-		Nickname: user.Nickname,
-		Icon:     user.Icon,
-		Online:   cacheuser.GetUserOnlineStatus(user.UserID),
+		ClubID:    req.ClubID,
+		UserID:    user.UserID,
+		Icon:      user.Icon,
+		CreatorID: mdClub.CreatorID,
+		Online:    cacheuser.GetUserOnlineStatus(user.UserID),
 	}
+	_, creator := cacheuser.GetUserByID(mdClub.CreatorID)
+	if creator != nil {
+		msgAll.CreatorName = creator.Nickname
+		msgAll.Icon = creator.Icon
+	}
+
 	topic.Publish(cs.broker, msgAll, TopicClubMemberJoin)
 
 	mailReq := &pbmail.SendSysMailRequest{
@@ -272,6 +300,7 @@ func (cs *ClubSrv) JoinClub(ctx context.Context,
 	lock := ClubLockKey(req.ClubID)
 	err = gsync.GlobalTransaction(lock, f)
 	if err != nil {
+		cachelog.SetErrLog(enumclub.ServiceCode, err.Error())
 		log.Err("%s club update failed: %v", lock, err)
 		return err
 	}
@@ -307,6 +336,7 @@ func (cs *ClubSrv) LeaveClub(ctx context.Context,
 	lock := ClubLockKey(mdClub.ClubID)
 	err = gsync.GlobalTransaction(lock, f)
 	if err != nil {
+		cachelog.SetErrLog(enumclub.ServiceCode, err.Error())
 		log.Err("%s create club leave  failed: %v", lock, err)
 		return err
 	}
@@ -494,6 +524,7 @@ func (cs *ClubSrv) ClubRecharge(ctx context.Context,
 	lock := ClubLockKey(req.ClubID)
 	err = gsync.GlobalTransaction(lock, f)
 	if err != nil {
+		cachelog.SetErrLog(enumclub.ServiceCode, err.Error())
 		log.Err("%s club recharge failed: %v", lock, err)
 		return err
 	}
@@ -709,14 +740,18 @@ func (cs *ClubSrv) UpdateClubExamine(ctx context.Context,
 	if req.Status == enumcon.ExamineStatusPass {
 		_, muser := cacheuser.GetUserByID(req.UserID)
 		msgAll := &pbclub.ClubMember{
-			ClubID:   req.ClubID,
-			UserID:   muser.UserID,
-			Nickname: muser.Nickname,
-			Icon:     muser.Icon,
-			Online:   cacheuser.GetUserOnlineStatus(muser.UserID),
+			ClubID:    req.ClubID,
+			UserID:    muser.UserID,
+			Nickname:  muser.Nickname,
+			Online:    cacheuser.GetUserOnlineStatus(muser.UserID),
+			CreatorID: mdClub.CreatorID,
 		}
 		msgAll.ClubName = mdClub.ClubName
-		msgAll.CreatorName = muser.Nickname
+		_, creator := cacheuser.GetUserByID(mdClub.CreatorID)
+		if creator != nil {
+			msgAll.CreatorName = creator.Nickname
+			msgAll.Icon = creator.Icon
+		}
 		topic.Publish(cs.broker, msgAll, TopicClubMemberJoin)
 
 		mailReq := &pbmail.SendSysMailRequest{

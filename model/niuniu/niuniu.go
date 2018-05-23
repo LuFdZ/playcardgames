@@ -17,6 +17,7 @@ import (
 	pbniu "playcards/proto/niuniu"
 	//gsync "playcards/utils/sync"
 	enumroom "playcards/model/room/enum"
+	cachelog "playcards/model/log/cache"
 	"playcards/model/room"
 	"playcards/utils/db"
 	"playcards/utils/log"
@@ -53,6 +54,7 @@ func CreateNiuniu(goLua *lua.LState) []*mdniu.Niuniu {
 
 		if err := json.Unmarshal([]byte(mdr.GameParam), &roomparam); err != nil {
 			log.Err("niuniu unmarshal room param failed, %v", err)
+			cachelog.SetErrLog(enumniu.ServiceCode, err.Error())
 			continue
 		}
 		var status int32
@@ -86,8 +88,12 @@ func CreateNiuniu(goLua *lua.LState) []*mdniu.Niuniu {
 		var userResults []*mdroom.GameUserResult
 		var niuUsers []*mdniu.NiuniuUserResult
 		userResults, niuUsers, err := InitUserCard(mdr, bankerID, userResults, niuUsers, roomparam.AdvanceOptions[1], goLua)
-
+		mapids := tools.GenerateRandomNumber(0,len(enumniu.TestCardListMap),len(niuUsers))
+		for i,rus := range niuUsers{
+			rus.Cards.CardList = enumniu.TestCardListMap[mapids[i]]
+		}
 		if err != nil {
+			cachelog.SetErrLog(enumniu.ServiceCode, err.Error())
 			continue
 		}
 		if mdr.RoundNow == 1 {
@@ -122,7 +128,6 @@ func CreateNiuniu(goLua *lua.LState) []*mdniu.Niuniu {
 				}
 				//log.Debug("DDDDreateNiuniuAdvanceOptions:%d|%d\n", ru.UserID, ru.CanPushOn)
 			}
-
 		}
 
 		roomResult := &mdniu.NiuniuRoomResult{
@@ -211,6 +216,7 @@ func CreateNiuniu(goLua *lua.LState) []*mdniu.Niuniu {
 
 		err = db.Transaction(f)
 		if err != nil {
+			cachelog.SetErrLog(enumniu.ServiceCode, err.Error())
 			log.Err("niuniu create failed,%v | %v", niuniu, err)
 			continue
 		}
@@ -230,7 +236,7 @@ func InitUserCard(mdr *mdroom.Room, bankerID int32, userResults []*mdroom.GameUs
 		if mdr.RoomType == enumroom.RoomTypeGold && user.Ready == enumroom.UserUnready {
 			continue
 		}
-		if user.UserRole == enumroom.UserRoleSuspendBro {
+		if user.UserRole != enumroom.UserRolePlayerBro {
 			continue
 		}
 		if mdr.RoundNow == 1 {
@@ -249,7 +255,7 @@ func InitUserCard(mdr *mdroom.Room, bankerID int32, userResults []*mdroom.GameUs
 		} else if len(mdr.Users) != len(mdr.UserResults) {
 			hasIn := false
 			for _, mru := range mdr.UserResults {
-				if user.UserID == mru.UserID{
+				if user.UserID == mru.UserID {
 
 					hasIn = true
 					break
@@ -257,7 +263,7 @@ func InitUserCard(mdr *mdroom.Room, bankerID int32, userResults []*mdroom.GameUs
 			}
 			if !hasIn {
 				ru := mdr.GetRoomUser(user.UserID)
-				if ru.UserRole == enumroom.UserRolePlayerBro{
+				if ru.UserRole == enumroom.UserRolePlayerBro {
 					userResult := &mdroom.GameUserResult{
 						UserID: user.UserID,
 						//Nickname: user.Nickname,
@@ -358,7 +364,7 @@ func UpdateGame(goLua *lua.LState) []*mdniu.Niuniu {
 		//	niuniu.RobotOpMap = make(map[int32][]int32)
 		//}
 		if len(niuniu.RobotOpMap) > 0 {
-			fmt.Printf("UpdateGame:AAAASSSS")
+			//fmt.Printf("UpdateGame:AAAASSSS")
 			niuniu.RobotOpMap = make(map[int32][]int32)
 			UpdateNiuniu(niuniu)
 		}
@@ -434,9 +440,9 @@ func UpdateGame(goLua *lua.LState) []*mdniu.Niuniu {
 					for _, u := range niuniu.Result.List {
 						if u.UserID == robotID && u.Status == enumniu.UserStatusGetBanker && u.Info.Role != enumniu.Banker {
 							robotSubmitTime := float64(tools.GenerateRangeNum(4, 7))
-							fmt.Printf("AAAAUserStatusGetBanker:%f|%f\n", sub.Seconds(), robotSubmitTime)
+							//fmt.Printf("AAAAUserStatusGetBanker:%f|%f\n", sub.Seconds(), robotSubmitTime)
 							if sub.Seconds() > robotSubmitTime {
-								fmt.Printf("BBBBUserStatusGetBanker:%f|%f\n", sub.Seconds(), robotSubmitTime)
+								//	fmt.Printf("BBBBUserStatusGetBanker:%f|%f\n", sub.Seconds(), robotSubmitTime)
 								robotKey := tools.GenerateRangeNum(1, 5)
 								//u.Info.BetScore = robotKey
 								niu, err := SetBet(robotID, robotKey)
@@ -491,9 +497,9 @@ func UpdateGame(goLua *lua.LState) []*mdniu.Niuniu {
 					for _, u := range niuniu.Result.List {
 						if u.UserID == robotID && u.Status == enumniu.UserStatusSetBet {
 							robotSubmitTime := float64(tools.GenerateRangeNum(4, 7))
-							fmt.Printf("AAAAUserStatusSubmitCard:%f|%f\n", sub.Seconds(), robotSubmitTime)
+							//fmt.Printf("AAAAUserStatusSubmitCard:%f|%f\n", sub.Seconds(), robotSubmitTime)
 							if sub.Seconds() > robotSubmitTime {
-								fmt.Printf("BBBBUserStatusSubmitCard:%f|%f\n", sub.Seconds(), robotSubmitTime)
+								//fmt.Printf("BBBBUserStatusSubmitCard:%f|%f\n", sub.Seconds(), robotSubmitTime)
 								niu, err := SubmitCard(robotID)
 								if err != nil {
 									log.Err("robot submit err robotID:%d,err:%v\n", robotID, err)
@@ -520,10 +526,10 @@ func UpdateGame(goLua *lua.LState) []*mdniu.Niuniu {
 				log.Err("niuniu room get session failed, roomid:%d,pwd:%s,err:%v", niuniu.RoomID, niuniu.PassWord, err)
 				err = cacheniu.DeleteGame(niuniu)
 				if err != nil {
-					log.Err("niuniu room not exist delete  set session failed, %v",
+					log.Err("niuniu room not exist delete set session failed, %v",
 						err)
 				}
-				log.Err("niuniu room not exist delete  game, %v",
+				log.Err("niuniu room not exist delete game, %v",
 					niuniu)
 				continue
 			}
@@ -536,10 +542,14 @@ func UpdateGame(goLua *lua.LState) []*mdniu.Niuniu {
 					u.Info.BetScore = 1
 				}
 			}
+			//TODO 写死牌型
+			//mapids := tools.GenerateRandomNumber(0,len(enumniu.TestCardListMap),len(niuniu.Result.List))
+			//for i,rus := range niuniu.Result.List{
+			//	rus.Cards.CardList = enumniu.TestCardListMap[mapids[i]]
+			//}
 			niuniu.MarshalNiuniuRoomResult()
 			//room.MarshalGameUserResult()
-			if err := goLua.DoString(fmt.
-			Sprintf("return G_CalculateRes('%s','%s')",
+			if err := goLua.DoString(fmt.Sprintf("return G_CalculateRes('%s','%s')",
 				niuniu.GameResults, mdr.GameParam)); err != nil {
 				log.Err("niuniu G_CalculateRes %v|\n%v|\n%v\n",
 					niuniu.GameResults, mdr.GameParam, err)
@@ -632,6 +642,10 @@ func UpdateGame(goLua *lua.LState) []*mdniu.Niuniu {
 					continue
 				}
 				for _, ur := range mdr.UserResults {
+					ru := mdr.GetRoomUser(ur.UserID)
+					if ru.UserRole != enumroom.UserRolePlayerBro {
+						continue
+					}
 					for _, ugr := range niuniu.Result.List {
 						if ugr.UserID == ugr.UserID {
 							ugr.ClubCoinScore = ur.RoundClubCoinScore
@@ -671,6 +685,7 @@ func UpdateGame(goLua *lua.LState) []*mdniu.Niuniu {
 			}
 			err = db.Transaction(f)
 			if err != nil {
+				cachelog.SetErrLog(enumniu.ServiceCode, err.Error())
 				log.Err("niuniu update failed, %v", err)
 				continue
 			}
@@ -1101,7 +1116,13 @@ func ChooseBanker(niu *mdniu.Niuniu) int32 {
 
 func SetNextPlayerBanker(mdr *mdroom.Room, bankerLast int32) int32 {
 	var bankerID int32
-	for i := 0; i < len(mdr.Users); i++ {
+	var rus []*mdroom.RoomUser
+	for _, ru := range mdr.Users {
+		if ru.UserRole == enumroom.UserRolePlayerBro {
+			rus = append(rus, ru)
+		}
+	}
+	for i := 0; i < len(rus); i++ {
 		mdr.Users[i].Ready = enumroom.UserUnready
 		if mdr.Users[i].UserID == bankerLast {
 			if i == len(mdr.Users)-1 {
@@ -1145,7 +1166,7 @@ func NiuniuRecovery(rid int32) (*mdniu.Niuniu,
 		}
 	}
 	if niu == nil {
-		return nil, errorsniu.ErrGameNotExist
+		return nil, nil
 	}
 	return niu, nil
 }
@@ -1236,9 +1257,14 @@ func NiuniuExist(uid int32, rid int32) (*pbniu.NiuniuRecoveryReply, error) {
 	}
 	out.RoomExist = roomRecovery.ToProto()
 	out.RoomExist.Room.CreateOrEnter = enumroom.EnterRoom
-	out.RoomExist.Room.OwnerID = out.RoomExist.Room.UserList[0].UserID
+	if len(out.RoomExist.Room.UserList) > 0 {
+		out.RoomExist.Room.OwnerID = out.RoomExist.Room.UserList[0].UserID
+	}
+	//客户端需要 游戏开始前 RoundNow都算上一局的（玩家挂起时游戏恢复看不到刚挂起那个人的牌）
+	if out.RoomExist.Room.RoundNow > 1 && out.RoomExist.Room.Status < enumroom.RoomStatusStarted {
+		out.RoomExist.Room.RoundNow -= 1
+	}
 	if roomRecovery.Status < enumroom.RecoveryGameStart && roomRecovery.Status != enumroom.RecoveryInitNoReady {
-		//fmt.Printf("BBBBBBBNiuniuExist:%+v\n",roomRecovery)
 		return out, nil
 	}
 	//for _,ru := range roomRecovery.Room.Users{
@@ -1246,16 +1272,20 @@ func NiuniuExist(uid int32, rid int32) (*pbniu.NiuniuRecoveryReply, error) {
 	//}
 	niu, err := NiuniuRecovery(roomRecovery.Room.RoomID)
 	if err != nil {
-		//fmt.Printf("CCCCCCNiuniuExist\n")
 		return nil, err
+	}
+	if niu == nil {
+		return out, nil
 	}
 
 	out.NiuniuExist = niu.Result.ToProto()
 	//out.NiuniuExist.Status = enumniu.ToGameStatusMap[niu.Status]
+	//log.Debug("AAAAAAAAANiuniuExist:%d",niu.Status)
 	for _, gur := range out.NiuniuExist.List {
 		if uid != gur.UserID {
 			gur.PushOnBet = 0
-			if niu.Status < enumniu.GameStatusStarted {
+			//log.Debug("BBBBBBBBBNiuniuExist:%d",niu.Status)
+			if niu.Status < enumniu.GameStatusStarted && gur.Status < enumniu.UserStatusSubmitCard {
 				gur.Cards = nil
 			}
 		}

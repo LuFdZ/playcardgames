@@ -28,6 +28,7 @@ var (
 	MailServiceCode     = 21 //邮件
 	GoldRoomServiceCode = 22 //金币场
 	TowCardServiceCode  = 23 //两张
+	RunCardServiceCode  = 24 //跑得快
 )
 
 //基本消息标签和编号
@@ -82,6 +83,12 @@ const (
 
 	MsgBankerList     = "RoomBankerList"
 	MsgBankerListCode = 400114
+
+	MsgUserRestore     = "UserSetRestore"
+	MsgUserRestoreCode = 400115
+
+	MsgRoomSitDown     = "RoomSitDown"
+	MsgRoomSitDownCode = 400116
 )
 
 //十三张标签和编号
@@ -247,4 +254,19 @@ const (
 
 	MsgTwoCardExist     = "TwoCardExist"
 	MsgTwoCardExistCode = 230107
+)
+
+//十三张标签和编号
+const (
+	MsgRunCardGameResult     = "RuncardGameResult"
+	MsgRunCardGameResultCode = 240101
+
+	MsgRunCardSubmitCard     = "RuncardSubmitCard"
+	MsgRunCardSubmitCardCode = 240102
+
+	MsgRunCardGameStart     = "RuncardGameStart"
+	MsgRunCardGameStartCode = 240103
+
+	MsgRunCardExist     = "RuncardExist"
+	MsgRunCardExistCode = 240104
 )

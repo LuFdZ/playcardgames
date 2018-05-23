@@ -18,6 +18,8 @@ const (
 	ShuffleDelaySeconds    = 3
 	VipRoomLimit           = 8
 	WatchLimit             = 4
+	ReadyWaitTime          = 7
+	ServiceCode            = 40
 )
 
 //db config
@@ -101,6 +103,7 @@ const (
 	DoudizhuGameType = 1003
 	FourCardGameType = 1004
 	TwoCardGameType  = 1005
+	RunCardGameType  = 1006
 
 	ThirteenGameCost = 1.0
 	NiuniuGameCost   = 1.0
@@ -141,10 +144,19 @@ const (
 	RoomNoFlag = 2
 )
 
+//const (
+//	ConsumeOpen      = 110001 //消费开关
+//	AgentConsumeOpen = 110002 //代开房消费开关
+//	ClubConsumeOpen  = 110003 //俱乐部消费开关
+//)
+
 const (
-	ConsumeOpen      = 110001 //消费开关
-	AgentConsumeOpen = 110002 //代开房消费开关
-	ClubConsumeOpen  = 110003 //俱乐部消费开关
+	ThirteenConsume = "SSZ_COST"
+	NiuniuConsume   = "NN_COST"
+	FourcardConsume = "SZ_COST"
+	TwocardConsume  = "LZ_COST"
+	RuncardConsume  = "PDK_COST"
+	DoudizhuConsume = "DDZ_COST"
 )
 
 const (
@@ -185,8 +197,22 @@ const (
 )
 
 const (
-	UserCreateRoomOpen  = 1
-	UserCreateRoomClose = 2
+	UserCreateRoomOpen  = 1 //允许俱乐部成员开房
+	UserCreateRoomClose = 2 //禁止俱乐部成员开房
+)
+
+const (
+	UserClubCoinLimit = 10000
+)
+
+//NoticeCode
+const (
+	BankerClubCoinNoEnough = 101
+)
+
+const (
+	RoomSitDown  = 1
+	RoomRecovery = 2
 )
 
 //金币场配置表
@@ -194,8 +220,15 @@ const (
 var GoldRoomCostMap = map[int32]map[int32][]int64{
 	1001: {1: []int64{100, 20000, 100}, 2: []int64{500, 100000, 100}},
 	1002: {1: []int64{100, 20000, 100}, 2: []int64{500, 100000, 100}},
-	1003: {1: []int64{100, 20000, 100}, 2: []int64{500, 100000, 100}},
 	1004: {1: []int64{100, 20000, 100}, 2: []int64{500, 100000, 100}},
+	1005: {1: []int64{100, 20000, 100}, 2: []int64{500, 100000, 100}},
 }
 
 var GameType = []int32{1001, 1002, 1003, 1004}
+
+var GameNumberLimit = map[int32][]int32{
+	1001: {2, 8},
+	1002: {2, 10},
+	1004: {2, 8},
+	1005: {2, 10},
+}

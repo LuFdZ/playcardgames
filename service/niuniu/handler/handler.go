@@ -65,14 +65,22 @@ func (ns *NiuniuSrv) update(gt *gsync.GlobalTimer, gl *lua.LState) {
 							ServerTime: game.OpDateAt.Unix(),
 							Count:      enumniu.GetBankerTime,
 						},
+						Index: game.Index,
 					}
+					//if game.Index != 1 &&  game.Index != 10{
+					//
+					//}
 					topic.Publish(ns.broker, msg, TopicNiuniuGameStart)
 				}
 
 				//if game.RoomType == enumr.RoomTypeGold {
 				//
 				//}
-				if len(game.WatchIds) > 0 {
+				mdr, _ := cacheroom.GetRoom(game.PassWord)
+				ids := mdr.GetIdsNotInGame()
+				ids = append(ids, mdr.GetSuspendUser()...)
+				//fmt.Printf("AAAAAAAAAAAAAAAAAA:%+v\n",ids)
+				if len(ids) > 0 {
 					msg := &pbniu.NiuniuGameStart{
 						Role:       0,
 						BankerID:   game.BankerID,
@@ -82,9 +90,10 @@ func (ns *NiuniuSrv) update(gt *gsync.GlobalTimer, gl *lua.LState) {
 							ServerTime: game.OpDateAt.Unix(),
 							Count:      enumniu.GetBankerTime,
 						},
+						Index: game.Index,
 					}
-					mdr, _ := cacheroom.GetRoom(game.PassWord)
-					for _, uid := range mdr.GetIdsNotInGame() {
+
+					for _, uid := range ids {
 						msg.UserID = uid
 						msg.CardList = nil
 						topic.Publish(ns.broker, msg, TopicNiuniuGameStart)
@@ -135,13 +144,17 @@ func (ns *NiuniuSrv) update(gt *gsync.GlobalTimer, gl *lua.LState) {
 				//		}
 				//	}
 				//} else
-				mdr, _ := cacheroom.GetRoom(game.PassWord)
+				mdr, err := cacheroom.GetRoom(game.PassWord)
+				if err != nil {
+					log.Err("update game get room by password fail game:%+v,err:%+v", game, err)
+					continue
+				}
 				if game.BroStatus == enumniu.GameStatusGetBanker {
 					if game.HasNewBanker {
 						msg := &pbniu.BeBanker{
 							BankerID:   game.BankerID,
 							GameStatus: enumniu.ToGameStatusMap[game.Status],
-							Ids:        game.Ids,
+							Ids:        mdr.Ids,
 							CountDown:  &pbniu.CountDown{game.OpDateAt.Unix(), enumniu.SetBetTime},
 						}
 						utilproto.ProtoSlice(game.GetBankerList, &msg.List)
@@ -158,7 +171,7 @@ func (ns *NiuniuSrv) update(gt *gsync.GlobalTimer, gl *lua.LState) {
 							msgSetBet := &pbniu.SetBet{
 								UserID: UserResult.UserID,
 								Key:    game.RoomParam.BetScore,
-								Ids:    game.Ids,
+								Ids:    mdr.Ids,
 							}
 							msgSetBet.Ids = append(msgSetBet.Ids, mdr.GetIdsNotInGame()...)
 							topic.Publish(ns.broker, msgSetBet, TopicNiuniuSetBet)
@@ -185,7 +198,9 @@ func (ns *NiuniuSrv) update(gt *gsync.GlobalTimer, gl *lua.LState) {
 					//	}
 					//}
 					//fmt.Printf("AAAAAAGameStatusGetBanker:%+v|%+v\n", game.WatchIds, mdr.Ids, )
-					for _, uid := range mdr.GetIdsNotInGame() {
+					ids := mdr.GetIdsNotInGame()
+					ids = append(ids, mdr.GetSuspendUser()...)
+					for _, uid := range ids {
 						msg := &pbniu.AllBet{
 							UserID:    uid,
 							Status:    enumniu.ToGameStatusMap[game.Status],
@@ -196,7 +211,7 @@ func (ns *NiuniuSrv) update(gt *gsync.GlobalTimer, gl *lua.LState) {
 				} else if game.BroStatus == enumniu.GameStatusDone {
 					msg := game.Result.ToProto()
 					msg.Status = enumniu.ToGameStatusMap[game.Status]
-					msg.Ids = game.Ids
+					msg.Ids = mdr.Ids
 					//if game.RoomType == enumr.RoomTypeGold {
 					//	mdr, _ := cacheroom.GetRoom(game.PassWord)
 					//	msg.Ids = append(msg.Ids, mdr.WatchIds...)
@@ -213,7 +228,7 @@ func (ns *NiuniuSrv) update(gt *gsync.GlobalTimer, gl *lua.LState) {
 						msg := &pbniu.SetBet{
 							UserID: uid,
 							Key:    value[1],
-							Ids:    game.Ids,
+							Ids:    mdr.Ids,
 						}
 						msg.Ids = append(msg.Ids, mdr.GetIdsNotInGame()...)
 						topic.Publish(ns.broker, msg, TopicNiuniuSetBet)
@@ -221,7 +236,7 @@ func (ns *NiuniuSrv) update(gt *gsync.GlobalTimer, gl *lua.LState) {
 					case enumniu.UserStatusSubmitCard:
 						msg := &pbniu.GameReady{
 							UserID: uid,
-							Ids:    game.Ids,
+							Ids:    mdr.Ids,
 						}
 						//if mdr.RoomType == enumr.RoomTypeGold {
 						//	msg.Ids = append(msg.Ids, mdr.WatchIds...)
@@ -319,7 +334,7 @@ func (ns *NiuniuSrv) SetBet(ctx context.Context, req *pbniu.SetBetRequest,
 	//if mdr.RoomType == enumr.RoomTypeGold {
 	//	msg.Ids = append(msg.Ids, mdr.WatchIds...)
 	//}
-	msg.Ids = append(msg.Ids, mdr.WatchIds...)
+	msg.Ids = append(msg.Ids, mdr.GetIdsNotInGame()...)
 	for _, gu := range game.Result.List {
 		if gu.UserID == u.UserID {
 			//if game.RoomParam.AdvanceOptions[0] != "0" {
@@ -349,8 +364,9 @@ func (ns *NiuniuSrv) SubmitCard(ctx context.Context, req *pbniu.SubmitCardReques
 	if err != nil {
 		return err
 	}
+	var game *mdniu.Niuniu
 	f := func() error {
-		_, err = niuniu.SubmitCard(u.UserID)
+		game, err = niuniu.SubmitCard(u.UserID)
 		if err != nil {
 			return err
 		}
@@ -363,14 +379,21 @@ func (ns *NiuniuSrv) SubmitCard(ctx context.Context, req *pbniu.SubmitCardReques
 		return err
 	}
 	*rsp = *reply
+	var cardList []string
+	for _, ur := range game.Result.List {
+		if ur.UserID == u.UserID {
+			cardList = ur.Cards.CardList
+		}
+	}
 	msg := &pbniu.GameReady{
-		UserID: u.UserID,
-		Ids:    mdr.Ids,
+		UserID:   u.UserID,
+		Ids:      mdr.Ids,
+		CardList: cardList,
 	}
 	//if mdr.RoomType == enumr.RoomTypeGold {
 	//	msg.Ids = append(msg.Ids, mdr.WatchIds...)
 	//}
-	msg.Ids = append(msg.Ids, mdr.WatchIds...)
+	msg.Ids = append(msg.Ids, mdr.GetIdsNotInGame()...)
 	topic.Publish(ns.broker, msg, TopicNiuniuGameReady)
 	return nil
 }

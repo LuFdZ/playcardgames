@@ -5,8 +5,9 @@ import (
 )
 
 const (
-	ErrDiamondNotEnough = 41000
-	ErrRoomDisband      = 41028
+	ErrDiamondNotEnough   = 41000
+	ErrRoomDisband        = 41028
+	ErrRoomBankerClubCoin = 41029
 )
 
 var (
@@ -44,7 +45,7 @@ var (
 	ErrAlreadyInBankerList     = errors.Conflict(40032, "您已经在申请上庄列表中！")
 	ErrNoInBankerList          = errors.Conflict(40033, "您不在在申请上庄列表中！")
 	ErrOutBankerList           = errors.Conflict(40034, "现在不能下庄！")
-	ErrNotEnoughClubCoin       = errors.Conflict(40035, "俱乐部奖杯不足！最少需要%d")
+	ErrNotEnoughClubCoin       = errors.Conflict(40035, "您的奖杯分不足，俱乐部要求%d分，无法进行游戏")
 	ErrOutBankerListWithBanker = errors.Conflict(40036, "你是当前你庄家，此轮游戏结束前不能下庄！")
 	ErrSettingParam            = errors.Forbidden(40037, "比赛模式下，设置不能为空！")
 	ErrCanNotIntoClubRoom      = errors.Conflict(40038, "您不在这个俱乐部或被禁赛，详情请联系俱乐部老板！")
@@ -53,12 +54,15 @@ var (
 	ErrVipRoomStatus           = errors.Forbidden(40041, "包厢打烊中！")
 	ErrClubNotEnoughDiamond    = errors.Conflict(40042, "俱乐部钻石不足！")
 	ErrPushOnBet               = errors.Conflict(40043, "不能推注！")
-	ErrWatchLimit              = errors.Conflict(40044, "该房间观察者人数已满！")
+	ErrWatchLimit              = errors.Conflict(40044, "旁观者人数过多，请稍后再试!")
 	ErrNotInWatchList          = errors.Conflict(40045, "您并不在观察者列表中！")
 	ErrCanNotJoin              = errors.Conflict(40046, "该房间不能中途加入！")
 	ErrCanNotJoinOrGameOver    = errors.Conflict(40047, "该房间不能中途加入或已到最后一局！")
 	ErrNotInGame               = errors.Conflict(40048, "您未参与游戏不能执行此操作！")
 	ErrUserCreateRoom          = errors.Conflict(40049, "此俱乐部不能大厅开房！")
-	ErrNotInSuspend            = errors.Conflict(40050, "您处于挂起状态不能执行此操作！")
-	ErrInReadyMap               = errors.Conflict(40051, "请等待下局游戏开始才能申请上庄！")
+	ErrNotInSuspend            = errors.Conflict(40050, "您未处于挂起状态，不能执行此操作！")
+	ErrInReadyMap              = errors.Conflict(40051, "请等待下局游戏开始才能申请上庄！")
+	ErrClubCoinOverdose        = errors.Conflict(40052, "俱乐部奖杯超过上限，请及时贡献奖杯！")
+	ErrBankerClubCoinNoEnough  = errors.Conflict(40053, "庄家奖杯分不足俱乐部要求%d分，无法进行游戏")
+	ErrUserDiamondNoEnough     = errors.Conflict(40054, "玩家[%s]钻石不足[%d],无法开始游戏！")
 )

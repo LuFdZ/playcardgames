@@ -1,6 +1,6 @@
 package room
 
-import (
+import  (
 	apienum "playcards/service/api/enum"
 	pbroom "playcards/proto/room"
 	srvroom "playcards/service/room/handler"
@@ -78,6 +78,10 @@ func SubscribeAllRoomMessage(brk broker.Broker) error {
 	subscribe.SrvSubscribe(brk, topic.Topic(srvroom.TopicBankerList),
 		BankerListHandler,
 	)
+	subscribe.SrvSubscribe(brk, topic.Topic(srvroom.TopicUserRestore),
+		UserRestoreHandler,
+	)
+
 	return nil
 }
 
@@ -370,6 +374,23 @@ func BankerListHandler(p broker.Publication) error {
 	ids := rs.Ids
 	rs.Ids = nil
 	err = clients.SendToUsers(ids, t, enum.MsgBankerList, rs,enum.MsgBankerListCode)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func UserRestoreHandler(p broker.Publication) error {
+	t := p.Topic()
+	msg := p.Message()
+	rs := &pbroom.RoomUser{}
+	err := proto.Unmarshal(msg.Body, rs)
+	if err != nil {
+		return err
+	}
+	ids := rs.Ids
+	rs.Ids = nil
+	err = clients.SendToUsers(ids, t, enum.MsgUserRestore, rs,enum.MsgUserRestoreCode)
 	if err != nil {
 		return err
 	}

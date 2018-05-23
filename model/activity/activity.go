@@ -139,7 +139,7 @@ func Share(uid int32) error { //(*mbill.Balance, error) *mda.PlayerShare,
 	}
 
 	if ps.ShareTimes >= enumact.ShareLimitTimes || ps.TotalDiamonds >= enumact.ShareLimitDiamond {
-		return nil //errors.ErrShareNoDiamonds
+		return errors.ErrShareNoDiamonds
 	}
 
 	//ub, err := bill.GainBalance(uid, time.Now().Unix(),enumbill.JournalTypeShare,
@@ -147,18 +147,18 @@ func Share(uid int32) error { //(*mbill.Balance, error) *mda.PlayerShare,
 	//if err != nil {
 	//	return nil, err
 	//}
-	//ps.TotalDiamonds += enumact.ShareDiamond
-	//ps.ShareTimes++
-	//f := func(tx *gorm.DB) error {
-	//	err := dba.UpdatePlayerShare(tx, ps)
-	//	if err != nil {
-	//		return nil
-	//	}
-	//	return nil
-	//}
-	//if err := db.Transaction(f); err != nil {
-	//	return nil, err
-	//}
+	ps.TotalDiamonds += enumact.ShareDiamond
+	ps.ShareTimes++
+	f := func(tx *gorm.DB) error {
+		err := dba.UpdatePlayerShare(tx, ps)
+		if err != nil {
+			return err
+		}
+		return nil
+	}
+	if err := db.Transaction(f); err != nil {
+		return err
+	}
 	return nil
 }
 

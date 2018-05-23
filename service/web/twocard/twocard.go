@@ -157,7 +157,13 @@ func TwoCardExistHandle(p broker.Publication) error {
 		log.Err("two card exist handle http err:%v|%v\n", rs, err)
 		return err
 	}
-	err = clients.SendTo(rs.UserID, t, enum.MsgTwoCardExist, reply,enum.MsgTwoCardExistCode)
+	topic := enum.MsgTwoCardExist
+	topicCode := enum.MsgTwoCardExistCode
+	if rs.RecoveryType == 1{
+		topic = enum.MsgRoomSitDown
+		topicCode = enum.MsgRoomSitDownCode
+	}
+	err = clients.SendTo(rs.UserID, t, topic, reply,topicCode)
 	if err != nil {
 		return err
 	}

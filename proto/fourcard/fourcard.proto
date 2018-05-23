@@ -8,16 +8,16 @@ package fourcard;
 //四张玩家结构
 message UserInfo {
     int32 UserID = 1;
-    int32 Bet = 2;//下注分
-    int32 Role = 3;//角色 1庄家 2闲家
-    repeated string CardList = 4;//玩家初始牌
+    int32 Bet = 2; //下注分
+    int32 Role = 3; //角色 1庄家 2闲家
+    repeated string CardList = 4; //玩家初始牌
     UserCard HeadCards = 5; //玩家头道牌组信息
     UserCard TailCards = 6; //玩家尾道牌组信息
     string TotalScore = 7; //总分
     int32 Status = 8; //玩家状态
-    int64 ClubCoinScore = 9;//玩家战绩分成绩
-//    string NickName = 10;//历史查询时才发
-//    string Icon = 11;//历史查询时才发
+    int64 ClubCoinScore = 9; //玩家战绩分成绩
+    //    string NickName = 10;//历史查询时才发
+    //    string Icon = 11;//历史查询时才发
 }
 
 //四张玩家牌组信息
@@ -29,7 +29,7 @@ message UserCard {
 }
 
 //随机开始玩家结构体
-message UserDice{
+message UserDice {
     int32 UserID = 1; //开始玩家id
     int32 DiceAPoints = 2; //骰子A点数
     int32 DiceBPoints = 3; //骰子B点数
@@ -45,17 +45,18 @@ message CountDown {
 message GameStart {
     int32 GameID = 1;
     int32 UserID = 2;
-    int32 RoomStatus = 3;//房间状态
-    int32 GameStatus = 4;//游戏状态
+    int32 RoomStatus = 3; //房间状态
+    int32 GameStatus = 4; //游戏状态
     int32 BankerID = 5; //庄家id
     repeated string CardList = 6; //玩家总牌组
     CountDown CountDown = 7;
+    int32 Index = 9;
 }
 
 //玩家下注结构体
 message SetBet {
     int32 GameID = 1;
-    int32 GameStatus = 2;//游戏状态
+    int32 GameStatus = 2; //游戏状态
     int32 UserID = 3;
     int32 Key = 4;
     CountDown CountDown = 5;
@@ -65,7 +66,7 @@ message SetBet {
 message SubmitCard {
     int32 GameID = 1;
     int32 UserID = 2;
-    int32 GameStatus = 3;//游戏状态
+    int32 GameStatus = 3; //游戏状态
 }
 
 //结算结构体
@@ -77,7 +78,6 @@ message GameResult {
     repeated UserInfo List = 5; //用户信息
     int32 UserID = 6;
 }
-
 
 //***********************************************请求***********************************************
 message SetBetRequest {
@@ -135,13 +135,13 @@ message SetBetBro {
 
 //玩家出牌广播
 message SubmitCardBro {
-    SubmitCard Context= 1;
+    SubmitCard Context = 1;
     repeated int32 Ids = 2;
 }
 
 //结算广播
 message GameResultBro {
-    GameResult Context= 1;
+    GameResult Context = 1;
     repeated int32 Ids = 2;
 }
 

@@ -29,10 +29,12 @@ var RoomEvent = []string{
 	srvroom.TopicRoomDoudizhuExist,
 	srvroom.TopicRoomFourCardExist,
 	srvroom.TopicRoomTwoCardExist,
+	srvroom.TopicRoomRunCardExist,
 	srvroom.TopicRoomNotice,
 	srvroom.TopicRoomShuffleCardBro,
 	srvroom.TopicRoomChat,
 	srvroom.TopicBankerList,
+	srvroom.TopicUserRestore,
 }
 
 func RoomOnlineNotice(c *clients.Client) {

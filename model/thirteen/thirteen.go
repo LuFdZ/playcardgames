@@ -14,6 +14,7 @@ import (
 	errorst "playcards/model/thirteen/errors"
 	mdt "playcards/model/thirteen/mod"
 	pbt "playcards/proto/thirteen"
+	cachelog "playcards/model/log/cache"
 	"playcards/model/room"
 	"playcards/utils/db"
 	"playcards/utils/log"
@@ -43,8 +44,15 @@ func CreateThirteen(goLua *lua.LState) []*mdt.Thirteen {
 		var userResults []*mdr.GameUserResult
 		var groupCards []*mdt.GroupCard
 		var bankerID int32
-		if err := goLua.DoString(fmt.Sprintf("return G_Reset(%d)", len(mdroom.Users))); err != nil {
-			log.Err("thirteen G_Reset err %+v", err)
+		var num int32 = 0
+		for _,ur := range mdroom.Users{
+			if ur.UserRole == enumr.UserRolePlayerBro{
+				num ++
+			}
+		}
+		if err := goLua.DoString(fmt.Sprintf("return G_Reset(%d)", num)); err != nil {
+			log.Err("run card G_Reset err %+v", err)
+			cachelog.SetErrLog(enumt.ServiceCode,err.Error())
 			continue
 		}
 		for _, user := range mdroom.Users {
@@ -81,8 +89,12 @@ func CreateThirteen(goLua *lua.LState) []*mdt.Thirteen {
 					}
 				}
 			}
+			if user.UserRole != enumr.UserRolePlayerBro {
+				continue
+			}
 			if err := goLua.DoString("return G_GetCards()"); err != nil {
 				log.Err("thirteen G_GetCards %+v", err)
+				cachelog.SetErrLog(enumt.ServiceCode,err.Error())
 				continue
 			}
 			getCards := goLua.Get(-1)
@@ -197,6 +209,7 @@ func CreateThirteen(goLua *lua.LState) []*mdt.Thirteen {
 
 		err := db.Transaction(f)
 		if err != nil {
+			cachelog.SetErrLog(enumt.ServiceCode,err.Error())
 			log.Err("thirteen create failed,%v | %+v", thirteen, err)
 			continue
 		}
@@ -240,7 +253,6 @@ func UpdateGame(goLua *lua.LState) []*mdt.Thirteen { //[]*mdt.GameResultList
 			log.Err("thirteen room not exist delete  game, %v",
 				thirteen)
 			continue
-			continue
 		}
 		if mdroom == nil {
 			log.Err("room get session failed, %v", err)
@@ -248,11 +260,18 @@ func UpdateGame(goLua *lua.LState) []*mdt.Thirteen { //[]*mdt.GameResultList
 		}
 
 		var results []*mdt.ThirteenResult
-
+		////TODO 写死牌型
+		//mapids := tools.GenerateRandomNumber(0,len(enumt.TestCardListMap),len(thirteen.SubmitCards))
+		//for i,usc := range thirteen.SubmitCards{
+		//	usc.Head = enumt.TestCardListMap[mapids[i]][0]
+		//	usc.Middle = enumt.TestCardListMap[mapids[i]][1]
+		//	usc.Tail = enumt.TestCardListMap[mapids[i]][2]
+		//}
 		thirteen.MarshalUserSubmitCards()
 		//fmt.Printf("GameParam:%v\n%v\n",thirteen.UserSubmitCards,room.GameParam)
 		if err := goLua.DoString(fmt.Sprintf("return G_GetResult('%s','%s')",
 			thirteen.UserSubmitCards, mdroom.GameParam)); err != nil {
+			cachelog.SetErrLog(enumt.ServiceCode,err.Error())
 			log.Err("thirteen G_GetResult submit card:%s, game param:%s,%v", thirteen.UserSubmitCards, mdroom.GameParam, err)
 			continue
 		}
@@ -322,6 +341,10 @@ func UpdateGame(goLua *lua.LState) []*mdt.Thirteen { //[]*mdt.GameResultList
 				continue
 			}
 			for _, ur := range mdroom.UserResults {
+				ru := mdroom.GetRoomUser(ur.UserID)
+				if ru.UserRole != enumr.UserRolePlayerBro {
+					continue
+				}
 				for _, ugr := range thirteen.Result.Result {
 					if ugr.UserID == ugr.UserID {
 						ugr.ClubCoinScore = ur.RoundClubCoinScore
@@ -342,7 +365,14 @@ func UpdateGame(goLua *lua.LState) []*mdt.Thirteen { //[]*mdt.GameResultList
 		}
 
 		if roomparam.BankerAddScore > 0 && roomparam.Times != enumt.TimesDefault {
-			for i := 0; i < len(mdroom.Users); i++ {
+			var rus []*mdr.RoomUser
+			for _,ur := range mdroom.Users{
+				if ur.UserRole == enumr.UserRolePlayerBro{
+					rus = append(rus,ur)
+				}
+			}
+
+			for i := 0; i < len(rus); i++ {
 				//room.Users[i].Ready = enumr.UserUnready
 				//十三张一局结束后 轮庄
 				if mdroom.Users[i].Role == enumr.UserRoleMaster {
@@ -469,7 +499,7 @@ func SubmitCard(uid int32, submitCard *mdt.SubmitCard) error {
 		return errors.ErrGameIsDone
 	}
 
-	if mdr.MaxNumber == int32(len(thirteen.SubmitCards)) {
+	if len(thirteen.Cards) == len(thirteen.SubmitCards) {
 		thirteen.Status = enumt.GameStatusStarted
 	}
 
@@ -635,7 +665,13 @@ func ThirteenExist(uid int32, rid int32) (*pbt.ThirteenRecoveryReply, error) {
 	}
 	out.RoomExist = roomRecovery.ToProto()
 	out.RoomExist.Room.CreateOrEnter = enumr.EnterRoom
-	out.RoomExist.Room.OwnerID = out.RoomExist.Room.UserList[0].UserID
+	if len(out.RoomExist.Room.UserList) > 0 {
+		out.RoomExist.Room.OwnerID = out.RoomExist.Room.UserList[0].UserID
+	}
+	//客户端需要 游戏开始前 RoundNow都算上一局的（玩家挂起时游戏恢复看不到刚挂起那个人的牌）
+	if out.RoomExist.Room.RoundNow >1 && out.RoomExist.Room.Status < enumr.RoomStatusStarted {
+		out.RoomExist.Room.RoundNow -= 1
+	}
 	if roomRecovery.Status < enumr.RecoveryGameStart && roomRecovery.Status != enumr.RecoveryInitNoReady {
 		return out, nil
 	}
@@ -647,6 +683,9 @@ func ThirteenExist(uid int32, rid int32) (*pbt.ThirteenRecoveryReply, error) {
 		thirteen, err = dbt.GetLastThirteenByRoomID(db.DB(), roomRecovery.Room.RoomID)
 		if err != nil {
 			return nil, err
+		}
+		if thirteen == nil {
+			return out, nil
 		}
 	}
 	if thirteen == nil {
@@ -699,6 +738,7 @@ func ThirteenExist(uid int32, rid int32) (*pbt.ThirteenRecoveryReply, error) {
 	//	ThirteenExist: recovery.ToProto(),
 	//}
 	out.ThirteenExist = recovery.ToProto()
+
 	return out, nil
 }
 

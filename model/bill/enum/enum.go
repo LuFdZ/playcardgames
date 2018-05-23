@@ -1,13 +1,16 @@
 package enum
 
 const (
-	JournalTypeInitBalance  = iota + 1
-	JournalTypeRecharge
-	JournalTypeInvite
-	JournalTypeInvited
-	JournalTypeShare
-	JournalTypeClubRecharge
-	JournalTypeMailTitem
+	ServiceCode = 20
+)
+const (
+	JournalTypeInitBalance  = iota + 1 // 1:初始值
+	JournalTypeRecharge                // 2:充值
+	JournalTypeInvite                  //3:邀请
+	JournalTypeInvited                 //4:被邀请
+	JournalTypeShare                   //5:分享
+	JournalTypeClubRecharge            //6：俱乐部充值
+	JournalTypeMailTitem               //7：邮件奖励
 )
 
 const (
@@ -20,7 +23,6 @@ const (
 	JournalTypeFourCard       = 400101
 	JournalTypeFourCardFreeze = 400102
 )
-
 
 const (
 	UserBalanceTableName = "balances"
@@ -53,7 +55,7 @@ const (
 )
 
 const (
-	MailRecharge   = 1001
+	MailRecharge = 1001
 )
 
 const (

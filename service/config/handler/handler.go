@@ -27,7 +27,7 @@ func (cs *ConfigSrv) init() {
 }
 
 func (cs *ConfigSrv) CreateConfig(ctx context.Context,
-	req *pbconf.Config, rsp *pbconf.ConfigReply) error {
+	req *pbconf.ConfigNew, rsp *pbconf.ConfigReply) error {
 	co := mdconf.ConfigFromProto(req)
 	err := config.CreateConfig(co)
 	if err != nil {
@@ -41,7 +41,7 @@ func (cs *ConfigSrv) CreateConfig(ctx context.Context,
 }
 
 func (cs *ConfigSrv) UpdateConfig(ctx context.Context,
-	req *pbconf.Config, rsp *pbconf.ConfigReply) error {
+	req *pbconf.ConfigNew, rsp *pbconf.ConfigReply) error {
 
 	co := mdconf.ConfigFromProto(req)
 	err := config.UpdateConfig(co)

@@ -45,6 +45,7 @@ message ClubMember {
     int32 MemberOnline = 13;
     string ClubName = 14; //俱乐部名称
     string CreatorName = 15;
+    int32 CreatorID = 16;
 }
 
 //俱乐部流水结构体

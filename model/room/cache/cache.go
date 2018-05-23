@@ -213,8 +213,24 @@ func GetRoomByKey(key string) (*mdroom.Room, error) {
 	return room, nil
 }
 
+func SetConfigKey() error {
+	f := func(tx *redis.Tx) error {
+		tx.Pipelined(func(p *redis.Pipeline) error {
+			tx.HSet("CONFIGKEY", "ThirteenCheckHasCards", "0")
+			tx.HSet("CONFIGKEY", "FourCardCheckHasCards", "0")
+			return nil
+		})
+		return nil
+	}
+	err := cache.KV().Watch(f, "CONFIGKEY")
+	if err != nil {
+		return errors.Internal("set room user failed", err)
+	}
+	return nil
+}
+
 func GetRoomTestConfigKey(key string) string {
-	val := cache.KV().HGet("TESTKEY", key).Val()
+	val := cache.KV().HGet("CONFIGKEY", key).Val()
 	if len(val) == 0 {
 		return "0"
 	}

@@ -7,6 +7,7 @@ import (
 	mdu "playcards/model/user/mod"
 	pbu "playcards/proto/user"
 	enumuser "playcards/model/user/enum"
+	cachelog "playcards/model/log/cache"
 	"playcards/utils/auth"
 	"playcards/utils/log"
 	utilpb "playcards/utils/proto"
@@ -222,10 +223,13 @@ func (us *UserSrv) WXLogin(ctx context.Context, req *pbu.WXLoginRequest,
 		addresslist, _ := forwarded.(string) //ctx.Value("X-Real-Ip").(string)
 		list := strings.Split(addresslist, ",")
 		address = list[0]
+	}else if ctx.Value("X-Real-Ip") != nil{
+		address = ctx.Value("X-Real-Ip").(string)
 	}
-
+	//log.Debug("login ctx:%+v",ctx)
 	u, err := user.WXLogin(mdu.UserFromWXLoginRequestProto(req), req.Code, address)
 	if err != nil {
+		cachelog.SetErrLog(enumuser.ServiceCode,err.Error())
 		return err
 	}
 	u.MobileOs = req.MobileOs
@@ -234,6 +238,7 @@ func (us *UserSrv) WXLogin(ctx context.Context, req *pbu.WXLoginRequest,
 	token, err := cacheuser.SetUser(u)
 	if err != nil {
 		log.Err("user login set session failed, %v", err)
+		cachelog.SetErrLog(enumuser.ServiceCode,err.Error())
 		return err
 	}
 	rsp.Token = token
@@ -241,6 +246,7 @@ func (us *UserSrv) WXLogin(ctx context.Context, req *pbu.WXLoginRequest,
 	reply := u.ToProto()
 	balance, err := bill.GetAllUserBalance(u.UserID)
 	if err != nil{
+		cachelog.SetErrLog(enumuser.ServiceCode,err.Error())
 		return err
 	}
 

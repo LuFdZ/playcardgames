@@ -1,6 +1,7 @@
 syntax = "proto3";
 
 package bill;
+import "playcards/proto/page/page.proto";
 
 //结构体
 message Balance {
@@ -11,10 +12,31 @@ message Balance {
     int64 UpdatedAt = 6;
 }
 
+message Journal {
+    int32 ID = 1;
+    int32 CoinType = 2;// 货币类型 1金币 2钻石
+    int64 Amount = 3;//金额
+    int64 AmountBefore = 4;//变更前金额
+    int64 AmountAfter = 5;//变更后金额
+    int32 UserID = 6;
+    int32 Type = 7;//流水类型
+    string Foreign = 8;//外键ID
+    int64 OpUserID = 9;//操作人ID
+    string Channel = 10;//渠道
+    int64 CreatedAt = 11;
+    int64 UpdatedAt = 12;
+}
+
 //请求
 message GetBalanceRequest {
     int32 UserID = 1;
 }
+
+message PageJournalRequest {
+    page.PageOption Page = 1;
+    Journal Journal = 2;
+}
+
 
 message RechargeRequest {
     int32 UserID = 1;
@@ -24,10 +46,21 @@ message RechargeRequest {
     int32 CoinType = 5;
 }
 
+message PageJoural {
+
+}
+
 //回应
 message RechargeReply {
     int32 Result = 1;
     int32 Code = 2;
+}
+
+message PageJournalReply {
+    int32 Result = 1;
+    int32 Code = 2;
+    repeated Journal List = 3;
+    int64 Count = 4;
 }
 
 //广播
@@ -45,5 +78,7 @@ service BillSrv {
     rpc GainBalance (Balance) returns (Balance) {
     }
     rpc Recharge (RechargeRequest) returns (RechargeReply) {
+    }
+    rpc PageJournal (PageJournalRequest) returns (PageJournalReply) {
     }
 }

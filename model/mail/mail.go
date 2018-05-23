@@ -74,7 +74,8 @@ func SendMail(uid int32, msl *mdgame.MailSendLog, ids []int32, channel string) (
 	if len(ids) == 0 && len(channel) == 0 {
 		return nil, errgame.ErrSendAndChannel
 	}
-	if msl.MailID == 0 && msl.MailInfo != nil {
+	//fmt.Printf("SendMail:%+v:\n",msl)
+	if msl.MailID == 0 && msl.MailInfo == nil {
 		return nil, errgame.ErrMailInfoContent
 	}
 	if msl.MailID > 0 {
@@ -132,6 +133,7 @@ func createPlayerMail(msl *mdgame.MailSendLog, ids []int32, channel string) {
 	if len(channel) > 0 {
 		ids = dbgame.GetAllUser(db.DB(), channel)
 	}
+
 	for _, id := range ids {
 		_, u := cacheuser.GetUserByID(id)
 		if u == nil {
@@ -146,6 +148,7 @@ func createPlayerMail(msl *mdgame.MailSendLog, ids []int32, channel string) {
 			Status:    enumgame.PlayermailNon,
 			HaveItem:  haveItem,
 		}
+		fmt.Printf("createPlayerMail:%+v\n",pm)
 		pms = append(pms, pm)
 	}
 	f := func(tx *gorm.DB) error {
@@ -365,7 +368,26 @@ func awardItemList(uid int32, sendLog *mdgame.MailSendLog) error {
 			} else if item.SubType == enumgame.CurrencySubTypeDiamond {
 				currencyType = enumbill.TypeDiamond
 			}
-			_, err := bill.GainBalance(uid, time.Now().Unix(), enumbill.JournalTypeMailTitem,
+			var gtype int32 = 0
+
+			if sendLog.MailInfo.MailID == enumgame.MailBeInvite {
+				gtype = enumbill.JournalTypeInvited
+			}
+			switch sendLog.MailInfo.MailID {
+			case enumgame.MailBeInvite:
+				gtype = enumbill.JournalTypeInvited
+				break
+			case enumgame.MailInvite:
+				gtype = enumbill.JournalTypeInvite
+				break
+			case enumgame.MailShare:
+				gtype = enumbill.JournalTypeShare
+				break
+			default:
+				gtype = enumbill.JournalTypeMailTitem
+				break
+			}
+			_, err := bill.GainBalance(uid, time.Now().Unix(), gtype,
 				&mdbill.Balance{Amount: item.Count, CoinType: int32(currencyType)},
 			)
 			if err != nil {
@@ -377,7 +399,6 @@ func awardItemList(uid int32, sendLog *mdgame.MailSendLog) error {
 			if item.ItemID == 0 {
 			}
 			break
-
 		}
 	}
 

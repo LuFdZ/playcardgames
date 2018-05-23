@@ -42,7 +42,7 @@ func SetBlackList(mbl *mdCommon.BlackList) error {
 	if err != nil {
 		return errors.Internal("set redis black list failed", err)
 	}
-	log.Err("set redis black list type:%s,orgonid:%d,targetid:%d\n", mbl.Type, mbl.OriginID, mbl.TargetID)
+	log.Info("set redis black list type:%s,orgonid:%d,targetid:%d\n", mbl.Type, mbl.OriginID, mbl.TargetID)
 	return nil
 }
 
@@ -96,7 +96,7 @@ func SetExamine(me *mdCommon.Examine) error {
 	if err != nil {
 		return errors.Internal("set redis examine failed", err)
 	}
-	log.Err("set redis black list type:%s,auditor:%d,applicant:%d\n", me.Type, me.AuditorID, me.ApplicantID)
+	log.Info("set redis black list type:%s,auditor:%d,applicant:%d\n", me.Type, me.AuditorID, me.ApplicantID)
 	return nil
 }
 

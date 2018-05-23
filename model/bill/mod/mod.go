@@ -34,6 +34,36 @@ type Journal struct {
 	UpdatedAt    *time.Time
 }
 
+func JournalFromProto(pJournal *pbbill.Journal) *Journal {
+	out := &Journal{
+		CoinType: pJournal.CoinType,
+		UserID:   pJournal.UserID,
+		Type:     pJournal.Type,
+		OpUserID: pJournal.OpUserID,
+		Channel:  pJournal.Channel,
+	}
+	return out
+}
+
+func (Journal *Journal) ToProto() *pbbill.Journal {
+	//clubMemberNumber, _ := cacheclub.CountClubMemberHKeys(club.ClubID)
+	//fmt.Printf("Club ToProto:%d\n",club.Setting)
+	return &pbbill.Journal{
+		ID           :Journal.ID,
+		CoinType     :Journal.CoinType,
+		Amount       :Journal.Amount,
+		AmountBefore :Journal.AmountBefore,
+		AmountAfter  :Journal.AmountAfter,
+		UserID       :Journal.UserID,
+		Type         :Journal.Type,
+		Foreign      :Journal.Foreign,
+		OpUserID     :Journal.OpUserID,
+		Channel      :Journal.Channel,
+		CreatedAt    :mdtime.TimeToProto(Journal.CreatedAt),
+		UpdatedAt    :mdtime.TimeToProto(Journal.UpdatedAt),
+	}
+}
+
 func (Balance) TableName() string {
 	return enumbill.UserBalanceTableName
 }

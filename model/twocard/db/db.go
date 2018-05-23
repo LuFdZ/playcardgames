@@ -4,6 +4,7 @@ import (
 	"playcards/model/twocard/enum"
 	enumtow "playcards/model/twocard/enum"
 	mdtwo "playcards/model/twocard/mod"
+	"playcards/utils/db"
 	"playcards/utils/errors"
 
 	"github.com/jinzhu/gorm"
@@ -43,10 +44,22 @@ func GetTwoCardByRoomID(tx *gorm.DB, rid int32) ([]*mdtwo.Twocard, error) {
 
 func GetLastTwoCardByRoomID(tx *gorm.DB, rid int32) (*mdtwo.Twocard, error) {
 	out := &mdtwo.Twocard{}
-	if err := tx.Where(" room_id = ? ", rid).
-		Order("game_id desc").Limit(1).Find(&out).Error; err != nil {
+
+
+	found, err := db.FoundRecord(tx.Where(" room_id = ? ", rid).
+		Order("game_id desc").Limit(1).Find(&out).Error)
+	if err != nil {
 		return nil, errors.Internal("get last two card by room_id failed", err)
 	}
+
+	if !found {
+		return nil, nil
+	}
+
+	//if err := tx.Where(" room_id = ? ", rid).
+	//	Order("game_id desc").Limit(1).Find(&out).Error; err != nil {
+	//	return nil, errors.Internal("get last two card by room_id failed", err)
+	//}
 	return out, nil
 }
 

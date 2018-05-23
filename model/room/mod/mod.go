@@ -27,7 +27,7 @@ type Room struct {
 	PayerID            int32
 	GameType           int32  //`reg:"required"`
 	GameParam          string //`reg:"required,min=1,excludesall="`
-	RoomParam          string
+	RoomParam          string //[]
 	GameUserResult     string
 	CreatedAt          *time.Time
 	UpdatedAt          *time.Time
@@ -57,8 +57,9 @@ type Room struct {
 	PlayerIds          []int32             `gorm:"-"`
 	RobotIds           []int32             `gorm:"-"`
 	WatchIds           []int32             `gorm:"-"`
-	TempWatchIds       []int32             `gorm:"-"`
+	ReadyDate          *time.Time          `gorm:"-"`
 	UserRole           int32               `gorm:"-"`
+	RoomNoticeCode     int32               `gorm:"-"`
 	//SearchKey      string            `gorm:"-"`
 }
 
@@ -101,6 +102,7 @@ type RoomUser struct {
 	RoomCost         int64
 	UserRole         int32
 	UserSitDownRound int32
+	//SuspendRound     int32
 }
 
 type GameUserResult struct {
@@ -120,6 +122,8 @@ type GameUserResult struct {
 	LastPushOnBet      int32
 	PushOnBetScore     int32
 	CanPushOn          int32
+	SuspendRound       int32
+	//SuspendRound       int32
 }
 
 type RoomResults struct {
@@ -197,6 +201,10 @@ type TwoCardRoomParam struct {
 	AdvanceOptions []string
 }
 
+type RunCardRoomParam struct {
+	Option [][]string //[][]
+}
+
 type PlayerSpecialGameRecord struct {
 	GameID     int32
 	RoomID     int32
@@ -215,6 +223,7 @@ type ClubRoomLog struct {
 	ClubRoomCount     int32
 	ClubCoinRoomCount int32
 	TotalRoomCount    int32
+	TotalRoundCount   int32
 }
 
 //func (r *Room) String() string {
@@ -302,6 +311,7 @@ func (r *RoomUser) ToProto() *pbr.RoomUser {
 		ClubCoin:         r.ClubCoin,
 		UserRole:         r.UserRole,
 		UserSitDownRound: r.UserSitDownRound,
+		//SuspendRound:     r.SuspendRound,
 	}
 	_, u := cacheuser.GetUserByID(r.UserID)
 	if u != nil {
@@ -360,6 +370,8 @@ func (ur *GameUserResult) ToProto() *pbr.GameUserResult {
 		GameCardCount:      ur.GameCardCount,
 		TotalClubCoinScore: ur.TotalClubCoinScore,
 		ClubCoin:           ur.ClubCoin,
+		SuspendRound:       ur.SuspendRound,
+		//RoundClubCoinScore: ur.RoundClubCoinScore,
 	}
 	_, u := cacheuser.GetUserByID(ur.UserID)
 	if u != nil {
@@ -396,7 +408,7 @@ func (cre *CheckRoomExist) ToProto() *pbr.CheckRoomExistReply {
 	//fmt.Printf("AAAAACheckRoomExistToProto:%d\n", out.Room.Status)
 	//if out.Room.Status == enumr.RoomStatusInit {
 	//	for _, ru := range out.Room.UserList {
-	//		fmt.Printf("CheckRoomExistToProto:%+v\n", ru)
+	//		//fmt.Printf("CheckRoomExistToProto:%+v\n", ru)
 	//		if ru.UserSitDownRound > 0 && ru.UserSitDownRound <= out.Room.RoundNow {
 	//			ru.UserRole = enumr.UserRoleWatchBro
 	//		}
@@ -429,10 +441,11 @@ func (psgr *PlayerSpecialGameRecord) ToProto() *pbr.PlayerSpecialGameRecord {
 
 func (crl *ClubRoomLog) ToProto() *pbr.ClubRoomLog {
 	out := &pbr.ClubRoomLog{
-		Date:           crl.Date,
-		VipRoomCount:   crl.VipRoomCount,
-		ClubRoomCount:  crl.ClubRoomCount,
-		TotalRoomCount: crl.TotalRoomCount,
+		Date:            crl.Date,
+		VipRoomCount:    crl.VipRoomCount,
+		ClubRoomCount:   crl.ClubRoomCount,
+		TotalRoomCount:  crl.TotalRoomCount,
+		TotalRoundCount: crl.TotalRoundCount,
 	}
 	return out
 }
@@ -458,6 +471,16 @@ func (r *Room) GetIdsNotInGame() []int32 {
 	return ids
 }
 
+func (r *Room) GetSuspendUser() []int32 {
+	var ids []int32
+	for _, ru := range r.Users {
+		if ru.UserRole == enumr.UserRoleSuspendBro || ru.UserRole == enumr.UserRoleRestoreBro {
+			ids = append(ids, ru.UserID)
+		}
+	}
+	return ids
+}
+
 func (r *Room) GetRoomUser(uid int32) *RoomUser {
 	for _, ru := range r.Users {
 		if ru.UserID == uid {
@@ -473,6 +496,7 @@ func (r *Room) BeforeUpdate(scope *gorm.Scope) error {
 	r.MarshalRoomParam()
 	scope.SetColumn("user_list", r.UserList)
 	scope.SetColumn("game_user_result", r.GameUserResult)
+	scope.SetColumn("room_param", r.RoomParam)
 	return nil
 }
 
@@ -482,6 +506,7 @@ func (r *Room) BeforeCreate(scope *gorm.Scope) error {
 	r.MarshalRoomParam()
 	scope.SetColumn("user_list", r.UserList)
 	scope.SetColumn("game_user_result", r.GameUserResult)
+	scope.SetColumn("room_param", r.RoomParam)
 	return nil
 }
 
@@ -502,7 +527,10 @@ func (r *Room) AfterFind() error {
 }
 
 func (r *Room) MarshalUsers() error {
-	data, _ := json.Marshal(&r.Users)
+	data, err := json.Marshal(&r.Users)
+	if err != nil {
+		return err
+	}
 	r.UserList = string(data)
 	return nil
 }
@@ -517,7 +545,10 @@ func (r *Room) UnmarshalUsers() error {
 }
 
 func (r *Room) MarshalGameUserResult() error {
-	data, _ := json.Marshal(&r.UserResults)
+	data, err := json.Marshal(&r.UserResults)
+	if err != nil {
+		return err
+	}
 	r.GameUserResult = string(data)
 	return nil
 }
@@ -528,7 +559,8 @@ func (r *Room) UnmarshalGameUserResult() error {
 	}
 	var out []*GameUserResult
 	if err := json.Unmarshal([]byte(r.GameUserResult), &out); err != nil {
-		return err
+		//log.Err("UnmarshalGameUserResult:%+v|%+v\n",r.GameUserResult,err)
+		return nil
 	}
 	r.UserResults = out
 	return nil
@@ -538,7 +570,11 @@ func (r *Room) MarshalRoomParam() error {
 	if r.RoomAdvanceOptions == nil {
 		return nil
 	}
-	data, _ := json.Marshal(&r.RoomAdvanceOptions)
+	data, err := json.Marshal(&r.RoomAdvanceOptions)
+	if err != nil {
+		//log.Err("MarshalRoomParam:%+v|%+v\n",r.RoomAdvanceOptions,err)
+		return err
+	}
 	r.RoomParam = string(data)
 	return nil
 }
@@ -549,7 +585,8 @@ func (r *Room) UnmarshalRoomParam() error {
 	}
 	var out []string
 	if err := json.Unmarshal([]byte(r.RoomParam), &out); err != nil {
-		return err
+		//log.Err("UnmarshalRoomParam:%+v|%+v\n",r.RoomParam,err)
+		return nil
 	}
 	r.RoomAdvanceOptions = out
 	return nil

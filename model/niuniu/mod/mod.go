@@ -157,7 +157,10 @@ func (n *Niuniu) AfterFind() error {
 }
 
 func (n *Niuniu) MarshalNiuniuRoomResult() error {
-	data, _ := json.Marshal(&n.Result)
+	data, err := json.Marshal(&n.Result)
+	if err != nil {
+		return err
+	}
 	n.GameResults = string(data)
 	return nil
 }

@@ -34,7 +34,9 @@ message Room {
     int32 VipRoomSettingID = 27; //包厢模式
     int32 UserRole = 28; // 回复标签 1普通玩家 2观察者
     int32 JoinType = 29;
-    repeated string RoomAdvanceOptions = 30;
+    repeated string RoomAdvanceOptions = 30; // RoomAdvanceOptions[0]:允许玩家开房  值:0 允许 1不允许
+                                             // RoomAdvanceOptions[1]:付费类型     值:0 房主付费 1 AA付费
+                                             // RoomAdvanceOptions[2]:积分倍数     值:1 2 5 10 0.1 0.2 0.5
 }
 
 message RoomUser {
@@ -57,6 +59,7 @@ message RoomUser {
     int64 ClubCoin = 19;
     int32 UserRole = 20;
     int32 UserSitDownRound = 21;
+    int32 SuspendRound = 22;
 }
 
 message ClubRoomUser {
@@ -87,6 +90,8 @@ message GameUserResult {
     int64 TotalClubCoinScore = 9;
     int64 ClubCoin = 10;
     int32 UserRole = 11; // 回复标签 1普通玩家 2观察者
+    int32 SuspendRound = 12;
+//    int64 RoundClubCoinScore = 13;
 }
 
 message RoomResults {
@@ -106,6 +111,7 @@ message RoomResults {
     int32 RoomType = 14;
     int32 SubRoomType = 15;
     repeated RoomUser UserList = 16;
+    repeated string RoomAdvanceOptions = 17;
 }
 
 message Feedback {
@@ -128,6 +134,7 @@ message ClubRoomLog {
     int32 ClubRoomCount = 3;
     int32 TotalRoomCount = 4;
     int32 ClubCoinRoomCount = 5;
+    int32 TotalRoundCount = 6;
 }
 
 //倒计时结构体
@@ -210,6 +217,10 @@ message OutBankerListRequest {
     string Password = 1;
 }
 
+message GetRoomListByIDSRequest {
+    repeated int32 Ids = 1;
+}
+
 //回应
 message PageFeedbackListReply {
     int32 Result = 1;
@@ -272,6 +283,11 @@ message ClubRoomLogReply {
     repeated ClubRoomLog List = 2;
 }
 
+message GetRoomListByIDSReply {
+    int32 Result = 1;
+    repeated Room List = 2;
+}
+
 //广播
 message UserState {
     int32 State = 1;
@@ -319,6 +335,7 @@ message RoomNotice {
 message RoomExist {
     int32 UserID = 1;
     int32 RoomID = 2;
+    int32 RecoveryType = 3; //1恢复房间游戏数据 2坐下消息
 }
 
 message ShuffleCardBro {
@@ -391,6 +408,8 @@ service RoomSrv {
     rpc GetVipRoomList (Room) returns (GetVipRoomListReply) {
     }
     rpc GetRoomRoundNow (Room) returns (ClubRoomLogReply) {
+    }
+    rpc GetRoomListByIds (GetRoomListByIDSRequest) returns (GetRoomListByIDSReply) {
     }
 }
 

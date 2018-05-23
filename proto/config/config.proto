@@ -15,36 +15,56 @@ message Config {
     string Description = 8;
     int64 CreatedAt = 9;
     int64 UpdatedAt = 10;
+    string ItemName = 11;
+}
+
+message ConfigNew {
+    int32 ConfigID = 1;
+    string Channel = 2;
+    string Version = 3;
+    string MobileOs = 4;
+    string ItemID = 5;
+    string ItemValue = 6;
+    int32 Status = 7;
+    string Description = 8;
+    int64 CreatedAt = 9;
+    int64 UpdatedAt = 10;
 }
 
 //请请求
-message PageConfigsRequest{
+message PageConfigsRequest {
     page.PageOption Page = 1;
-    Config Config = 2;
+    ConfigNew Config = 2;
 }
 
 //回应
-message ConfigReply{
+message ConfigReply {
     int32 Result = 1;
 }
 
-message GetConfigsReply{
+message GetConfigsReply {
     int32 Result = 1;
     repeated Config List = 2;
 }
 
 message PageConfigListReply {
     int32 Result = 1;
-    repeated Config List = 2;
+    repeated ConfigNew List = 2;
     int64 Count = 3;
 }
 
 
 service ConfigSrv {
-    rpc CreateConfig (Config) returns (ConfigReply) {}
-    rpc UpdateConfig (Config) returns (ConfigReply) {}
-    rpc GetConfigs (Config) returns (GetConfigsReply) {}
-    rpc GetConfigsBeforeLogin (Config) returns (GetConfigsReply) {}
-    rpc PageConfigs (PageConfigsRequest) returns (PageConfigListReply) {}
-    rpc RefreshAllConfigsFromDB (Config) returns (ConfigReply) {}
+    rpc CreateConfig (ConfigNew) returns (ConfigReply) {
+    }
+    rpc UpdateConfig (ConfigNew) returns (ConfigReply) {
+    }
+    rpc GetConfigs (Config) returns (GetConfigsReply) {
+    }
+    rpc GetConfigsBeforeLogin (Config) returns (GetConfigsReply) {
+    }
+    rpc PageConfigs (PageConfigsRequest) returns (PageConfigListReply) {
+    }
+    rpc RefreshAllConfigsFromDB (Config) returns (ConfigReply) {
+    }
 }

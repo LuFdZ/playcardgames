@@ -8,6 +8,7 @@ import (
 	"playcards/utils/errors"
 	enumcom "playcards/model/common/enum"
 	sq "github.com/Masterminds/squirrel"
+	mdpage "playcards/model/page"
 	"github.com/jinzhu/gorm"
 	"strconv"
 )
@@ -120,30 +121,30 @@ func InsertJournal(tx *gorm.DB, uid int32, b *mdbill.Balance, bbfore *mdbill.Bal
 }
 
 func GainBalance(tx *gorm.DB, uid int32, b *mdbill.Balance, typ int32,
-	fid string, opuid int32, channel string) (*mdbill.Balance,error) {
+	fid string, opuid int32, channel string) (*mdbill.Balance, error) {
 	if b.Amount == 0 {
-		return nil,errbill.ErrNotAllowAmount
+		return nil, errbill.ErrNotAllowAmount
 	}
 
 	ub, err := GetLockUserBalance(tx, uid, b.CoinType)
 	if err != nil {
-		return nil,err
+		return nil, err
 	}
 
 	balance := ub.Amount + b.Amount - ub.Freeze - ub.Deposit
 	if balance < 0 {
-		return nil,errbill.ErrOutOfBalance
+		return nil, errbill.ErrOutOfBalance
 	}
 	err = InsertJournal(tx, uid, b, ub, typ, fid, opuid, channel)
 	if err != nil {
-		return nil,err
+		return nil, err
 	}
 	ub.Amount += b.Amount
 	ub.Balance = ub.Amount - ub.Freeze - ub.Deposit
 	if err = tx.Save(ub).Error; err != nil {
-		return nil,errors.Internal("gain balance failed", err)
+		return nil, errors.Internal("gain balance failed", err)
 	}
-	return ub,nil
+	return ub, nil
 }
 
 func SetBalanceFreeze(tx *gorm.DB, uid int32, b *mdbill.Balance, typ int32,
@@ -173,6 +174,17 @@ func SetBalanceFreeze(tx *gorm.DB, uid int32, b *mdbill.Balance, typ int32,
 		return errors.Internal("gain balance failed", err)
 	}
 	return nil
+}
+
+func PageJournal(tx *gorm.DB, mdj *mdbill.Journal, page *mdpage.PageOption,
+) ([]*mdbill.Journal, int64, error) {
+	var out []*mdbill.Journal
+	rows, rtx := page.Find(tx.Where(mdj).
+		Order("created_at desc").Find(&out), &out)
+	if rtx.Error != nil {
+		return nil, 0, errors.Internal("page journal failed", rtx.Error)
+	}
+	return out, rows, nil
 }
 
 //func SetBalanceUnFreeze(tx *gorm.DB, uid int32, b *mdbill.Balance, typ int32,

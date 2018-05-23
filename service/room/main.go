@@ -40,9 +40,11 @@ var FuncRights = map[string]int32{
 	"RoomSrv.GetVipRoomList":        auth.RightsPlayer,
 	"RoomSrv.WatchRoom":             auth.RightsPlayer,
 	"RoomSrv.SitDown":               auth.RightsPlayer,
+	"RoomSrv.SetRestore":            auth.RightsPlayer,
+	"RoomSrv.GetRoomListByIds":      auth.RightsAdmin,
 	"RoomSrv.PageSpecialGameList":   auth.RightsAdmin,
 	"RoomSrv.GetRoomRoundNow":       auth.RightsAdmin,
-	"RoomSrv.PageRoomList":          auth.RightsNoticeAdmin,
+	"RoomSrv.PageRoomList":          auth.RightsRoomAdmin,
 	"RoomSrv.PageFeedbackList":      auth.RightsRoomAdmin,
 }
 

@@ -145,7 +145,10 @@ func (fc *Fourcard) AfterFind() error {
 }
 
 func (fc *Fourcard) MarshalGameResult() error {
-	data, _ := json.Marshal(&fc.GameResult)
+	data, err := json.Marshal(&fc.GameResult)
+	if err != nil {
+		return err
+	}
 	fc.GameResultStr = string(data)
 	return nil
 }

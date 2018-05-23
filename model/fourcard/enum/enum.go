@@ -6,6 +6,7 @@ const (
 	LogTime        = 20
 	SetBetTime     = 32.0
 	SubmitCardTime = 32.0
+	ServiceCode = 16
 )
 
 const (
@@ -57,3 +58,14 @@ var FourCardCardType = [...]int32{10, 20, 30, 40, 50, 60, 70, 80, 90,
 	100, 110}
 
 //var BetScoreMap = map[int32]int32{1: 1, 2: 10, 3: 15, 4: 20, 5: 25}
+
+var TestCardListMap = [][][]string{
+	[][]string{[]string{"3_2","1_10"},[]string{"5_21","3_3"}},
+	[][]string{[]string{"1_5","4_4"},[]string{"4_8","1_8"}},
+	[][]string{[]string{"3_7","3_10"},[]string{"3_9","1_12"}},
+	[][]string{[]string{"3_4","4_7"},[]string{"1_2","3_8"}},
+	[][]string{[]string{"1_4","3_6"},[]string{"2_10","2_8"}},
+	[][]string{[]string{"1_6","2_7"},[]string{"1_9","4_10"}},
+	[][]string{[]string{"3_11","2_4"},[]string{"2_6","3_12"}},
+	[][]string{[]string{"4_6","3_5"},[]string{"1_11","1_7"}},
+}

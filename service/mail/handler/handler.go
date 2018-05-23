@@ -7,6 +7,7 @@ import (
 	enumgame "playcards/model/mail/enum"
 	mdpage "playcards/model/page"
 	gsync "playcards/utils/sync"
+	cachelog "playcards/model/log/cache"
 	"playcards/utils/topic"
 	"playcards/utils/auth"
 	"time"
@@ -14,6 +15,7 @@ import (
 	"golang.org/x/net/context"
 	"github.com/micro/go-micro/broker"
 	"github.com/micro/go-micro/server"
+	"fmt"
 )
 
 type MailSrv struct {
@@ -75,6 +77,7 @@ func (ms *MailSrv) UpdateMailInfo(ctx context.Context,
 	mi := mdgame.MailInfoFromProto(req)
 	_, err := mail.UpdateMailInfo(mi)
 	if err != nil {
+		cachelog.SetErrLog(enumgame.ServiceCode,err.Error())
 		return err
 	}
 
@@ -93,6 +96,7 @@ func (ms *MailSrv) SendSysMail(ctx context.Context, req *pbgame.SendSysMailReque
 	}
 	err = mail.SendSysMail(req.MailID, req.Ids, req.Args)
 	if err != nil {
+		cachelog.SetErrLog(enumgame.ServiceCode,err.Error())
 		return err
 	}
 	reply := &pbgame.DefaultReply{
@@ -108,8 +112,10 @@ func (ms *MailSrv) SendMail(ctx context.Context, req *pbgame.SendMailRequest,
 	if err != nil {
 		return err
 	}
+	fmt.Printf("OOOOOOOOSendMail:%+v\n",req.MailSend)
 	msl, err := mail.SendMail(u.UserID, mdgame.SendMailLogFromProto(req.MailSend), req.Ids, req.Channel)
 	if err != nil {
+		cachelog.SetErrLog(enumgame.ServiceCode,err.Error())
 		return err
 	}
 	reply := &pbgame.DefaultReply{
@@ -129,6 +135,7 @@ func (ms *MailSrv) RefreshAllMailInfoFromDB(ctx context.Context,
 	req *pbgame.MailInfo, rsp *pbgame.DefaultReply) error {
 	err := mail.RefreshAllMailInfoFromDB()
 	if err != nil {
+		cachelog.SetErrLog(enumgame.ServiceCode,err.Error())
 		return err
 	}
 	*rsp = pbgame.DefaultReply{
@@ -141,6 +148,7 @@ func (ms *MailSrv) RefreshAllMailSendLogFromDB(ctx context.Context,
 	req *pbgame.MailInfo, rsp *pbgame.DefaultReply) error {
 	err := mail.RefreshAllSendMailLogFromDB()
 	if err != nil {
+		cachelog.SetErrLog(enumgame.ServiceCode,err.Error())
 		return err
 	}
 	*rsp = pbgame.DefaultReply{
@@ -153,6 +161,7 @@ func (ms *MailSrv) RefreshAllPlayerMailFromDB(ctx context.Context,
 	req *pbgame.MailInfo, rsp *pbgame.DefaultReply) error {
 	err := mail.RefreshAllPlayerMailFromDB()
 	if err != nil {
+		cachelog.SetErrLog(enumgame.ServiceCode,err.Error())
 		return err
 	}
 	*rsp = pbgame.DefaultReply{
@@ -169,6 +178,7 @@ func (ms *MailSrv) ReadMail(ctx context.Context, req *pbgame.ReadMailRequest,
 	}
 	err = mail.ReadMail(u.UserID, req.LogID)
 	if err != nil {
+		cachelog.SetErrLog(enumgame.ServiceCode,err.Error())
 		return err
 	}
 	reply := &pbgame.DefaultReply{
@@ -187,6 +197,7 @@ func (ms *MailSrv) GetMailItems(ctx context.Context, req *pbgame.GetMailItemsReq
 	}
 	itemList, err := mail.GetMailItems(u.UserID, req.LogID)
 	if err != nil {
+		cachelog.SetErrLog(enumgame.ServiceCode,err.Error())
 		return err
 	}
 	reply := &pbgame.GetMailItemsReply{
@@ -209,6 +220,7 @@ func (ms *MailSrv) GetAllMailItems(ctx context.Context, req *pbgame.GetMailItems
 	}
 	itemList, err := mail.GetAllMailItems(u.UserID)
 	if err != nil {
+		cachelog.SetErrLog(enumgame.ServiceCode,err.Error())
 		return err
 	}
 	reply := &pbgame.GetMailItemsReply{

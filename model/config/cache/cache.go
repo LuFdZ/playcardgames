@@ -16,8 +16,8 @@ func ConfigHKey() string {
 	return fmt.Sprintf(cache.KeyPrefix("CONFIGS"))
 }
 
-func ConfigHSubKey(itemid int32, channel string, version string, mobileos string) string {
-	return fmt.Sprintf(cache.KeyPrefix("CONFIGS:%d:%s:%s:%s"), itemid, channel, version, mobileos)
+func ConfigHSubKey(itemid string, channel string, version string, mobileos string) string {
+	return fmt.Sprintf(cache.KeyPrefix("CONFIGS:%s:%s:%s:%s"), itemid, channel, version, mobileos)
 }
 
 func UserHKeySearchList(hSubKey string) map[string]string {
@@ -83,7 +83,7 @@ func SetConfig(co *mdc.Config) error {
 	return nil
 }
 
-func GetConfig(itemid int32, channel string, version string, mobileos string) (*mdc.Config, error) {
+func GetConfig(itemid string, channel string, version string, mobileos string) (*mdc.Config, error) {
 	key := ConfigHKey()
 	subkey := ConfigHSubKey(itemid, channel, version, mobileos)
 	//fmt.Printf("AAAGetConfig:%s|%s\n", key, subkey)
@@ -161,8 +161,8 @@ func GetAllConfigKey() ([]string, error) {
 	return rks, nil
 }
 
-func GetAllConfig(f func(*mdc.Config) bool) map[int32]*mdc.Config {
-	cm := make(map[int32]*mdc.Config)
+func GetAllConfig(f func(*mdc.Config) bool) map[string]*mdc.Config {
+	cm := make(map[string]*mdc.Config)
 	keys, err := GetAllConfigKey()
 	if err != nil {
 		log.Err("redis get all room err: %v", err)

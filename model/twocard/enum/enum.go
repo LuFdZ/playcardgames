@@ -6,6 +6,7 @@ const (
 	LogTime        = 20
 	SetBetTime     = 32.0
 	SubmitCardTime = 32.0
+	ServiceCode    = 32
 )
 
 const (
@@ -47,7 +48,6 @@ const (
 	BetTypeNo   = 2 //比牌模式 无下注
 )
 
-
 const (
 	TimesDefault = 3 //当庄模式 固定上庄
 
@@ -57,3 +57,17 @@ var TwoCardCardType = [...]int32{10, 20, 30, 40, 50, 60, 70, 80, 90,
 	100, 110}
 
 //var BetScoreMap = map[int32]int32{1: 1, 2: 10, 3: 15, 4: 20, 5: 25}
+
+var TestCardListMap = [][]string{
+	{"5_21","3_3"},
+	{"2_4","3_4"},
+	{"3_7","4_7"},
+	{"4_8","3_12"},
+	{"3_2","2_8"},
+	{"1_4","3_5"},
+	{"2_7","4_4"},
+	{"3_9","1_6"},
+	{"2_10","4_10"},
+	{"1_9","4_6"},
+}
+

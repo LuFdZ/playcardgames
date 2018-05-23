@@ -16,6 +16,7 @@ const (
 	TopicRoomShuffleCardBro = "playcards.room.ShuffleCardBro"
 	TopicRoomChat           = "playcards.room.RoomChat"
 	TopicBankerList         = "playcards.room.BankerList"
+	TopicUserRestore      = "playcards.room.UserRestore"
 )
 
 const (
@@ -24,6 +25,7 @@ const (
 	TopicRoomDoudizhuExist = "playcards.room.DoudizhuExist"
 	TopicRoomFourCardExist = "playcards.room.FourCardExist"
 	TopicRoomTwoCardExist  = "playcards.room.TwoCardExist"
+	TopicRoomRunCardExist  = "playcards.room.RunCardExist"
 )
 
 const (

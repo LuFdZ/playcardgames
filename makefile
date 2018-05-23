@@ -25,6 +25,7 @@ all:  api-srv           \
       fourcard-srv      \
       mail-srv          \
       twocard-srv       \
+      runcard-srv       \
 
 dev:
 	-${GOGET} github.com/golang/lint
@@ -92,6 +93,7 @@ gen: dep
 	${PROTO_BUILD} ./proto/mail/mail.proto
 	${PROTO_BUILD} ./proto/goldroom/goldroom.proto
 	${PROTO_BUILD} ./proto/twocard/twocard.proto
+	${PROTO_BUILD} ./proto/runcard/runcard.proto
 
 
 api-srv: gen
@@ -144,6 +146,8 @@ goldroom-srv: gen
 	${BUILD} -o ./bin/goldroom-srv service/goldroom/main.go
 twocard-srv: gen
 	${BUILD} -o ./bin/twocard-srv service/twocard/main.go
+runcard-srv: gen
+	${BUILD} -o ./bin/runcard-srv service/runcard/main.go
 
 db-reset-init:
 	${MIGRATE_CMD} goto 1
@@ -151,3 +155,6 @@ db-reset-init:
 	${MIGRATE_CMD} version
 
 .PHONY: all gen dep
+
+
+

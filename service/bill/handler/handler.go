@@ -9,8 +9,10 @@ import (
 	"playcards/utils/auth"
 	gctx "playcards/utils/context"
 	"playcards/utils/topic"
-	//"playcards/model/mail"
+	mdpage "playcards/model/page"
+	mdbill "playcards/model/bill/mod"
 	srvmail "playcards/service/mail/handler"
+	utilproto "playcards/utils/proto"
 	"github.com/micro/go-micro/broker"
 	"github.com/micro/go-micro/server"
 
@@ -96,6 +98,7 @@ func (b *BillSrv) Recharge(ctx context.Context, req *pbbill.RechargeRequest,
 		req.OrderID, enumbill.JournalTypeRecharge, u.Channel, req.CoinType)
 	if err != nil {
 		rsp.Code = 102
+		//cachelog.SetErrLog(enumbill.ServiceCode,err.Error())
 		return err
 	}
 	if res == 1 {
@@ -122,5 +125,22 @@ func (b *BillSrv) Recharge(ctx context.Context, req *pbbill.RechargeRequest,
 		topic.Publish(b.broker, mailReq, srvmail.TopicSendSysMail)
 	}
 	//rsp.Result = result
+	return nil
+}
+
+func (b *BillSrv) PageJournal(ctx context.Context,
+	req *pbbill.PageJournalRequest, rsp *pbbill.PageJournalReply) error {
+	page := mdpage.PageOptionFromProto(req.Page)
+	rsp.Result = 2
+	l, rows, err := bill.PageJournal(mdbill.JournalFromProto(req.Journal),page)
+	if err != nil {
+		return err
+	}
+	err = utilproto.ProtoSlice(l, &rsp.List)
+	if err != nil {
+		return err
+	}
+	rsp.Count = rows
+	rsp.Result = 1
 	return nil
 }

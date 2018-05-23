@@ -261,12 +261,12 @@ func RefreshWXToken(refreshtoken string) (*mdu.AccessTokenResponse, error) {
 			return nil, erru.ErrWXResponseJson
 		}
 		//log.Err("refresh_token refresh WX token :%v \n", ater)
-		log.Err("GetWXToken info response fail! req:%s,refreshtoken:%s,alter:%+v", requestLine, refreshtoken, ater)
+		log.Err("RefreshWXToken info response fail! req:%s,refreshtoken:%s,alter:%+v", requestLine, refreshtoken, ater)
 		if err != nil {
 			return nil, erru.ErrWXResponseJson
 		}
 		mderr := errors.Parse(erru.ErrWXLoginResponse.Error())
-		mderr.Detail = fmt.Sprintf(mderr.Detail, "GetWXToken Response Err")
+		mderr.Detail = fmt.Sprintf(mderr.Detail, "RefreshWXToken Response Err")
 		return nil, erru.ErrWXParam
 	}
 	return atr, nil
@@ -350,7 +350,7 @@ func WXLogin(u *mdu.User, code string, address string) (*mdu.User, error) {
 	} else {
 		checkatr, err := GetAndCheckWXToken(u.OpenID) //cacheuser.GetAccessToken(u.OpenID)
 		if err != nil {
-			log.Err("user login set session failed, %v", err)
+			log.Err("user login get and check WX token failed, %v", err)
 			return nil, err
 		}
 		atr = checkatr

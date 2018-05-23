@@ -7,14 +7,16 @@ const (
 	ClubJournalTableName = "club_journals"
 	MaxRecordCount       = 20
 	ClubCoinInit         = 10000000
+	ServiceCode          = 14
 )
 
 const (
-	JournalTypeClubAddMemberClubCoin     int32 = 1
-	JournalTypeClubMemberClubCoinOfferUp int32 = 2
-	JournalTypeClubGame                  int32 = 3
-	JournalTypeClubGameCostBack          int32 = 4
+	JournalTypeClubAddMemberClubCoin     int32 = 1 //俱乐部发放奖杯
+	JournalTypeClubMemberClubCoinOfferUp int32 = 2 //俱乐部成员贡献奖杯
+	JournalTypeClubGame                  int32 = 3 //玩家游戏结算
+	JournalTypeClubGameCostBack          int32 = 4 //俱乐部游戏玩家上缴管理费
 	JournalTypeClubRecharge              int32 = 6
+	JournalTypeClubGameCostGain          int32 = 7 //俱乐部获取管理费
 )
 
 const (

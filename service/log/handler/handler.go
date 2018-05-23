@@ -5,22 +5,36 @@ import (
 	mdlog "playcards/model/log/mod"
 	pblog "playcards/proto/log"
 	gctx "playcards/utils/context"
+	gsync "playcards/utils/sync"
+	enumlog "playcards/model/log/enum"
+
 	"playcards/utils/log"
 
 	"github.com/micro/go-micro"
 	"golang.org/x/net/context"
+	"time"
 )
 
 type LogSrv struct {
 	cerror chan *mdlog.ClientErrorLog
 }
 
-func NewHandler(srv micro.Service) *LogSrv {
+func NewHandler(srv micro.Service, gt *gsync.GlobalTimer) *LogSrv {
 	ls := &LogSrv{
 		cerror: make(chan *mdlog.ClientErrorLog, 1024),
 	}
-	go ls.writeLogLoop()
+	ls.update(srv, gt)
+	//go ls.writeLogLoop()
 	return ls
+}
+
+func (ls *LogSrv) update(s micro.Service, gt *gsync.GlobalTimer) {
+	lock := "playcards.thirteen.update.lock"
+	f := func() error {
+		mlog.GetAllErrLog()
+		return nil
+	}
+	gt.Register(lock, time.Minute*enumlog.LoopTime, f)
 }
 
 func (ls *LogSrv) writeLogLoop() {

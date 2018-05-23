@@ -60,7 +60,7 @@ func PageSpecialGameList(tx *gorm.DB, gr *mdr.PlayerSpecialGameRecord, page *mdp
 	rows, rtx := page.Find(tx.Where(gr).
 		Order("created_at desc").Find(&out), &out)
 	if rtx.Error != nil {
-		return nil, 0, errors.Internal("page room result failed", rtx.Error)
+		return nil, 0, errors.Internal("page special game failed", rtx.Error)
 	}
 	return out, rows, nil
 }
@@ -187,10 +187,10 @@ func PageRoomResultList(tx *gorm.DB, uid int32, gtype int32, page *mdpage.PageOp
 func PageClubRoomResultList(tx *gorm.DB, clubid int32, page *mdpage.PageOption) ([]*mdr.Room, int64, error) {
 	var out []*mdr.Room
 	sqlstr := " club_id = ? and round_now >1 and room_type = ? and flag = ? "
-	rows, rtx := page.Find(tx.Model(out).Where(sqlstr, clubid, enumr.RoomTypeClub,  enumr.RoomNoFlag).
+	rows, rtx := page.Find(tx.Model(out).Where(sqlstr, clubid, enumr.RoomTypeClub, enumr.RoomNoFlag).
 		Order("created_at desc"), &out)
 	if rtx.Error != nil {
-		return nil, 0, errors.Internal("page room result failed", rtx.Error)
+		return nil, 0, errors.Internal("page club room result failed", rtx.Error)
 	}
 	return out, rows, nil
 }
@@ -202,7 +202,7 @@ func PageClubMemberRoomResultList(tx *gorm.DB, uid int32, clubid int32, page *md
 	rows, rtx := page.Find(tx.Model(out).Where(sqlstr, clubid, enumr.RoomTypeClub, enumr.RoomNoFlag, uid).
 		Order("created_at desc"), &out)
 	if rtx.Error != nil {
-		return nil, 0, errors.Internal("page room result failed", rtx.Error)
+		return nil, 0, errors.Internal("page club member room result failed", rtx.Error)
 	}
 	return out, rows, nil
 }
@@ -333,9 +333,9 @@ func PageRoomList(tx *gorm.DB, clubid int32, page int32, pagesize int32, flag in
 		strWhere += fmt.Sprintf(" and flag = %d ", flag)
 	}
 	sql, param, err := squirrel.
-	Select(" room_id,password,status,game_type,max_number,round_now,round_number,game_param,game_user_result,created_at").
+	Select(" room_id,password,status,game_type,max_number,round_now,sub_room_type,round_number,game_param,game_user_result,created_at").
 		From(enum.RoomTableName + " r ").
-		Where(strWhere, clubid).ToSql()
+		Where(strWhere, clubid).OrderBy("created_at desc ").ToSql()
 
 	if err != nil {
 		return nil, errors.Internal("get room list failed", err)
@@ -352,7 +352,7 @@ func GetClubRoomLog(tx *gorm.DB, clubid int32) ([]*mdr.ClubRoomLog, error) {
 	var out []*mdr.ClubRoomLog
 	//var out []*interface{}
 	sql, ps, err := sq.
-	Select(" DATE_FORMAT(created_at,'%Y-%m-%d') date ,count(room_id) as total_room_count " +//round_now
+	Select(" DATE_FORMAT(created_at,'%Y-%m-%d') date ,count(room_id) as total_room_count " + //round_now
 		",sum(IF((vip_room_setting_id =0), 1,0)) as club_room_count" +
 		",sum(IF((vip_room_setting_id >0), 1,0)) as vip_room_count").
 		From(enum.RoomTableName).
@@ -383,10 +383,11 @@ func GetRoomRoundNow(tx *gorm.DB, gtype int32) ([]*mdr.ClubRoomLog, error) {
 
 	sql, ps, err := sq.
 	Select(" DATE_FORMAT(created_at,'%Y-%m-%d') date " +
-		",sum(round_now) as total_room_count " +
-		",sum(IF((club_id > 0), round_now,0)) as club_room_count" +
-		",sum(IF((club_id > 0), round_now,0)) as club_coin_room_count" +
-		",sum(IF((club_id > 0 and sub_room_type = 301), round_now,0)) as vip_room_count").
+		",sum(round_now) as total_round_count " +
+		",count(room_id) as total_room_count" +
+		",sum(IF((club_id > 0), 1,0)) as club_room_count" +
+		",sum(IF((sub_room_type = 301 and vip_room_setting_id = 0), 1,0)) as club_coin_room_count" +
+		",sum(IF((vip_room_setting_id >0), 1,0)) as vip_room_count").
 		From(enum.RoomTableName).
 		Where(strWhere).
 		GroupBy(" date ").
